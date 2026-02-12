@@ -52,8 +52,6 @@ class _SignInScreenState extends State<SignInScreen> {
     final int adminId = response[0]['userid'];
     final String role = response[0]['role'];
 
-    if (!mounted) return;
-
     if (role == 'ADMIN') {
       Navigator.pushReplacement(
         context,

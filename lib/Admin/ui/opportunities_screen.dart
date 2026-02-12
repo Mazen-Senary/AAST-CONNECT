@@ -6,6 +6,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../utils/opportunity_mappers.dart';
 
 class OpportunitiesScreen extends StatefulWidget {
   final int adminId;
@@ -23,21 +24,17 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
   final descriptionController = TextEditingController();
   final locationController = TextEditingController();
   final skillsController = TextEditingController();
-  String selectedType = 'Internship';
-String selectedWorkMode = 'ONSITE';
-bool paidStatus = false;
-DateTime? selectedDeadline;
+    String selectedWorkMode = 'ONSITE';
+  bool paidStatus = false;
+  DateTime? selectedDeadline;
+  String selectedAudience = 'STUDENT';
+  String applicationMethod = 'INTERNAL';
+  final externalUrlController = TextEditingController();
+
 
   String _searchTerm = '';
   String _filterType = 'all';
   final supabase = Supabase.instance.client;
-  final Map<String, String> typeMap = {
-  'Internship': 'INTERNSHIP',
-  'Training': 'TRAINING',
-  'Job': 'JOB',
-  'Volunteer': 'VOLUNTEER',
-  'Competition': 'COMPETITION',
-};
   @override
   void initState() {
     super.initState();
@@ -57,15 +54,20 @@ Future<void> _fetchOpportunities() async {
     setState(() {
       _opportunities = response.map<Opportunity>((row) {
         return Opportunity(
-          id: row['id'].toString(),
-          title: row['title'],
-          company: row['company_name'] ?? '—',
-          type: row['type'],
-          status: 'Active',
-          applicants: 0,
-          posted: DateTime.parse(row['created_at']),
-          deadline: DateTime.parse(row['deadline']),
-        );
+        id: row['vacancyid'].toString(),
+        title: row['title'] ?? '',
+        company: row['company_name'] ?? '—',
+        type: row['type'] ?? 'INTERNSHIP',
+        applicationMethod: row['application_method'] ?? 'INTERNAL',
+        applicants: 0,
+        posted: DateTime.parse(row['created_at']),
+        deadline: DateTime.parse(row['deadline']),
+        targetAudience: row['target_audience'] ?? 'STUDENT',
+        externalApplyUrl: row['external_apply_url'],
+      );
+
+
+
       }).toList();
       _isLoading = false;
     });
@@ -82,8 +84,9 @@ Future<void> _fetchOpportunities() async {
           opp.company.toLowerCase().contains(_searchTerm.toLowerCase());
 
       final matchesFilter =
-          _filterType == 'all' ||
-typeMap[_filterType] == opp.type;
+        _filterType == 'all' ||
+        uiToDbType(_filterType) == opp.type;
+
 
 
       return matchesSearch && matchesFilter;
@@ -355,7 +358,7 @@ typeMap[_filterType] == opp.type;
           title: opp.title,
           company: opp.company,
           type: opp.type,
-          status: opp.status,
+          status: opp.applicationMethod,
           applicants: opp.applicants.toString(),
           deadline: DateFormat('yyyy-MM-dd').format(opp.deadline),
           actions: '',
@@ -438,7 +441,7 @@ typeMap[_filterType] == opp.type;
   }
 
   Widget _statusBadge(String status, bool isDark) {
-    final bool isInternal = status == 'Internal';
+    final bool isInternal = status == 'INTERNAL';
     return _badge(
       status,
       isInternal
@@ -635,6 +638,30 @@ const SizedBox(height: 16),
         ),
 
         const SizedBox(height: 24),
+        _buildDropdownField(
+      'Target Audience',
+      selectedAudience,
+     ['STUDENT', 'GRADUATE', 'BOTH'],
+     (v) => setState(() => selectedAudience = v!),
+      isDark,
+),
+      _buildDropdownField(
+  'Application Method',
+  applicationMethod,
+  ['INTERNAL', 'EXTERNAL'],
+  (v) => setState(() => applicationMethod = v!),
+  isDark,
+),
+if (applicationMethod == 'EXTERNAL') ...[
+  const SizedBox(height: 16),
+  _buildFormField(
+    'External Application URL',
+    externalUrlController,
+    'https://company.com/apply',
+    isDark,
+  ),
+],
+
 
         // ---------- ACTION BUTTONS ----------
         Row(
@@ -652,12 +679,12 @@ const SizedBox(height: 16),
                 await _saveOpportunityToSupabase(
                   title: titleController.text,
                   description: descriptionController.text,
-                  type: typeMap[selectedType]!,
                   location: locationController.text,
                   skills: skillsController.text,
                   paidStatus: paidStatus,
                   deadline: selectedDeadline!,
                   selectedWorkMode: selectedWorkMode,
+                  selectedType: selectedType,
                 );
                 await _fetchOpportunities();
 
@@ -785,26 +812,36 @@ const SizedBox(height: 16),
   Future<void> _saveOpportunityToSupabase({
   required String title,
   required String description,
-  required String type,
   required String location,
   required String skills,
   required String selectedWorkMode,
   required bool paidStatus,
   required DateTime deadline,
+  required String selectedType,
 }) async {
   try {
-    await supabase.from('vacancies').insert({
+    final dbType = uiToDbType(selectedType);
+
+await supabase.from('vacancies').insert({
+  'type': dbType,
   'title': title,
   'description': description,
-  'type': type,
   'company_name': companyController.text.trim(),
-  'location': locationController.text.trim(), // ✅ real place
-  'work_mode': selectedWorkMode,              // ✅ enum
+  'location': locationController.text.trim(),
+  'work_mode': selectedWorkMode,
   'requiredskills': skills,
   'paidstatus': paidStatus,
   'deadline': deadline.toIso8601String(),
+  
   'postedbyadminid': widget.adminId,
+  'target_audience': selectedAudience,
+  'application_method': applicationMethod,
+  'external_apply_url':
+      applicationMethod == 'EXTERNAL'
+          ? externalUrlController.text.trim()
+          : null,
 });
+
   titleController.clear();
     companyController.clear();
     descriptionController.clear();
@@ -869,8 +906,11 @@ final editCompanyController =
     final deadlineController = TextEditingController(
       text: DateFormat('yyyy-MM-dd').format(opportunity.deadline),
     );
-    String selectedType = opportunity.type;
-    String selectedStatus = opportunity.status;
+    String selectedType = dbToUiType(opportunity.type);
+
+
+    String selectedApplicationMethod = opportunity.applicationMethod;
+
 
     showDialog(
       context: context,
@@ -934,15 +974,16 @@ final editCompanyController =
                       isDark,
                     ),
                     const SizedBox(height: 16),
-                    
+
                     _buildDropdownField(
-                      'Status',
-                      selectedStatus,
-                      ['Active', 'Inactive', 'Closed'],
-                      (value) => setState(() => selectedStatus = value!),
+                      'Application Method',
+                      selectedApplicationMethod,
+                      ['INTERNAL', 'EXTERNAL'],
+                      (value) => setState(() => selectedApplicationMethod = value!),
                       isDark,
                     ),
-                    const SizedBox(height: 16),
+
+                   const SizedBox(height: 16),
                     
                     _buildFormField(
                       'Deadline',
@@ -981,10 +1022,10 @@ final editCompanyController =
                           onPressed: () {
                             _updateOpportunity(
                               opportunity.id,
-                              titleController.text,
-                              companyController.text,
-                              selectedType,
-                              selectedStatus,
+                              editTitleController.text,
+                              editCompanyController.text,
+                              uiToDbType(selectedType),
+                              selectedApplicationMethod,
                               deadlineController.text,
                               descriptionController.text,
                             );
@@ -1016,7 +1057,7 @@ final editCompanyController =
     String title,
     String company,
     String type,
-    String status,
+    String applicationMethod,
     String deadline,
     String description,
   ) {
@@ -1029,15 +1070,18 @@ final editCompanyController =
       final index = _opportunities.indexWhere((opp) => opp.id == id);
       if (index != -1) {
         _opportunities[index] = Opportunity(
-          id: id,
-          title: title,
-          company: company,
-          type: type,
-          status: status,
-          applicants: _opportunities[index].applicants, // Keep existing applicants
-          posted: _opportunities[index].posted, // Keep original posted date
-          deadline: DateTime.tryParse(deadline) ?? _opportunities[index].deadline,
-        );
+        id: id,
+        title: title,
+        company: company,
+        type: type,
+        applicationMethod: applicationMethod,
+        targetAudience: _opportunities[index].targetAudience,
+        externalApplyUrl: _opportunities[index].externalApplyUrl,
+        applicants: _opportunities[index].applicants,
+        posted: _opportunities[index].posted,
+        deadline: DateTime.tryParse(deadline) ?? _opportunities[index].deadline,
+      );
+
       }
     });
   }
