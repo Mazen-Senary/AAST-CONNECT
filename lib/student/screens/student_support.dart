@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/theme_provider.dart';
 
 class StudentSupport extends StatelessWidget {
-  final VoidCallback toggleTheme;
-  final bool isDark;
-
-  const StudentSupport({super.key, required this.toggleTheme, required this.isDark});
+  const StudentSupport({super.key});
 
   // ================= MODAL HELPERS =================
 
@@ -15,9 +14,9 @@ class StudentSupport extends StatelessWidget {
       backgroundColor: Colors.transparent,
       builder: (context) => Container(
         height: MediaQuery.of(context).size.height * 0.85,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surface,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.all(25),
         child: Column(
@@ -26,7 +25,10 @@ class StudentSupport extends StatelessWidget {
               children: [
                 CircleAvatar(
                   backgroundColor: Colors.blue.shade50,
-                  child: const Icon(Icons.smart_toy_outlined, color: Colors.blue),
+                  child: const Icon(
+                    Icons.smart_toy_outlined,
+                    color: Colors.blue,
+                  ),
                 ),
                 const SizedBox(width: 15),
                 const Column(
@@ -34,7 +36,10 @@ class StudentSupport extends StatelessWidget {
                   children: [
                     Text(
                       "FAQ Assistant",
-                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                      ),
                     ),
                     Text(
                       "Online",
@@ -57,10 +62,10 @@ class StudentSupport extends StatelessWidget {
                     "Hi! I'm here to help you with questions about AAST Connect. You can ask me about training hours, applications, documents, and system features.",
                   ),
                   const SizedBox(height: 20),
-                  const Text(
+                  Text(
                     "Frequently Asked Questions:",
                     style: TextStyle(
-                      color: Colors.black,
+                      color: Theme.of(context).colorScheme.onSurface,
                       fontWeight: FontWeight.bold,
                       fontSize: 16,
                     ),
@@ -147,17 +152,18 @@ class StudentSupport extends StatelessWidget {
         children: [
           Padding(
             padding: const EdgeInsets.all(16),
-            child: Text(
-              answer,
-              style: const TextStyle(height: 1.5),
-            ),
+            child: Text(answer, style: const TextStyle(height: 1.5)),
           ),
         ],
       ),
     );
   }
 
-  void _showInfoModal(BuildContext context, String title, List<Widget> children) {
+  void _showInfoModal(
+    BuildContext context,
+    String title,
+    List<Widget> children,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -175,10 +181,7 @@ class StudentSupport extends StatelessWidget {
         content: SizedBox(
           width: double.maxFinite,
           child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: children,
-            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: children),
           ),
         ),
       ),
@@ -190,26 +193,38 @@ class StudentSupport extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF9F9F9),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        title: const Text(
+        title: Text(
           "AAST Connect",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 22),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
         ),
         actions: [
           IconButton(
-            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined, 
-                       color: const Color(0xFF284B8C)),
-            onPressed: toggleTheme,
+            icon: Icon(
+              Provider.of<ThemeProvider>(context).isDark
+                  ? Icons.light_mode_outlined
+                  : Icons.dark_mode_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            onPressed: () {
+              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+            },
           ),
           TextButton.icon(
             onPressed: () {},
             icon: const Icon(Icons.logout, color: Colors.grey, size: 18),
-            label: const Text(
+            label: Text(
               "Logout",
-              style: TextStyle(color: Colors.grey),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              ),
             ),
           ),
         ],
@@ -219,13 +234,20 @@ class StudentSupport extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "Help & Support",
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 28,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
-            const Text(
+            Text(
               "Find answers and get assistance",
-              style: TextStyle(color: Colors.grey, fontSize: 16),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+                fontSize: 16,
+              ),
             ),
             const SizedBox(height: 25),
 
@@ -256,26 +278,36 @@ class StudentSupport extends StatelessWidget {
             ),
 
             const SizedBox(height: 30),
-            const Text(
+            Text(
               "Contact Us",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 15),
             _buildContactTile(
+              context,
               "Email Support",
               "training@aast.edu",
               Icons.email_outlined,
             ),
             _buildContactTile(
+              context,
               "Phone Support",
               "+20 2 2622 8888",
               Icons.phone_outlined,
             ),
 
             const SizedBox(height: 30),
-            const Text(
+            Text(
               "Resources",
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const SizedBox(height: 15),
             _buildResourceTile(
@@ -306,12 +338,18 @@ class StudentSupport extends StatelessWidget {
 
   void _showUserGuide(BuildContext context) {
     _showInfoModal(context, "User Guide", [
-      _guideItem("Create and update your user profile with academic and contact information"),
+      _guideItem(
+        "Create and update your user profile with academic and contact information",
+      ),
       _guideItem("Upload CVs and supporting documents in PDF or image formats"),
-      _guideItem("Browse training and job opportunities using filters and search"),
+      _guideItem(
+        "Browse training and job opportunities using filters and search",
+      ),
       _guideItem("Apply for opportunities by completing application forms"),
       _guideItem("Track application status in your dashboard"),
-      _guideItem("Submit training hours with certificates and supervisor details"),
+      _guideItem(
+        "Submit training hours with certificates and supervisor details",
+      ),
       _guideItem("Monitor training hour approvals and feedback"),
     ]);
   }
@@ -338,9 +376,18 @@ class StudentSupport extends StatelessWidget {
 
   void _showGuidelines(BuildContext context) {
     _showInfoModal(context, "Training Guidelines", [
-      _guideStep("1", "All training hours require official university approval before being counted"),
-      _guideStep("2", "Official training certificates must be uploaded with each submission"),
-      _guideStep("3", "Incomplete or invalid submissions may be rejected with feedback"),
+      _guideStep(
+        "1",
+        "All training hours require official university approval before being counted",
+      ),
+      _guideStep(
+        "2",
+        "Official training certificates must be uploaded with each submission",
+      ),
+      _guideStep(
+        "3",
+        "Incomplete or invalid submissions may be rejected with feedback",
+      ),
     ]);
   }
 
@@ -407,24 +454,26 @@ class StudentSupport extends StatelessWidget {
               title,
               style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
             ),
-            Text(
-              sub,
-              style: const TextStyle(fontSize: 12),
-            ),
+            Text(sub, style: const TextStyle(fontSize: 12)),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildContactTile(String title, String info, IconData icon) {
+  Widget _buildContactTile(
+    BuildContext context,
+    String title,
+    String info,
+    IconData icon,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         children: [
@@ -438,7 +487,12 @@ class StudentSupport extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                style: TextStyle(
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.6),
+                  fontSize: 12,
+                ),
               ),
               Text(
                 info,
@@ -466,9 +520,9 @@ class StudentSupport extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 12),
         padding: const EdgeInsets.all(15),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: Theme.of(context).colorScheme.surface,
           borderRadius: BorderRadius.circular(15),
-          border: Border.all(color: Colors.grey.shade200),
+          border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           children: [
@@ -476,14 +530,13 @@ class StudentSupport extends StatelessWidget {
             const SizedBox(width: 15),
             Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.w500, color: Colors.black87),
+              style: TextStyle(
+                fontWeight: FontWeight.w500,
+                color: Theme.of(context).colorScheme.onSurface,
+              ),
             ),
             const Spacer(),
-            const Icon(
-              Icons.open_in_new,
-              size: 16,
-              color: Colors.grey,
-            ),
+            const Icon(Icons.open_in_new, size: 16, color: Colors.grey),
           ],
         ),
       ),

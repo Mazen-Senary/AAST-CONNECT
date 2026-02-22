@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/theme_provider.dart';
 
 class StudentHome extends StatelessWidget {
   final VoidCallback onSeeAll;
-  final VoidCallback toggleTheme;
-  final bool isDark;
 
-  const StudentHome({
-    super.key, 
-    required this.onSeeAll, 
-    required this.toggleTheme,
-    required this.isDark,
-  });
+  const StudentHome({super.key, required this.onSeeAll});
 
   void _showApplyModal(BuildContext context, String title) {
     showModalBottomSheet(
@@ -74,7 +69,12 @@ class StudentHome extends StatelessWidget {
     );
   }
 
-  void _showDetailsModal(BuildContext context, String title, String company, String hours) {
+  void _showDetailsModal(
+    BuildContext context,
+    String title,
+    String company,
+    String hours,
+  ) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -93,7 +93,10 @@ class StudentHome extends StatelessWidget {
                 Expanded(
                   child: Text(
                     title,
-                    style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 IconButton(
@@ -107,7 +110,7 @@ class StudentHome extends StatelessWidget {
               style: const TextStyle(fontSize: 18, color: Colors.grey),
             ),
             const SizedBox(height: 20),
-            
+
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -130,9 +133,9 @@ class StudentHome extends StatelessWidget {
                 ],
               ),
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             const Text(
               'Description',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -141,9 +144,9 @@ class StudentHome extends StatelessWidget {
             const Text(
               'This comprehensive training program is designed to help students gain practical skills and industry experience. You will work on real-world projects under the guidance of experienced mentors.',
             ),
-            
+
             const SizedBox(height: 20),
-            
+
             const Text(
               'Requirements',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
@@ -152,9 +155,9 @@ class StudentHome extends StatelessWidget {
             const Text('• Basic programming knowledge'),
             const Text('• Currently enrolled student'),
             const Text('• Good academic standing'),
-            
+
             const SizedBox(height: 20),
-            
+
             Row(
               children: [
                 const Icon(Icons.calendar_today, size: 16, color: Colors.grey),
@@ -162,9 +165,9 @@ class StudentHome extends StatelessWidget {
                 const Text('Start Date: Flexible'),
               ],
             ),
-            
+
             const Spacer(),
-            
+
             Row(
               children: [
                 Expanded(
@@ -235,13 +238,55 @@ class StudentHome extends StatelessWidget {
             Expanded(
               child: ListView(
                 children: [
-                  _buildDeadlineCard("Database Management", "Feb 10", "30h", false),
-                  _buildDeadlineCard("Mobile App Dev", "Feb 18", "40h", false),
-                  _buildDeadlineCard("Python for Data Science", "Feb 25", "50h", false),
-                  _buildDeadlineCard("Web Development", "Mar 2", "60h", false),
-                  _buildDeadlineCard("Cybersecurity Workshop", "Mar 10", "25h", true),
-                  _buildDeadlineCard("UI/UX Design Project", "Mar 15", "45h", false),
-                  _buildDeadlineCard("Backend Development", "Mar 22", "70h", true),
+                  _buildDeadlineCard(
+                    context,
+                    "Database Management",
+                    "Feb 10",
+                    "30h",
+                    false,
+                  ),
+                  _buildDeadlineCard(
+                    context,
+                    "Mobile App Dev",
+                    "Feb 18",
+                    "40h",
+                    false,
+                  ),
+                  _buildDeadlineCard(
+                    context,
+                    "Python for Data Science",
+                    "Feb 25",
+                    "50h",
+                    false,
+                  ),
+                  _buildDeadlineCard(
+                    context,
+                    "Web Development",
+                    "Mar 2",
+                    "60h",
+                    false,
+                  ),
+                  _buildDeadlineCard(
+                    context,
+                    "Cybersecurity Workshop",
+                    "Mar 10",
+                    "25h",
+                    true,
+                  ),
+                  _buildDeadlineCard(
+                    context,
+                    "UI/UX Design Project",
+                    "Mar 15",
+                    "45h",
+                    false,
+                  ),
+                  _buildDeadlineCard(
+                    context,
+                    "Backend Development",
+                    "Mar 22",
+                    "70h",
+                    true,
+                  ),
                 ],
               ),
             ),
@@ -251,14 +296,20 @@ class StudentHome extends StatelessWidget {
     );
   }
 
-  Widget _buildDeadlineCard(String title, String date, String hours, bool isUrgent) {
+  Widget _buildDeadlineCard(
+    BuildContext context,
+    String title,
+    String date,
+    String hours,
+    bool isUrgent,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -268,18 +319,26 @@ class StudentHome extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.black87),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
               ),
               Row(
                 children: [
                   Text(
                     "Due: $date",
-                    style: TextStyle(color: isUrgent ? Colors.red : Colors.grey),
+                    style: TextStyle(
+                      color: isUrgent ? Colors.red : Colors.grey,
+                    ),
                   ),
                   if (isUrgent) ...[
                     const SizedBox(width: 8),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 6,
+                        vertical: 2,
+                      ),
                       decoration: BoxDecoration(
                         color: Colors.red.shade50,
                         borderRadius: BorderRadius.circular(4),
@@ -297,13 +356,13 @@ class StudentHome extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: const Color(0xFFD6E2F2),
+              color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
               borderRadius: BorderRadius.circular(12),
             ),
             child: Text(
               hours,
-              style: const TextStyle(
-                color: Color(0xFF284B8C),
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
                 fontWeight: FontWeight.bold,
               ),
             ),
@@ -316,29 +375,36 @@ class StudentHome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF9F9F9),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        title: const Text(
+        title: Text(
           "AAST Connect",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 22),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+            fontSize: 22,
+          ),
         ),
         actions: [
           IconButton(
-            icon: Icon(isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined, 
-                       color: const Color(0xFF284B8C)),
-            onPressed: toggleTheme,
+            icon: Icon(
+              Provider.of<ThemeProvider>(context).isDark
+                  ? Icons.light_mode_outlined
+                  : Icons.dark_mode_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            onPressed: () {
+              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+            },
           ),
           TextButton.icon(
             onPressed: () {
               // Add logout logic
             },
             icon: const Icon(Icons.logout, color: Colors.grey, size: 18),
-            label: const Text(
-              "Logout",
-              style: TextStyle(color: Colors.grey),
-            ),
+            label: Text("Logout", style: TextStyle(color: Colors.grey)),
           ),
           const SizedBox(width: 5),
         ],
@@ -350,21 +416,26 @@ class StudentHome extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   "Hello, Sarah 👋",
-                  style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.black87),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineLarge?.copyWith(fontSize: 28),
                 ),
-                const Text(
+                Text(
                   "Let's continue your learning journey",
-                  style: TextStyle(color: Colors.grey, fontSize: 16),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontSize: 16),
                 ),
                 const SizedBox(height: 25),
-                _buildProgressCard(),
+                _buildProgressCard(context),
                 const SizedBox(height: 25),
                 Row(
                   children: [
                     Expanded(
                       child: _buildStatCard(
+                        context,
                         const Color(0xffF2C6C6),
                         "2",
                         "Pending",
@@ -374,6 +445,7 @@ class StudentHome extends StatelessWidget {
                     const SizedBox(width: 15),
                     Expanded(
                       child: _buildStatCard(
+                        context,
                         const Color(0xffCFE3CF),
                         "5",
                         "Completed",
@@ -384,14 +456,28 @@ class StudentHome extends StatelessWidget {
                 ),
                 const SizedBox(height: 30),
                 _buildSectionHeader(
+                  context,
                   "Upcoming Deadlines",
                   "View all",
                   () => _showAllDeadlines(context),
                 ),
-                _buildDeadlineCard("Database Management", "Feb 10", "30h", false),
-                _buildDeadlineCard("Mobile App Dev", "Feb 18", "40h", true),
+                _buildDeadlineCard(
+                  context,
+                  "Database Management",
+                  "Feb 10",
+                  "30h",
+                  false,
+                ),
+                _buildDeadlineCard(
+                  context,
+                  "Mobile App Dev",
+                  "Feb 18",
+                  "40h",
+                  true,
+                ),
                 const SizedBox(height: 30),
                 _buildSectionHeader(
+                  context,
                   "Available Programs",
                   "See all",
                   onSeeAll,
@@ -417,7 +503,7 @@ class StudentHome extends StatelessWidget {
     );
   }
 
-  Widget _buildProgressCard() {
+  Widget _buildProgressCard(BuildContext context) {
     double completedHours = 80;
     double totalHours = 720;
     double percentage = (completedHours / totalHours) * 100;
@@ -432,7 +518,7 @@ class StudentHome extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
@@ -440,7 +526,7 @@ class StudentHome extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -451,17 +537,19 @@ class StudentHome extends StatelessWidget {
             children: [
               Text(
                 "$completedHours of $totalHours hours completed",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 14,
-                  color: Colors.black54,
+                  color: Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withOpacity(0.7),
                 ),
               ),
               Text(
                 "${percentage.toStringAsFixed(1)}%",
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black87,
+                  color: Theme.of(context).colorScheme.onSurface,
                 ),
               ),
             ],
@@ -479,9 +567,9 @@ class StudentHome extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             "${remainingHours.toStringAsFixed(0)} hours remaining",
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 12,
-              color: Colors.black54,
+              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -491,6 +579,7 @@ class StudentHome extends StatelessWidget {
   }
 
   Widget _buildStatCard(
+    BuildContext context,
     Color color,
     String number,
     String label,
@@ -505,26 +594,24 @@ class StudentHome extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 28, color: Colors.black87),
+          Icon(icon, size: 28, color: Theme.of(context).colorScheme.onSurface),
           const SizedBox(height: 10),
           Text(
             number,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 30,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          Text(
-            label,
-            style: const TextStyle(color: Colors.black54),
-          ),
+          Text(label, style: Theme.of(context).textTheme.bodyMedium),
         ],
       ),
     );
   }
 
   Widget _buildSectionHeader(
+    BuildContext context,
     String title,
     String action,
     VoidCallback tap,
@@ -536,14 +623,13 @@ class StudentHome extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black87),
+            style: Theme.of(
+              context,
+            ).textTheme.headlineMedium?.copyWith(fontSize: 20),
           ),
           GestureDetector(
             onTap: tap,
-            child: Text(
-              "$action →",
-              style: const TextStyle(color: Colors.blueGrey),
-            ),
+            child: Text("$action →", style: TextStyle(color: Colors.blueGrey)),
           ),
         ],
       ),
@@ -560,47 +646,41 @@ class StudentHome extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 15),
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: Colors.black87,
+              color: Theme.of(context).colorScheme.onSurface,
             ),
           ),
-          Text(
-            subtitle,
-            style: const TextStyle(color: Colors.grey),
-          ),
+          Text(subtitle, style: Theme.of(context).textTheme.bodyMedium),
           const SizedBox(height: 15),
           Row(
             children: [
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD6E2F2),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
-                child: const Text(
+                child: Text(
                   "Training",
                   style: TextStyle(
-                    color: Color(0xFF284B8C),
+                    color: Theme.of(context).colorScheme.primary,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
               const SizedBox(width: 10),
-              Text(
-                hours,
-                style: const TextStyle(color: Colors.grey),
-              ),
+              Text(hours, style: Theme.of(context).textTheme.bodyMedium),
             ],
           ),
           const SizedBox(height: 20),
@@ -608,7 +688,8 @@ class StudentHome extends StatelessWidget {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => _showDetailsModal(context, title, subtitle, hours),
+                  onPressed: () =>
+                      _showDetailsModal(context, title, subtitle, hours),
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
                     side: const BorderSide(color: Color(0xFF284B8C)),
@@ -629,7 +710,10 @@ class StudentHome extends StatelessWidget {
                   onPressed: () => _showApplyModal(context, title),
                   child: const Text(
                     "Apply Now",
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
               ),

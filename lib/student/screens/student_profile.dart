@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/theme_provider.dart';
 
 class StudentProfile extends StatelessWidget {
   const StudentProfile({super.key});
@@ -30,7 +32,7 @@ class StudentProfile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 20),
-            
+
             // Profile Header with Initials (fixed)
             Row(
               children: [
@@ -58,7 +60,10 @@ class StudentProfile extends StatelessWidget {
                   children: [
                     Text(
                       "Sarah Johnson",
-                      style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     Text(
                       "ID: 3333333333",
@@ -68,9 +73,9 @@ class StudentProfile extends StatelessWidget {
                 ),
               ],
             ),
-            
+
             const Divider(height: 40),
-            
+
             // Scrollable content area
             Expanded(
               child: SingleChildScrollView(
@@ -80,48 +85,63 @@ class StudentProfile extends StatelessWidget {
                     // Basic Information
                     const Text(
                       "Basic Information",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 15),
-                    
+
                     _buildEditField("First Name", "Sarah"),
                     _buildEditField("Last Name", "Johnson"),
                     _buildEditField("Email", "sarah.johnson@aast.edu"),
                     _buildEditField("Phone Number", "+20 123 456 7890"),
-                    
+
                     const SizedBox(height: 25),
-                    
+
                     // Academic Information
                     const Text(
                       "Academic Information",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 15),
-                    
+
                     Row(
                       children: [
-                        Expanded(child: _buildEditField("Major", "Computer Science")),
+                        Expanded(
+                          child: _buildEditField("Major", "Computer Science"),
+                        ),
                         const SizedBox(width: 15),
-                        Expanded(child: _buildEditField("Academic Year", "2024")),
+                        Expanded(
+                          child: _buildEditField("Academic Year", "2024"),
+                        ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 15),
-                    
+
                     Row(
                       children: [
                         Expanded(child: _buildEditField("GPA", "3.8")),
                         const SizedBox(width: 15),
-                        Expanded(child: _buildEditField("Year Level", "Junior")),
+                        Expanded(
+                          child: _buildEditField("Year Level", "Junior"),
+                        ),
                       ],
                     ),
-                    
+
                     const SizedBox(height: 25),
-                    
+
                     // Bio
                     const Text(
                       "Bio",
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 10),
                     Container(
@@ -136,14 +156,14 @@ class StudentProfile extends StatelessWidget {
                         style: TextStyle(fontSize: 14, height: 1.5),
                       ),
                     ),
-                    
+
                     // Add extra space at the bottom for comfortable scrolling
                     const SizedBox(height: 30),
                   ],
                 ),
               ),
             ),
-            
+
             // Save Button (fixed at bottom)
             SizedBox(
               width: double.infinity,
@@ -175,10 +195,7 @@ class StudentProfile extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: const TextStyle(color: Colors.grey, fontSize: 12),
-          ),
+          Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
           const SizedBox(height: 5),
           Container(
             width: double.infinity,
@@ -188,10 +205,7 @@ class StudentProfile extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
               border: Border.all(color: Colors.grey.shade200),
             ),
-            child: Text(
-              value,
-              style: const TextStyle(fontSize: 14),
-            ),
+            child: Text(value, style: const TextStyle(fontSize: 14)),
           ),
         ],
       ),
@@ -199,409 +213,519 @@ class StudentProfile extends StatelessWidget {
   }
 
   void _showSkillsModal(BuildContext context) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
-  
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
-    ),
-    builder: (context) => Container(
-      height: MediaQuery.of(context).size.height * 0.9,
-      decoration: BoxDecoration(
-        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      child: Column(
-        children: [
-          // Fixed Header
-          Padding(
-            padding: const EdgeInsets.all(25),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text(
-                  "Skills & Interests",
-                  style: TextStyle(
-                    fontSize: 24, 
-                    fontWeight: FontWeight.bold,
-                    color: isDark ? Colors.white : Colors.black,
-                  ),
-                ),
-                IconButton(
-                  icon: Icon(Icons.close, color: isDark ? Colors.white : Colors.black),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-          ),
-
-          // Scrollable Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 25),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      builder: (context) => Container(
+        height: MediaQuery.of(context).size.height * 0.9,
+        decoration: BoxDecoration(
+          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        ),
+        child: Column(
+          children: [
+            // Fixed Header
+            Padding(
+              padding: const EdgeInsets.all(25),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  // Skills Section
                   Text(
-                    "Skills",
+                    "Skills & Interests",
                     style: TextStyle(
-                      fontSize: 20,
+                      fontSize: 24,
                       fontWeight: FontWeight.bold,
                       color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
-                  const SizedBox(height: 15),
-
-                  // Add new skill form
-                  Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2C2C2C) : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(15),
-                      border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-                    ),
-                    child: Column(
-                      children: [
-                        TextField(
-                          decoration: InputDecoration(
-                            hintText: "Add a new skill...",
-                            hintStyle: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey),
-                            border: InputBorder.none,
-                          ),
-                          style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                        ),
-                        const SizedBox(height: 15),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF3C3C3C) : Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Category",
-                                      style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey),
-                                    ),
-                                    Icon(Icons.arrow_drop_down, color: isDark ? Colors.grey.shade400 : Colors.grey),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF3C3C3C) : Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Level",
-                                      style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey),
-                                    ),
-                                    Icon(Icons.arrow_drop_down, color: isDark ? Colors.grey.shade400 : Colors.grey),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 10),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF3C3C3C) : Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Technical",
-                                      style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey),
-                                    ),
-                                    Icon(Icons.arrow_drop_down, color: isDark ? Colors.grey.shade400 : Colors.grey),
-                                  ],
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: isDark ? const Color(0xFF3C3C3C) : Colors.white,
-                                  borderRadius: BorderRadius.circular(8),
-                                  border: Border.all(color: isDark ? Colors.grey.shade700 : Colors.grey.shade300),
-                                ),
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Text(
-                                      "Beginner",
-                                      style: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey),
-                                    ),
-                                    Icon(Icons.arrow_drop_down, color: isDark ? Colors.grey.shade400 : Colors.grey),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 15),
-                        SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: () {},
-                            icon: const Icon(Icons.add),
-                            label: const Text("Add Skill"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF284B8C),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  // Technical Skills
-                  Text(
-                    "Technical Skills",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                  IconButton(
+                    icon: Icon(
+                      Icons.close,
                       color: isDark ? Colors.white : Colors.black,
                     ),
+                    onPressed: () => Navigator.pop(context),
                   ),
-                  const SizedBox(height: 10),
-                  _buildSkillChip("React", "Advanced", isDark),
-                  _buildSkillChip("TypeScript", "Intermediate", isDark),
-                  _buildSkillChip("Python", "Advanced", isDark),
-
-                  const SizedBox(height: 20),
-
-                  // Soft Skills
-                  Text(
-                    "Soft Skills",
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 10),
-                  _buildSkillChip("Communication", "Advanced", isDark),
-                  _buildSkillChip("Team Leadership", "Intermediate", isDark),
-
-                  const SizedBox(height: 25),
-
-                  // Interests Section
-                  Text(
-                    "Interests",
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-
-                  // Add interest field
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 15),
-                    decoration: BoxDecoration(
-                      color: isDark ? const Color(0xFF2C2C2C) : Colors.grey.shade50,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-                    ),
-                    child: TextField(
-                      decoration: InputDecoration(
-                        hintText: "Add an interest...",
-                        hintStyle: TextStyle(color: isDark ? Colors.grey.shade400 : Colors.grey),
-                        border: InputBorder.none,
-                        suffixIcon: IconButton(
-                          icon: Icon(Icons.add, color: const Color(0xFF284B8C)),
-                          onPressed: () {},
-                        ),
-                      ),
-                      style: TextStyle(color: isDark ? Colors.white : Colors.black),
-                    ),
-                  ),
-                  const SizedBox(height: 15),
-
-                  // Interest chips
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: [
-                      _buildInterestChip("Web Development", isDark),
-                      _buildInterestChip("Machine Learning", isDark),
-                      _buildInterestChip("UI/UX Design", isDark),
-                      _buildInterestChip("Cloud Computing", isDark),
-                    ],
-                  ),
-
-                  const SizedBox(height: 25),
-
-                  // Improve Profile Tip
-                  Container(
-                    padding: const EdgeInsets.all(15),
-                    decoration: BoxDecoration(
-                      color: isDark 
-                        ? const Color(0xFF284B8C).withOpacity(0.2)
-                        : const Color(0xFFD6E2F2).withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFF284B8C).withOpacity(0.3)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.lightbulb_outline, 
-                          color: isDark ? Colors.white : const Color(0xFF284B8C)
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            "Improve Your Profile\nAdding skills and interests helps match you with relevant opportunities and training programs.",
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                              height: 1.4,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 30), // Extra space at bottom
                 ],
               ),
             ),
-          ),
 
-          // Fixed Done Button at Bottom
-          Padding(
-            padding: const EdgeInsets.all(25),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF284B8C),
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
+            // Scrollable Content
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 25),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Skills Section
+                    Text(
+                      "Skills",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Add new skill form
+                    Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF2C2C2C)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(15),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade200,
+                        ),
+                      ),
+                      child: Column(
+                        children: [
+                          TextField(
+                            decoration: InputDecoration(
+                              hintText: "Add a new skill...",
+                              hintStyle: TextStyle(
+                                color: isDark
+                                    ? Colors.grey.shade400
+                                    : Colors.grey,
+                              ),
+                              border: InputBorder.none,
+                            ),
+                            style: TextStyle(
+                              color: isDark ? Colors.white : Colors.black,
+                            ),
+                          ),
+                          const SizedBox(height: 15),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF3C3C3C)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Category",
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.grey.shade400
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_drop_down,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF3C3C3C)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Level",
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.grey.shade400
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_drop_down,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF3C3C3C)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Technical",
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.grey.shade400
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_drop_down,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 8,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: isDark
+                                        ? const Color(0xFF3C3C3C)
+                                        : Colors.white,
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: isDark
+                                          ? Colors.grey.shade700
+                                          : Colors.grey.shade300,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Text(
+                                        "Beginner",
+                                        style: TextStyle(
+                                          color: isDark
+                                              ? Colors.grey.shade400
+                                              : Colors.grey,
+                                        ),
+                                      ),
+                                      Icon(
+                                        Icons.arrow_drop_down,
+                                        color: isDark
+                                            ? Colors.grey.shade400
+                                            : Colors.grey,
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 15),
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: () {},
+                              icon: const Icon(Icons.add),
+                              label: const Text("Add Skill"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF284B8C),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    // Technical Skills
+                    Text(
+                      "Technical Skills",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildSkillChip("React", "Advanced", isDark),
+                    _buildSkillChip("TypeScript", "Intermediate", isDark),
+                    _buildSkillChip("Python", "Advanced", isDark),
+
+                    const SizedBox(height: 20),
+
+                    // Soft Skills
+                    Text(
+                      "Soft Skills",
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    _buildSkillChip("Communication", "Advanced", isDark),
+                    _buildSkillChip("Team Leadership", "Intermediate", isDark),
+
+                    const SizedBox(height: 25),
+
+                    // Interests Section
+                    Text(
+                      "Interests",
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black,
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Add interest field
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 15),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF2C2C2C)
+                            : Colors.grey.shade50,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: isDark
+                              ? Colors.grey.shade800
+                              : Colors.grey.shade200,
+                        ),
+                      ),
+                      child: TextField(
+                        decoration: InputDecoration(
+                          hintText: "Add an interest...",
+                          hintStyle: TextStyle(
+                            color: isDark ? Colors.grey.shade400 : Colors.grey,
+                          ),
+                          border: InputBorder.none,
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              Icons.add,
+                              color: const Color(0xFF284B8C),
+                            ),
+                            onPressed: () {},
+                          ),
+                        ),
+                        style: TextStyle(
+                          color: isDark ? Colors.white : Colors.black,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 15),
+
+                    // Interest chips
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        _buildInterestChip("Web Development", isDark),
+                        _buildInterestChip("Machine Learning", isDark),
+                        _buildInterestChip("UI/UX Design", isDark),
+                        _buildInterestChip("Cloud Computing", isDark),
+                      ],
+                    ),
+
+                    const SizedBox(height: 25),
+
+                    // Improve Profile Tip
+                    Container(
+                      padding: const EdgeInsets.all(15),
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? const Color(0xFF284B8C).withOpacity(0.2)
+                            : const Color(0xFFD6E2F2).withOpacity(0.3),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: const Color(0xFF284B8C).withOpacity(0.3),
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(
+                            Icons.lightbulb_outline,
+                            color: isDark
+                                ? Colors.white
+                                : const Color(0xFF284B8C),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              "Improve Your Profile\nAdding skills and interests helps match you with relevant opportunities and training programs.",
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: isDark
+                                    ? Colors.grey.shade300
+                                    : Colors.grey.shade700,
+                                height: 1.4,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 30), // Extra space at bottom
+                  ],
+                ),
+              ),
+            ),
+
+            // Fixed Done Button at Bottom
+            Padding(
+              padding: const EdgeInsets.all(25),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF284B8C),
+                    padding: const EdgeInsets.symmetric(vertical: 15),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text(
+                    "Done",
+                    style: TextStyle(color: Colors.white, fontSize: 16),
                   ),
                 ),
-                onPressed: () => Navigator.pop(context),
-                child: const Text(
-                  "Done",
-                  style: TextStyle(color: Colors.white, fontSize: 16),
-                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // Helper widgets (keep these outside the function)
+  Widget _buildSkillChip(String skill, String level, bool isDark) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(
+          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+        ),
+      ),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Text(
+            skill,
+            style: TextStyle(
+              fontWeight: FontWeight.w500,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+            decoration: BoxDecoration(
+              color: level == "Advanced"
+                  ? Colors.green.shade100
+                  : level == "Intermediate"
+                  ? Colors.orange.shade100
+                  : Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Text(
+              level,
+              style: TextStyle(
+                fontSize: 11,
+                color: level == "Advanced"
+                    ? Colors.green.shade800
+                    : level == "Intermediate"
+                    ? Colors.orange.shade800
+                    : Colors.blue.shade800,
               ),
             ),
           ),
         ],
       ),
-    ),
-  );
-}
+    );
+  }
 
-// Helper widgets (keep these outside the function)
-Widget _buildSkillChip(String skill, String level, bool isDark) {
-  return Container(
-    margin: const EdgeInsets.only(bottom: 8),
-    padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-    decoration: BoxDecoration(
-      color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: isDark ? Colors.grey.shade800 : Colors.grey.shade200),
-    ),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Text(
-          skill,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: isDark ? Colors.white : Colors.black87,
-          ),
-        ),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-          decoration: BoxDecoration(
-            color: level == "Advanced" 
-                ? Colors.green.shade100 
-                : level == "Intermediate"
-                    ? Colors.orange.shade100
-                    : Colors.blue.shade100,
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Text(
-            level,
-            style: TextStyle(
-              fontSize: 11,
-              color: level == "Advanced" 
-                  ? Colors.green.shade800 
-                  : level == "Intermediate"
-                      ? Colors.orange.shade800
-                      : Colors.blue.shade800,
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildInterestChip(String interest, bool isDark) {
-  return Container(
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-    decoration: BoxDecoration(
-      color: isDark 
-        ? const Color(0xFF284B8C).withOpacity(0.2)
-        : const Color(0xFF284B8C).withOpacity(0.1),
-      borderRadius: BorderRadius.circular(20),
-      border: Border.all(color: const Color(0xFF284B8C).withOpacity(0.3)),
-    ),
-    child: Text(
-      interest,
-      style: TextStyle(
-        color: isDark ? Colors.white : const Color(0xFF284B8C),
-        fontWeight: FontWeight.w500,
+  Widget _buildInterestChip(String interest, bool isDark) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isDark
+            ? const Color(0xFF284B8C).withOpacity(0.2)
+            : const Color(0xFF284B8C).withOpacity(0.1),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: const Color(0xFF284B8C).withOpacity(0.3)),
       ),
-    ),
-  );
-}
+      child: Text(
+        interest,
+        style: TextStyle(
+          color: isDark ? Colors.white : const Color(0xFF284B8C),
+          fontWeight: FontWeight.w500,
+        ),
+      ),
+    );
+  }
 
   void _showDocumentsModal(BuildContext context) {
     final List<Map<String, String>> documents = [
-      {
-        "name": "Resume_Sarah_Johnson.pdf",
-        "date": "CV • Jan 15",
-        "type": "CV",
-      },
+      {"name": "Resume_Sarah_Johnson.pdf", "date": "CV • Jan 15", "type": "CV"},
       {
         "name": "Python_Certificate.pdf",
         "date": "Certificate • Jan 10",
@@ -688,17 +812,25 @@ Widget _buildInterestChip(String interest, bool isDark) {
                             children: [
                               Text(
                                 documents[index]['name']!,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               Text(
                                 documents[index]['date']!,
-                                style: const TextStyle(color: Colors.grey, fontSize: 12),
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
                               ),
                             ],
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                          ),
                           onPressed: () {},
                         ),
                       ],
@@ -817,8 +949,8 @@ Widget _buildInterestChip(String interest, bool isDark) {
                             links[index]['type'] == 'GitHub'
                                 ? Icons.code
                                 : links[index]['type'] == 'LinkedIn'
-                                    ? Icons.work
-                                    : Icons.link,
+                                ? Icons.work
+                                : Icons.link,
                             color: const Color(0xFF284B8C),
                           ),
                         ),
@@ -829,7 +961,9 @@ Widget _buildInterestChip(String interest, bool isDark) {
                             children: [
                               Text(
                                 links[index]['title']!,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                               Text(
                                 links[index]['url']!,
@@ -842,7 +976,10 @@ Widget _buildInterestChip(String interest, bool isDark) {
                           ),
                         ),
                         IconButton(
-                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          icon: const Icon(
+                            Icons.delete_outline,
+                            color: Colors.red,
+                          ),
                           onPressed: () {},
                         ),
                       ],
@@ -937,7 +1074,10 @@ Widget _buildInterestChip(String interest, bool isDark) {
                         ),
                         Text(
                           "PDF or Image (Max 5MB)",
-                          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                          style: TextStyle(
+                            color: Colors.grey.shade600,
+                            fontSize: 12,
+                          ),
                         ),
                       ],
                     ),
@@ -978,7 +1118,11 @@ Widget _buildInterestChip(String interest, bool isDark) {
     );
   }
 
-  void _showSavedProgramDetails(BuildContext context, String title, String company) {
+  void _showSavedProgramDetails(
+    BuildContext context,
+    String title,
+    String company,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -1025,20 +1169,33 @@ Widget _buildInterestChip(String interest, bool isDark) {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xffF9F9F9),
+      backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        title: const Text(
+        title: Text(
           "AAST Connect",
-          style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+          style: TextStyle(
+            color: Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.dark_mode_outlined, color: Color(0xFF284B8C)),
-            onPressed: () {},
+            icon: Icon(
+              Provider.of<ThemeProvider>(context).isDark
+                  ? Icons.light_mode_outlined
+                  : Icons.dark_mode_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            onPressed: () {
+              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+            },
           ),
-          const Icon(Icons.logout, color: Colors.black54),
+          Icon(
+            Icons.logout,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
           const SizedBox(width: 15),
         ],
       ),
@@ -1048,13 +1205,17 @@ Widget _buildInterestChip(String interest, bool isDark) {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               "My Profile",
-              style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold),
+              style: Theme.of(
+                context,
+              ).textTheme.headlineLarge?.copyWith(fontSize: 28),
             ),
-            const Text(
+            Text(
               "Manage your information and documents",
-              style: TextStyle(color: Colors.grey, fontSize: 16),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontSize: 16),
             ),
             const SizedBox(height: 25),
 
@@ -1114,7 +1275,7 @@ Widget _buildInterestChip(String interest, bool isDark) {
             const SizedBox(height: 30),
 
             // User Info Card
-            _buildUserInfoCard(),
+            _buildUserInfoCard(context),
 
             const SizedBox(height: 30),
 
@@ -1122,9 +1283,11 @@ Widget _buildInterestChip(String interest, bool isDark) {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   "Documents",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineMedium?.copyWith(fontSize: 20),
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _showDocumentsModal(context),
@@ -1158,13 +1321,19 @@ Widget _buildInterestChip(String interest, bool isDark) {
             const SizedBox(height: 30),
 
             // Saved Programs - Now Clickable
-            const Row(
+            Row(
               children: [
-                Icon(Icons.bookmark_outline, size: 20),
-                SizedBox(width: 8),
+                Icon(
+                  Icons.bookmark_outline,
+                  size: 20,
+                  color: Theme.of(context).colorScheme.onSurface,
+                ),
+                const SizedBox(width: 8),
                 Text(
                   "Saved Programs",
-                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+                  style: Theme.of(
+                    context,
+                  ).textTheme.headlineMedium?.copyWith(fontSize: 20),
                 ),
               ],
             ),
@@ -1236,13 +1405,13 @@ Widget _buildInterestChip(String interest, bool isDark) {
     );
   }
 
-  Widget _buildUserInfoCard() {
+  Widget _buildUserInfoCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: Theme.of(context).colorScheme.surface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.shade200),
+        border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1288,16 +1457,17 @@ Widget _buildInterestChip(String interest, bool isDark) {
             ],
           ),
           const Divider(height: 40),
-          _buildInfoRow(Icons.email_outlined, "Email", "sarah.johnson@aast.edu"),
+          _buildInfoRow(
+            Icons.email_outlined,
+            "Email",
+            "sarah.johnson@aast.edu",
+          ),
           const SizedBox(height: 15),
           _buildInfoRow(Icons.phone_outlined, "Phone", "+20 123 456 7890"),
           const SizedBox(height: 15),
           _buildInfoRow(Icons.workspace_premium_outlined, "GPA", "3.8"),
           const SizedBox(height: 20),
-          const Text(
-            "Bio",
-            style: TextStyle(color: Colors.grey),
-          ),
+          const Text("Bio", style: TextStyle(color: Colors.grey)),
           const Text(
             "Passionate computer science student interested in web development and AI.",
           ),
@@ -1318,10 +1488,7 @@ Widget _buildInterestChip(String interest, bool isDark) {
               label,
               style: const TextStyle(color: Colors.grey, fontSize: 12),
             ),
-            Text(
-              value,
-              style: const TextStyle(fontWeight: FontWeight.w500),
-            ),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
           ],
         ),
       ],
@@ -1345,20 +1512,14 @@ Widget _buildInterestChip(String interest, bool isDark) {
               color: const Color(0xFFD6E2F2),
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(
-              Icons.file_present,
-              color: Color(0xFF284B8C),
-            ),
+            child: const Icon(Icons.file_present, color: Color(0xFF284B8C)),
           ),
           const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   date,
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
@@ -1366,11 +1527,7 @@ Widget _buildInterestChip(String interest, bool isDark) {
               ],
             ),
           ),
-          if (isClickable)
-            const Icon(
-              Icons.chevron_right,
-              color: Colors.grey,
-            ),
+          if (isClickable) const Icon(Icons.chevron_right, color: Colors.grey),
         ],
       ),
     );
@@ -1393,12 +1550,12 @@ Widget _buildInterestChip(String interest, bool isDark) {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
-              Text(
-                company,
-                style: const TextStyle(color: Colors.grey),
-              ),
+              Text(company, style: const TextStyle(color: Colors.grey)),
             ],
           ),
           const Icon(Icons.chevron_right, color: Colors.grey),
