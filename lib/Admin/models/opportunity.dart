@@ -6,8 +6,12 @@ class Opportunity {
   final int applicants;
   final DateTime posted;
   final DateTime deadline;
+  final String? location;
+  final String? workMode;
+  final bool paidStatus;
 
-  // ✅ NEW
+  final String? description;
+  final String? requiredSkills;
   final String targetAudience;      // STUDENT | GRADUATE | BOTH
   final String applicationMethod;   // INTERNAL | EXTERNAL
   final String? externalApplyUrl;   // nullable
@@ -23,5 +27,10 @@ class Opportunity {
     required this.deadline,
     required this.targetAudience,
     this.externalApplyUrl,
+    this.location,
+    this.workMode,
+    required this.paidStatus,
+    this.description,
+    this.requiredSkills,
   });
 }

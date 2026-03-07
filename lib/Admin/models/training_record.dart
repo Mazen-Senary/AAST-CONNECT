@@ -8,6 +8,7 @@ class TrainingRecord {
   final DateTime startDate;
   final DateTime endDate;
   final String status;
+  final String? rejectionReason;
   final DateTime createdAt;
   final String? proofImageUrl;
   final bool expanded;
@@ -25,6 +26,7 @@ class TrainingRecord {
     required this.createdAt,
     this.expanded = false,
     this.proofImageUrl,
+    this.rejectionReason,
   });
 
   factory TrainingRecord.fromMap(Map<String, dynamic> map) {
@@ -46,6 +48,7 @@ class TrainingRecord {
           ? DateTime.parse(map['created_at'])
           : DateTime.now(),
       proofImageUrl: map['proof_image_url'],
+      rejectionReason: map['rejectionreason'],
       expanded: false,
     );
   }
@@ -54,6 +57,7 @@ class TrainingRecord {
     String? status,
     bool? expanded,
     String? proofImageUrl,
+    String? rejectionReason,
   }) {
     return TrainingRecord(
       recordId: recordId,
@@ -67,6 +71,7 @@ class TrainingRecord {
       status: status ?? this.status,
       createdAt: createdAt,
       proofImageUrl: proofImageUrl ?? this.proofImageUrl,
+      rejectionReason: rejectionReason ?? this.rejectionReason,
       expanded: expanded ?? this.expanded,
     );
   }

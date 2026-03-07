@@ -1,136 +1,351 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import '../models/opportunity.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../utils/opportunity_mappers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/opportunities_provider.dart';
 
-class OpportunitiesScreen extends StatefulWidget {
+class OpportunitiesScreen extends ConsumerStatefulWidget {
   final int adminId;
-  const OpportunitiesScreen({super.key , required this.adminId,});
+  const OpportunitiesScreen({super.key, required this.adminId});
 
   @override
-  State<OpportunitiesScreen> createState() => _OpportunitiesScreenState();
+  ConsumerState<OpportunitiesScreen> createState() =>
+      _OpportunitiesScreenState();
 }
 
-class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
-  List<Opportunity> _opportunities = [];
-  bool _isLoading = true;
+class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
   final titleController = TextEditingController();
   final companyController = TextEditingController();
   final descriptionController = TextEditingController();
   final locationController = TextEditingController();
   final skillsController = TextEditingController();
-    String selectedWorkMode = 'ONSITE';
+  String selectedWorkMode = 'ONSITE';
   bool paidStatus = false;
   DateTime? selectedDeadline;
   String selectedAudience = 'STUDENT';
   String applicationMethod = 'INTERNAL';
   final externalUrlController = TextEditingController();
-
-
+  final Set<String> expandedRows = {};
   String _searchTerm = '';
   String _filterType = 'all';
+  final ScrollController _horizontalController = ScrollController();
+  final ScrollController _verticalController = ScrollController();
+  final ScrollController _formScrollController = ScrollController();
   final supabase = Supabase.instance.client;
+
+  // Form state variables
+  String? _formError;
+  bool _isSubmitting = false;
   @override
   void initState() {
     super.initState();
-    _fetchOpportunities();
   }
 
-Future<void> _fetchOpportunities() async {
-  try {
-    final response = await supabase
-        .from('vacancies')
-        .select('*')
-        .order('created_at', ascending: false);
+  String? _validateOpportunityForm() {
+    // Title validation
+    if (titleController.text.trim().isEmpty) {
+      return 'Title is required';
+    }
+    if (titleController.text.trim().length < 3) {
+      return 'Title must be at least 3 characters';
+    }
 
-    debugPrint('FETCHED ROWS: ${response.length}');
-    debugPrint(response.toString());
+    // Company validation
+    if (companyController.text.trim().isEmpty) {
+      return 'Company name is required';
+    }
+    if (companyController.text.trim().length < 2) {
+      return 'Company name must be at least 2 characters';
+    }
 
+    // Location validation
+    if (locationController.text.trim().isEmpty) {
+      return 'Location is required';
+    }
+    if (locationController.text.trim().length < 2) {
+      return 'Location must be at least 2 characters';
+    }
+
+    // Description is optional - only validate if provided
+    if (descriptionController.text.trim().isNotEmpty) {
+      if (descriptionController.text.trim().length < 10) {
+        return 'Description must be at least 10 characters if provided';
+      }
+    }
+
+    // Skills is optional - only validate if provided
+    if (skillsController.text.trim().isNotEmpty) {
+      if (skillsController.text.trim().length < 3) {
+        return 'Required skills must be at least 3 characters if provided';
+      }
+    }
+
+    // Deadline validation
+    if (selectedDeadline == null) {
+      return 'Deadline is required';
+    }
+
+    // External URL validation (if external application method)
+    if (applicationMethod == 'EXTERNAL') {
+      if (externalUrlController.text.trim().isEmpty) {
+        return 'External application URL is required';
+      }
+
+      // Basic URL validation
+      final url = externalUrlController.text.trim();
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        return 'Please enter a valid URL (e.g., https://example.com)';
+      }
+    }
+
+    // Deadline must be in the future
+    if (selectedDeadline != null &&
+        selectedDeadline!.isBefore(DateTime.now())) {
+      return 'Deadline must be in the future';
+    }
+
+    return null; // No validation errors
+  }
+
+  void _showValidationError(String error) {
     setState(() {
-      _opportunities = response.map<Opportunity>((row) {
-        return Opportunity(
-        id: row['vacancyid'].toString(),
-        title: row['title'] ?? '',
-        company: row['company_name'] ?? '—',
-        type: row['type'] ?? 'INTERNSHIP',
-        applicationMethod: row['application_method'] ?? 'INTERNAL',
-        applicants: 0,
-        posted: DateTime.parse(row['created_at']),
-        deadline: DateTime.parse(row['deadline']),
-        targetAudience: row['target_audience'] ?? 'STUDENT',
-        externalApplyUrl: row['external_apply_url'],
-      );
-
-
-
-      }).toList();
-      _isLoading = false;
+      _formError = error;
     });
-  } catch (e) {
-    debugPrint('FETCH ERROR: $e');
-    setState(() => _isLoading = false);
+
+    // Auto-scroll to absolute top of the form dialog
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_formScrollController.hasClients) {
+        _formScrollController.animateTo(
+          0.0, // Absolute top position
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
   }
-}
 
-  List<Opportunity> get _filteredOpportunities {
-    return _opportunities.where((opp) {
-      final matchesSearch =
-          opp.title.toLowerCase().contains(_searchTerm.toLowerCase()) ||
-          opp.company.toLowerCase().contains(_searchTerm.toLowerCase());
+  void _clearFormError() {
+    setState(() {
+      _formError = null;
+    });
+  }
 
-      final matchesFilter =
-        _filterType == 'all' ||
-        uiToDbType(_filterType) == opp.type;
+  Future<void> _showDeleteConfirmationDialog(Opportunity opportunity) async {
+    final themeProvider = provider.Provider.of<ThemeProvider>(
+      context,
+      listen: false,
+    );
+    final isDark = themeProvider.isDarkMode;
 
+    await showDialog(
+      context: context,
+      builder: (_) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Container(
+          margin: const EdgeInsets.all(20),
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: isDark ? AppColors.darkCard : AppColors.card,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 20,
+                offset: const Offset(0, 10),
+              ),
+            ],
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // HEADER
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accentAlert.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.delete_rounded,
+                      color: AppColors.accentAlertText,
+                      size: 24,
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: Text(
+                      'Delete Opportunity',
+                      style: AppTextStyles.h3.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                  ),
+                  GestureDetector(
+                    onTap: () => Navigator.pop(context),
+                    child: MouseRegion(
+                      cursor: SystemMouseCursors.click,
+                      child: Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: isDark
+                              ? AppColors.darkBackground
+                              : AppColors.background,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.close,
+                          color: isDark
+                              ? AppColors.darkTextSecondary
+                              : AppColors.textSecondary,
+                        ),
+                    ),
+                  ),),
+                ],
+              ),
 
+              const SizedBox(height: 20),
 
-      return matchesSearch && matchesFilter;
-    }).toList();
+              // OPPORTUNITY INFO
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: isDark
+                      ? AppColors.darkBackground
+                      : AppColors.background,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Opportunity to Delete',
+                      style: AppTextStyles.label.copyWith(
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      opportunity.title,
+                      style: AppTextStyles.body.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      opportunity.company,
+                      style: AppTextStyles.body.copyWith(
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // WARNING MESSAGE
+              Text(
+                'Are you sure you want to delete this opportunity? This action cannot be undone.',
+                style: AppTextStyles.body.copyWith(
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // ACTIONS
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(context),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.textSecondary,
+                        side: BorderSide(
+                          color: isDark
+                              ? AppColors.darkDivider
+                              : AppColors.border,
+                        ),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Cancel',
+                        style: AppTextStyles.label.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: ElevatedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        ref
+                            .read(opportunitiesProvider.notifier)
+                            .deleteOpportunity(opportunity.id);
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.accentAlert,
+                        foregroundColor: AppColors.accentAlertText,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      child: Text(
+                        'Delete',
+                        style: AppTextStyles.label.copyWith(
+                          fontWeight: FontWeight.w600,
+                          color: AppColors.accentAlertText,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = provider.Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    
+    final opportunitiesAsync = ref.watch(opportunitiesProvider);
+
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
-        elevation: 0,
-        title: Text(
-          'AAST Connect',
-          style: AppTextStyles.h1.copyWith(
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode : Icons.dark_mode_outlined,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.textSecondary,
-            ),
-            onPressed: () {
-              themeProvider.toggleTheme();
-            },
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Logout'),
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
+
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -143,7 +358,9 @@ Future<void> _fetchOpportunities() async {
                 Text(
                   'Opportunities Management',
                   style: AppTextStyles.h1.copyWith(
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
                   ),
                 ),
                 ElevatedButton.icon(
@@ -155,7 +372,10 @@ Future<void> _fetchOpportunities() async {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AppColors.interactive,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 20,
+                      vertical: 14,
+                    ),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
@@ -175,47 +395,63 @@ Future<void> _fetchOpportunities() async {
                     decoration: InputDecoration(
                       hintText: 'Search opportunities by title or company...',
                       hintStyle: TextStyle(
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.inputHint,
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.inputHint,
                         fontSize: 14,
                       ),
-                      prefixIcon: Icon(Icons.search, color: isDark ? AppColors.darkTextSecondary : AppColors.inputHint),
+                      prefixIcon: Icon(
+                        Icons.search,
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.inputHint,
+                      ),
                       filled: true,
-                      fillColor: isDark ? AppColors.darkCard : AppColors.inputBackground,
+                      fillColor: isDark
+                          ? AppColors.darkCard
+                          : AppColors.inputBackground,
 
-      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
 
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppColors.radius),
-        borderSide: BorderSide(color: isDark ? AppColors.darkDivider : AppColors.inputBorder),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppColors.radius),
-        borderSide: BorderSide(color: isDark ? AppColors.darkDivider : AppColors.inputBorder),
-      ),
-      focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppColors.radius),
-        borderSide: BorderSide(
-          color: AppColors.interactive,
-          width: 1.5,
-        ),
-      ),
-      focusedErrorBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(AppColors.radius),
-        borderSide: BorderSide(
-          color: AppColors.interactive,
-          width: 1.5,
-        ),
-      ),
-    ),
-  ),
-),
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppColors.radius),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.darkDivider
+                              : AppColors.inputBorder,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppColors.radius),
+                        borderSide: BorderSide(
+                          color: isDark
+                              ? AppColors.darkDivider
+                              : AppColors.inputBorder,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppColors.radius),
+                        borderSide: BorderSide(
+                          color: AppColors.interactive,
+                          width: 1.5,
+                        ),
+                      ),
+                      focusedErrorBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(AppColors.radius),
+                        borderSide: BorderSide(
+                          color: AppColors.interactive,
+                          width: 1.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
 
                 const SizedBox(width: 16),
                 SizedBox(
-  width: 180, // 👈 REQUIRED
-  child: _typeSorter(isDark),
-),
-
+                  width: 180, // 👈 REQUIRED
+                  child: _typeSorter(isDark),
+                ),
               ],
             ),
 
@@ -223,27 +459,34 @@ Future<void> _fetchOpportunities() async {
 
             /// TABLE
             Expanded(
-  child: _isLoading
-      ? const Center(child: CircularProgressIndicator())
-      : _opportunities.isEmpty
-          ? const Center(child: Text('No opportunities found'))
-          : Container(
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkCard : AppColors.card,
-                borderRadius: BorderRadius.circular(20),
-                border: Border.all(
-                  color: isDark ? AppColors.darkDivider : AppColors.border,
-                ),
-              ),
-              child: ListView(
-                children: [
-                  _tableHeader(isDark),
-                  ..._filteredOpportunities
-                      .map((opp) => _tableRow(opp, isDark)),
-                ],
+              child: opportunitiesAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Center(child: Text('Error: $e')),
+                data: (opportunities) {
+                  if (opportunities.isEmpty) {
+                    return const Center(child: Text('No opportunities found'));
+                  }
+
+                  final filtered = opportunities.where((opp) {
+                    final matchesSearch =
+                        opp.title.toLowerCase().contains(
+                          _searchTerm.toLowerCase(),
+                        ) ||
+                        opp.company.toLowerCase().contains(
+                          _searchTerm.toLowerCase(),
+                        );
+
+                    final matchesFilter =
+                        _filterType == 'all' ||
+                        uiToDbType(_filterType) == opp.type;
+
+                    return matchesSearch && matchesFilter;
+                  }).toList();
+
+                  return _buildTable(filtered, isDark);
+                },
               ),
             ),
-),
           ],
         ),
       ),
@@ -263,7 +506,13 @@ Future<void> _fetchOpportunities() async {
         title: 'Title',
         company: 'Company',
         type: 'Type',
-        status: 'Status',
+        status: 'Method',
+        location: 'Location',
+        workMode: 'Mode',
+        paid: 'Paid',
+        audience: 'Audience',
+        description: 'Description',
+        skills: 'Skills',
         applicants: 'Applicants',
         deadline: 'Deadline',
         actions: 'Actions',
@@ -272,75 +521,80 @@ Future<void> _fetchOpportunities() async {
       ),
     );
   }
-    // ---------------- SORTER ----------------
+  // ---------------- BUILD TABLE ----------------
+
+  Widget _buildTable(List<Opportunity> opportunities, bool isDark) {
+    return Scrollbar(
+      controller: _verticalController,
+      thumbVisibility: true,
+      child: SingleChildScrollView(
+        controller: _verticalController,
+        scrollDirection: Axis.horizontal,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minWidth: 1500),
+          child: Scrollbar(
+            controller: _horizontalController,
+            thumbVisibility: true,
+            child: SingleChildScrollView(
+              controller: _horizontalController,
+              child: Column(
+                children: [
+                  _tableHeader(isDark),
+                  ...opportunities.map((opp) => _tableRow(opp, isDark)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ---------------- SORTER ----------------
 
   Widget _typeSorter(bool isDark) {
-  return Container(
-    height: 44,
-    padding: const EdgeInsets.symmetric(horizontal: 14),
-    decoration: BoxDecoration(
-      gradient: LinearGradient(
-        colors: [
-          Colors.grey.shade300,
-          Colors.grey.shade100,
-        ],
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-      ),
-      borderRadius: BorderRadius.circular(10),
-      border: Border.all(color: Colors.grey.shade400),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.1),
-          blurRadius: 4,
-          offset: const Offset(0, 2),
+    return Container(
+      height: 44,
+      padding: const EdgeInsets.symmetric(horizontal: 14),
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.grey.shade300, Colors.grey.shade100],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
         ),
-      ],
-    ),
-    child: DropdownButtonHideUnderline(
-      child: DropdownButton<String>(
-        value: _filterType,
-        icon: const Icon(Icons.arrow_drop_down),
-        iconSize: 26,
-        isExpanded: true,
-        dropdownColor: Colors.white, // 👈 menu background
-        style: const TextStyle(
-          fontSize: 16,
-          color: Colors.black,
-        ),
-        onChanged: (value) {
-          setState(() => _filterType = value!);
-        },
-        items: const [
-          DropdownMenuItem(
-            value: 'all',
-            child: Text('All Types'),
-          ),
-          DropdownMenuItem(
-            value: 'Internship',
-            child: Text('Internship'),
-          ),
-          DropdownMenuItem(
-            value: 'Training',
-            child: Text('Training'),
-          ),
-          DropdownMenuItem(
-            value: 'Job',
-            child: Text('Job'),
-          ),
-          DropdownMenuItem(
-            value: 'Volunteer',
-            child: Text('Volunteer'),
-          ),
-          DropdownMenuItem(
-            value: 'Competition',
-            child: Text('Competition'),
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.grey.shade400),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-    ),
-  );
-}
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _filterType,
+          icon: const Icon(Icons.arrow_drop_down),
+          iconSize: 26,
+          isExpanded: true,
+          dropdownColor: Colors.white, // 👈 menu background
+          style: const TextStyle(fontSize: 16, color: Colors.black),
+          onChanged: (value) {
+            setState(() => _filterType = value!);
+          },
+          items: const [
+            DropdownMenuItem(value: 'all', child: Text('All Types')),
+            DropdownMenuItem(value: 'Internship', child: Text('Internship')),
+            DropdownMenuItem(value: 'Training', child: Text('Training')),
+            DropdownMenuItem(value: 'Job', child: Text('Job')),
+            DropdownMenuItem(value: 'Volunteer', child: Text('Volunteer')),
+            DropdownMenuItem(value: 'Competition', child: Text('Competition')),
+          ],
+        ),
+      ),
+    );
+  }
 
   // ---------------- TABLE ROW ----------------
 
@@ -351,7 +605,9 @@ Future<void> _fetchOpportunities() async {
         padding: const EdgeInsets.symmetric(vertical: 14),
         decoration: BoxDecoration(
           border: Border(
-            top: BorderSide(color: isDark ? AppColors.darkDivider : AppColors.border),
+            top: BorderSide(
+              color: isDark ? AppColors.darkDivider : AppColors.border,
+            ),
           ),
         ),
         child: _rowText(
@@ -359,6 +615,12 @@ Future<void> _fetchOpportunities() async {
           company: opp.company,
           type: opp.type,
           status: opp.applicationMethod,
+          location: opp.location ?? '-',
+          workMode: opp.workMode ?? '-',
+          paid: opp.paidStatus ? 'Yes' : 'No',
+          audience: opp.targetAudience,
+          description: opp.description ?? '-',
+          skills: opp.requiredSkills ?? '-',
           applicants: opp.applicants.toString(),
           deadline: DateFormat('yyyy-MM-dd').format(opp.deadline),
           actions: '',
@@ -375,6 +637,12 @@ Future<void> _fetchOpportunities() async {
     required String company,
     required String type,
     required String status,
+    required String location,
+    required String workMode,
+    required String paid,
+    required String audience,
+    required String description,
+    required String skills,
     required String applicants,
     required String deadline,
     required String actions,
@@ -382,8 +650,7 @@ Future<void> _fetchOpportunities() async {
     required bool isDark,
     Opportunity? opportunity,
   }) {
-    final textStyle =
-        isHeader ? AppTextStyles.caption : AppTextStyles.body;
+    final textStyle = isHeader ? AppTextStyles.caption : AppTextStyles.body;
 
     return Row(
       children: [
@@ -391,8 +658,18 @@ Future<void> _fetchOpportunities() async {
         _cell(company, flex: 2, style: textStyle, isDark: isDark),
         _typeBadge(type, isDark),
         _statusBadge(status, isDark),
+
+        _cell(location, flex: 2, style: textStyle, isDark: isDark),
+        _cell(workMode, flex: 1, style: textStyle, isDark: isDark),
+        _cell(paid, flex: 1, style: textStyle, isDark: isDark),
+        _cell(audience, flex: 1, style: textStyle, isDark: isDark),
+        isHeader
+            ? _cell(description, flex: 5, style: textStyle, isDark: isDark)
+            : _buildDescriptionCell(opportunity!, isDark),
+        _cell(skills, flex: 4, style: textStyle, isDark: isDark),
         _cell(applicants, flex: 1, style: textStyle, isDark: isDark),
         _cell(deadline, flex: 1, style: textStyle, isDark: isDark),
+
         if (isHeader)
           _cell(actions, flex: 1, style: textStyle, isDark: isDark)
         else
@@ -401,17 +678,72 @@ Future<void> _fetchOpportunities() async {
     );
   }
 
-  Widget _cell(String text,
-      {required int flex, required TextStyle style, required bool isDark}) {
-    return Expanded(
-      flex: flex,
+  Widget _cell(
+    String text, {
+    required int flex,
+    required TextStyle style,
+    required bool isDark,
+  }) {
+    return SizedBox(
+      width: flex * 140.0,
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 12),
         child: Text(
-          text, 
+          text,
+          softWrap: false,
+          overflow: TextOverflow.ellipsis,
           style: style.copyWith(
             color: isDark ? AppColors.darkTextPrimary : null,
           ),
+        ),
+      ),
+    );
+  }
+  // ---------------- Description ----------------
+
+  Widget _buildDescriptionCell(Opportunity opp, bool isDark) {
+    final isExpanded = expandedRows.contains(opp.id);
+
+    return SizedBox(
+      width: 5 * 140.0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              opp.description ?? '-',
+              maxLines: isExpanded ? 8 : 2,
+              overflow: TextOverflow.ellipsis,
+              style: AppTextStyles.body.copyWith(
+                color: isDark ? AppColors.darkTextPrimary : null,
+              ),
+            ),
+
+            if ((opp.description ?? '').length > 80)
+              GestureDetector(
+                onTap: () {
+                  setState(() {
+                    if (isExpanded) {
+                      expandedRows.remove(opp.id);
+                    } else {
+                      expandedRows.add(opp.id);
+                    }
+                  });
+                },
+                child: Padding(
+                  padding: const EdgeInsets.only(top: 2),
+                  child: Text(
+                    isExpanded ? "Show less" : "Show more",
+                    style: TextStyle(
+                      color: AppColors.interactive,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+          ],
         ),
       ),
     );
@@ -447,17 +779,20 @@ Future<void> _fetchOpportunities() async {
       isInternal
           ? AppColors.interactive.withOpacity(0.15)
           : (isDark ? AppColors.darkDivider : AppColors.border),
-      isInternal ? AppColors.interactive : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
+      isInternal
+          ? AppColors.interactive
+          : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
       isDark,
     );
   }
 
   Widget _badge(String text, Color bg, Color fg, bool isDark) {
-    return Expanded(
-      flex: 1,
+    return SizedBox(
+      width: 140,
       child: Container(
+        alignment: Alignment.center,
         margin: const EdgeInsets.symmetric(horizontal: 8),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        padding: const EdgeInsets.symmetric(vertical: 4),
         decoration: BoxDecoration(
           color: bg,
           borderRadius: BorderRadius.circular(8),
@@ -472,236 +807,310 @@ Future<void> _fetchOpportunities() async {
   }
 
   // ---------------- OPPORTUNITY FORM ----------------
+  void _showOpportunityForm(BuildContext context, {Opportunity? opportunity}) {
+    final isDark = provider.Provider.of<ThemeProvider>(
+      context,
+      listen: false,
+    ).isDarkMode;
+    final bool isEditing = opportunity != null;
 
+    String selectedType = isEditing
+        ? dbToUiType(opportunity.type)
+        : 'Internship';
 
-  void _showOpportunityForm(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDark = themeProvider.isDarkMode;
-    final deadlineController = TextEditingController();
-    String selectedType = 'Internship';
-    String selectedStatus = 'Active';
+    if (isEditing) {
+      titleController.text = opportunity.title;
+      companyController.text = opportunity.company;
+      locationController.text = opportunity.location ?? '';
+      descriptionController.text = opportunity.description ?? '';
+      skillsController.text = opportunity.requiredSkills ?? '';
+
+      selectedWorkMode = opportunity.workMode ?? 'ONSITE';
+      paidStatus = opportunity.paidStatus;
+
+      selectedDeadline = opportunity.deadline;
+      selectedAudience = opportunity.targetAudience;
+      applicationMethod = opportunity.applicationMethod;
+      externalUrlController.text = opportunity.externalApplyUrl ?? '';
+    } else {
+      titleController.clear();
+      companyController.clear();
+      descriptionController.clear();
+      locationController.clear();
+      skillsController.clear();
+      externalUrlController.clear();
+      selectedDeadline = null;
+      paidStatus = false;
+      selectedWorkMode = 'ONSITE';
+    }
 
     showDialog(
       context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
+      builder: (_) => StatefulBuilder(
+        builder: (context, setState) {
+          return Dialog(
+            backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Container(
+              width: MediaQuery.of(context).size.width * 0.8,
+              padding: const EdgeInsets.all(24),
+              child: SingleChildScrollView(
+                controller: _formScrollController,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    /// TITLE
+                    Text(
+                      isEditing ? 'Edit Opportunity' : 'Add Opportunity',
+                      style: AppTextStyles.h2,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // ERROR DISPLAY
+                    if (_formError != null)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: AppColors.accentAlert.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.accentAlert.withOpacity(0.3)),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.error_outline,
+                              color: AppColors.accentAlertText,
+                              size: 20,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _formError!,
+                                style: AppTextStyles.body.copyWith(
+                                  color: AppColors.accentAlertText,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    const SizedBox(height: 16),
+
+                    _buildFormField('Title', titleController, '', isDark),
+                    const SizedBox(height: 16),
+
+                    _buildFormField('Company', companyController, '', isDark),
+                    const SizedBox(height: 16),
+
+                    _buildFormField('Location', locationController, '', isDark),
+                    const SizedBox(height: 16),
+
+                    _buildDropdownField(
+                      'Type',
+                      selectedType,
+                      [
+                        'Internship',
+                        'Training',
+                        'Job',
+                        'Volunteer',
+                        'Competition',
+                      ],
+                      (v) => setState(() => selectedType = v!),
+                      isDark,
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildDropdownField(
+                      'Work Mode',
+                      selectedWorkMode,
+                      ['REMOTE', 'ONSITE', 'HYBRID'],
+                      (v) => setState(() => selectedWorkMode = v!),
+                      isDark,
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildFormField(
+                      'Required Skills',
+                      skillsController,
+                      '',
+                      isDark,
+                      maxLines: 2,
+                    ),
+                    const SizedBox(height: 16),
+
+                    _buildFormField(
+                      'Description',
+                      descriptionController,
+                      '',
+                      isDark,
+                      maxLines: 3,
+                    ),
+                    const SizedBox(height: 16),
+
+                    /// PAID SWITCH
+                    SwitchListTile(
+                      value: paidStatus,
+                      title: const Text('Paid Opportunity'),
+                      onChanged: (v) => setState(() => paidStatus = v),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    /// DEADLINE PICKER
+                    GestureDetector(
+                      onTap: () async {
+                        final picked = await showDatePicker(
+                          context: context,
+                          initialDate: DateTime.now(),
+                          firstDate: DateTime.now(),
+                          lastDate: DateTime.now().add(
+                            const Duration(days: 365),
+                          ),
+                        );
+                        if (picked != null) {
+                          setState(() => selectedDeadline = picked);
+                        }
+                      },
+                      child: AbsorbPointer(
+                        child: _buildFormField(
+                          'Deadline',
+                          TextEditingController(
+                            text: selectedDeadline == null
+                                ? ''
+                                : DateFormat(
+                                    'yyyy-MM-dd',
+                                  ).format(selectedDeadline!),
+                          ),
+                          '',
+                          isDark,
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildDropdownField(
+                      'Target Audience',
+                      selectedAudience,
+                      ['STUDENT', 'GRADUATE', 'BOTH'],
+                      (v) => setState(() => selectedAudience = v!),
+                      isDark,
+                    ),
+
+                    const SizedBox(height: 16),
+
+                    _buildDropdownField(
+                      'Application Method',
+                      applicationMethod,
+                      ['INTERNAL', 'EXTERNAL'],
+                      (v) => setState(() => applicationMethod = v!),
+                      isDark,
+                    ),
+
+                    if (applicationMethod == 'EXTERNAL') ...[
+                      const SizedBox(height: 16),
+                      _buildFormField(
+                        'External URL',
+                        externalUrlController,
+                        '',
+                        isDark,
+                      ),
+                    ],
+
+                    const SizedBox(height: 24),
+
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 16),
+                        ElevatedButton(
+                          onPressed: () async {
+                            // Clear previous error
+                            setState(() {
+                              _formError = null;
+                            });
+
+                            // Validate form
+                            final validationError = _validateOpportunityForm();
+                            if (validationError != null) {
+                              setState(() {
+                                _formError = validationError;
+                              });
+                              return;
+                            }
+
+                            if (isEditing) {
+                              await ref
+                                  .read(opportunitiesProvider.notifier)
+                                  .updateOpportunity(opportunity!.id, {
+                                    'title': titleController.text.trim(),
+                                    'company_name': companyController.text
+                                        .trim(),
+                                    'location': locationController.text.trim(),
+                                    'description': descriptionController.text
+                                        .trim(),
+                                    'requiredskills': skillsController.text
+                                        .trim(),
+                                    'work_mode': selectedWorkMode,
+                                    'paidstatus': paidStatus,
+                                    'type': uiToDbType(selectedType),
+                                    'deadline': selectedDeadline!
+                                        .toIso8601String(),
+                                    'target_audience': selectedAudience,
+                                    'application_method': applicationMethod,
+                                    'external_apply_url':
+                                        applicationMethod == 'EXTERNAL'
+                                        ? externalUrlController.text.trim()
+                                        : null,
+                                  });
+                            } else {
+                              await ref
+                                  .read(opportunitiesProvider.notifier)
+                                  .addOpportunity({
+                                    'type': uiToDbType(selectedType),
+                                    'title': titleController.text.trim(),
+                                    'description': descriptionController.text
+                                        .trim(),
+                                    'company_name': companyController.text
+                                        .trim(),
+                                    'location': locationController.text.trim(),
+                                    'work_mode': selectedWorkMode,
+                                    'requiredskills': skillsController.text
+                                        .trim(),
+                                    'paidstatus': paidStatus,
+                                    'deadline': selectedDeadline!
+                                        .toIso8601String(),
+                                    'postedbyadminid': widget.adminId,
+                                    'target_audience': selectedAudience,
+                                    'application_method': applicationMethod,
+                                    'external_apply_url':
+                                        applicationMethod == 'EXTERNAL'
+                                        ? externalUrlController.text.trim()
+                                        : null,
+                                  });
+                            }
+                            Navigator.pop(context);
+                          },
+                          child: Text(isEditing ? 'Update' : 'Add'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              child: Container(
-  width: MediaQuery.of(context).size.width * 0.8,
-  constraints: BoxConstraints(
-    maxHeight: MediaQuery.of(context).size.height * 0.85,
-  ),
-  padding: const EdgeInsets.all(24),
-  child: SingleChildScrollView(
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // ---------- HEADER ----------
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Add New Opportunity',
-              style: AppTextStyles.h2.copyWith(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
-              ),
             ),
-            IconButton(
-              onPressed: () => Navigator.pop(context),
-              icon: Icon(
-                Icons.close,
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.textSecondary,
-              ),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 20),
-
-        // ---------- FORM ----------
-        _buildFormField(
-          'Title',
-          titleController,
-          'Enter opportunity title',
-          isDark,
-        ),
-        const SizedBox(height: 16),
-        _buildFormField(
-          'Company',
-          companyController,
-          'Enter company name',
-          isDark,
-        ),
-        const SizedBox(height: 16),
-
-       _buildFormField(
-  'Location',
-  locationController,
-  'e.g. Cairo, Alexandria, Dubai',
-  isDark,
-),
-
-        const SizedBox(height: 16),
-
-        _buildDropdownField(
-          'Type',
-          selectedType,
-          ['Internship', 'Training', 'Job', 'Volunteer', 'Competition'],
-          (v) => setState(() => selectedType = v!),
-          isDark,
-        ),
-        const SizedBox(height: 16),
-
-_buildDropdownField(
-  'Work Mode',
-  selectedWorkMode,
-  ['REMOTE', 'ONSITE', 'HYBRID'],
-  (v) => setState(() => selectedWorkMode = v!),
-  isDark,
-),
-const SizedBox(height: 16),
-
-        _buildFormField(
-          'Required Skills',
-          skillsController,
-          'e.g. Flutter, Dart, REST APIs',
-          isDark,
-          maxLines: 2,
-        ),
-        const SizedBox(height: 16),
-
-        _buildFormField(
-          'Description',
-          descriptionController,
-          'Enter opportunity description',
-          isDark,
-          maxLines: 3,
-        ),
-        const SizedBox(height: 16),
-
-        // ---------- PAID SWITCH ----------
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(
-              'Paid Opportunity',
-              style: AppTextStyles.label.copyWith(
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
-              ),
-            ),
-            Switch(
-              value: paidStatus,
-              onChanged: (v) => setState(() => paidStatus = v),
-            ),
-          ],
-        ),
-
-        const SizedBox(height: 16),
-
-        // ---------- DEADLINE PICKER ----------
-        GestureDetector(
-          onTap: () async {
-            final picked = await showDatePicker(
-              context: context,
-              initialDate: DateTime.now(),
-              firstDate: DateTime.now(),
-              lastDate: DateTime.now().add(const Duration(days: 365)),
-            );
-            if (picked != null) {
-              setState(() => selectedDeadline = picked);
-            }
-          },
-          child: AbsorbPointer(
-            child: _buildFormField(
-              'Deadline',
-              TextEditingController(
-                text: selectedDeadline == null
-                    ? ''
-                    : DateFormat('yyyy-MM-dd')
-                        .format(selectedDeadline!),
-              ),
-              'Select deadline',
-              isDark,
-            ),
-          ),
-        ),
-
-        const SizedBox(height: 24),
-        _buildDropdownField(
-      'Target Audience',
-      selectedAudience,
-     ['STUDENT', 'GRADUATE', 'BOTH'],
-     (v) => setState(() => selectedAudience = v!),
-      isDark,
-),
-      _buildDropdownField(
-  'Application Method',
-  applicationMethod,
-  ['INTERNAL', 'EXTERNAL'],
-  (v) => setState(() => applicationMethod = v!),
-  isDark,
-),
-if (applicationMethod == 'EXTERNAL') ...[
-  const SizedBox(height: 16),
-  _buildFormField(
-    'External Application URL',
-    externalUrlController,
-    'https://company.com/apply',
-    isDark,
-  ),
-],
-
-
-        // ---------- ACTION BUTTONS ----------
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            const SizedBox(width: 16),
-            ElevatedButton(
-              onPressed: () async {
-                if (selectedDeadline == null) return;
-
-                await _saveOpportunityToSupabase(
-                  title: titleController.text,
-                  description: descriptionController.text,
-                  location: locationController.text,
-                  skills: skillsController.text,
-                  paidStatus: paidStatus,
-                  deadline: selectedDeadline!,
-                  selectedWorkMode: selectedWorkMode,
-                  selectedType: selectedType,
-                );
-                await _fetchOpportunities();
-
-                Navigator.pop(context);
-              },
-              child: const Text('Add Opportunity'),
-            ),
-          ],
-        ),
-      ],
-    ),
-  ),),
-);
-
-          },
-        );
-      },
+          );
+        },
+      ),
     );
   }
 
@@ -733,7 +1142,9 @@ if (applicationMethod == 'EXTERNAL') ...[
               color: isDark ? AppColors.darkTextSecondary : AppColors.inputHint,
             ),
             filled: true,
-            fillColor: isDark ? AppColors.darkDivider : AppColors.inputBackground,
+            fillColor: isDark
+                ? AppColors.darkDivider
+                : AppColors.inputBackground,
             border: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
               borderSide: BorderSide(
@@ -748,10 +1159,7 @@ if (applicationMethod == 'EXTERNAL') ...[
             ),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: AppColors.interactive,
-                width: 1.5,
-              ),
+              borderSide: BorderSide(color: AppColors.interactive, width: 1.5),
             ),
           ),
           style: TextStyle(
@@ -796,10 +1204,7 @@ if (applicationMethod == 'EXTERNAL') ...[
               color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
             ),
             items: items.map((String item) {
-              return DropdownMenuItem<String>(
-                value: item,
-                child: Text(item),
-              );
+              return DropdownMenuItem<String>(value: item, child: Text(item));
             }).toList(),
             onChanged: onChanged,
             underline: SizedBox(), // Remove the underline
@@ -809,83 +1214,22 @@ if (applicationMethod == 'EXTERNAL') ...[
     );
   }
 
-  Future<void> _saveOpportunityToSupabase({
-  required String title,
-  required String description,
-  required String location,
-  required String skills,
-  required String selectedWorkMode,
-  required bool paidStatus,
-  required DateTime deadline,
-  required String selectedType,
-}) async {
-  try {
-    final dbType = uiToDbType(selectedType);
-
-await supabase.from('vacancies').insert({
-  'type': dbType,
-  'title': title,
-  'description': description,
-  'company_name': companyController.text.trim(),
-  'location': locationController.text.trim(),
-  'work_mode': selectedWorkMode,
-  'requiredskills': skills,
-  'paidstatus': paidStatus,
-  'deadline': deadline.toIso8601String(),
-  
-  'postedbyadminid': widget.adminId,
-  'target_audience': selectedAudience,
-  'application_method': applicationMethod,
-  'external_apply_url':
-      applicationMethod == 'EXTERNAL'
-          ? externalUrlController.text.trim()
-          : null,
-});
-
-  titleController.clear();
-    companyController.clear();
-    descriptionController.clear();
-    locationController.clear();
-    skillsController.clear();
-
-    setState(() {
-      selectedDeadline = null;
-      paidStatus = false;
-      selectedWorkMode = 'ONSITE';
-      selectedType = 'Internship';
-    });
-  } catch (e) {
-    debugPrint('Insert error: $e');
-  }
-}
-
-
   Widget _buildActionButtons(Opportunity opportunity, bool isDark) {
-    return Expanded(
-      flex: 1,
+    return SizedBox(
+      width: 120,
       child: Row(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           IconButton(
             onPressed: () {
-              _showEditOpportunityForm(context, opportunity);
+              _showOpportunityForm(context, opportunity: opportunity);
             },
-            icon: Icon(
-              Icons.edit,
-              color: AppColors.interactive,
-              size: 18,
-            ),
+            icon: Icon(Icons.edit, color: AppColors.interactive, size: 18),
             tooltip: 'Edit',
           ),
           IconButton(
-            onPressed: () {
-              _deleteOpportunity(opportunity);
-            },
-            icon: Icon(
-              Icons.delete,
-              color: Colors.red,
-              size: 18,
-            ),
+            onPressed: () => _showDeleteConfirmationDialog(opportunity),
+            icon: Icon(Icons.delete, color: Colors.red, size: 18),
             tooltip: 'Delete',
           ),
         ],
@@ -893,286 +1237,15 @@ await supabase.from('vacancies').insert({
     );
   }
 
-  void _showEditOpportunityForm(BuildContext context, Opportunity opportunity) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDark = themeProvider.isDarkMode;
-    
-    final editTitleController =
-    TextEditingController(text: opportunity.title);
-final editCompanyController =
-    TextEditingController(text: opportunity.company);
-
-    final descriptionController = TextEditingController();
-    final deadlineController = TextEditingController(
-      text: DateFormat('yyyy-MM-dd').format(opportunity.deadline),
-    );
-    String selectedType = dbToUiType(opportunity.type);
-
-
-    String selectedApplicationMethod = opportunity.applicationMethod;
-
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return StatefulBuilder(
-          builder: (context, setState) {
-            return Dialog(
-              backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Container(
-                width: MediaQuery.of(context).size.width * 0.8,
-                padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'Edit Opportunity',
-                          style: AppTextStyles.h2.copyWith(
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                          ),
-                        ),
-                        IconButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          icon: Icon(
-                            Icons.close,
-                            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-                    
-                    // Form Fields
-                    _buildFormField(
-                      'Title',
-                      editTitleController,
-                      'Enter opportunity title',
-                      isDark,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    _buildFormField(
-                      'Company',
-                      editCompanyController,
-                      'Enter company name',
-                      isDark,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    _buildDropdownField(
-                      'Type',
-                      selectedType,
-                      ['Internship', 'Training', 'Job', 'Volunteer', 'Competition'],
-                      (value) => setState(() => selectedType = value!),
-                      isDark,
-                    ),
-                    const SizedBox(height: 16),
-
-                    _buildDropdownField(
-                      'Application Method',
-                      selectedApplicationMethod,
-                      ['INTERNAL', 'EXTERNAL'],
-                      (value) => setState(() => selectedApplicationMethod = value!),
-                      isDark,
-                    ),
-
-                   const SizedBox(height: 16),
-                    
-                    _buildFormField(
-                      'Deadline',
-                      deadlineController,
-                      'YYYY-MM-DD',
-                      isDark,
-                      keyboardType: TextInputType.datetime,
-                    ),
-                    const SizedBox(height: 16),
-                    
-                    _buildFormField(
-                      'Description',
-                      descriptionController,
-                      'Enter opportunity description',
-                      isDark,
-                      maxLines: 3,
-                    ),
-                    
-                    const SizedBox(height: 24),
-                    
-                    // Action Buttons
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.end,
-                      children: [
-                        TextButton(
-                          onPressed: () => Navigator.of(context).pop(),
-                          child: Text(
-                            'Cancel',
-                            style: TextStyle(
-                              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        ElevatedButton(
-                          onPressed: () {
-                            _updateOpportunity(
-                              opportunity.id,
-                              editTitleController.text,
-                              editCompanyController.text,
-                              uiToDbType(selectedType),
-                              selectedApplicationMethod,
-                              deadlineController.text,
-                              descriptionController.text,
-                            );
-                            Navigator.of(context).pop();
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.interactive,
-                            foregroundColor: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8),
-                            ),
-                          ),
-                          child: const Text('Update Opportunity'),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-
-  void _updateOpportunity(
-    String id,
-    String title,
-    String company,
-    String type,
-    String applicationMethod,
-    String deadline,
-    String description,
-  ) {
-    if (title.isEmpty || company.isEmpty || deadline.isEmpty) {
-      // Show error message or validation
-      return;
-    }
-
-    setState(() {
-      final index = _opportunities.indexWhere((opp) => opp.id == id);
-      if (index != -1) {
-        _opportunities[index] = Opportunity(
-        id: id,
-        title: title,
-        company: company,
-        type: type,
-        applicationMethod: applicationMethod,
-        targetAudience: _opportunities[index].targetAudience,
-        externalApplyUrl: _opportunities[index].externalApplyUrl,
-        applicants: _opportunities[index].applicants,
-        posted: _opportunities[index].posted,
-        deadline: DateTime.tryParse(deadline) ?? _opportunities[index].deadline,
-      );
-
-      }
-    });
-  }
-
-  void _deleteOpportunity(Opportunity opportunity) {
-    final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
-    final isDark = themeProvider.isDarkMode;
-
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.warning_amber_rounded,
-                  color: Colors.orange,
-                  size: 48,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Delete Opportunity',
-                  style: AppTextStyles.h2.copyWith(
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Are you sure you want to delete "${opportunity.title}" from ${opportunity.company}?',
-                  style: AppTextStyles.body.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 24),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    TextButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(
-                        'Cancel',
-                        style: TextStyle(
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    ElevatedButton(
-                      onPressed: () {
-                        Navigator.of(context).pop(); // Close dialog
-                        setState(() {
-                          _opportunities.removeWhere((opp) => opp.id == opportunity.id);
-                        });
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.red,
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text('Delete'),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
-    );
-  }
   @override
-void dispose() {
-  titleController.dispose();
-  companyController.dispose();
-  descriptionController.dispose();
-  locationController.dispose();
-  skillsController.dispose();
-  super.dispose();
+  void dispose() {
+    titleController.dispose();
+    companyController.dispose();
+    descriptionController.dispose();
+    locationController.dispose();
+    skillsController.dispose();
+    _horizontalController.dispose();
+    _verticalController.dispose();
+    super.dispose();
+  }
 }
-
-}
-
-
-

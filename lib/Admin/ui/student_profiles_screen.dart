@@ -1,111 +1,31 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart' as provider;
 import '../models/student.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../providers/student_profiles_provider.dart';
 
-class StudentProfilesScreen extends StatefulWidget {
+class StudentProfilesScreen extends ConsumerStatefulWidget {
   const StudentProfilesScreen({super.key});
 
   @override
-  State<StudentProfilesScreen> createState() =>
+  ConsumerState<StudentProfilesScreen> createState() =>
       _StudentProfilesScreenState();
 }
 
-class _StudentProfilesScreenState extends State<StudentProfilesScreen> {
-  String _searchTerm = '';
-  final supabase = Supabase.instance.client;
-  @override
-void initState() {
-  super.initState();
-  _loadStudents();
-}
-
-
-List<Student> _students = [];
-bool _isLoading = true;
-
-Future<void> _loadStudents() async {
-  try {
-    final response = await supabase
-        .from('student')
-        .select();
-
-    final data = response as List<dynamic>;
-    debugPrint('Students fetched: ${data.length}');
-
-    setState(() {
-      _students = data.map((e) => Student(
-        id: e['studentid'].toString(),
-        name: e['name'] ?? '',
-        email: e['email'] ?? '',
-        major: e['major'] ?? '',
-        year: e['academicyear'] ?? '',
-        gpa: (e['gpa'] ?? 0).toDouble(),
-        applications: e['application_count'] ?? 0,
-        trainingHours: e['completedtraininghours'] ?? 0,
-      )).toList();
-
-      _isLoading = false;
-    });
-  } catch (e) {
-    debugPrint('Load students error: $e');
-    setState(() => _isLoading = false);
-  }
-}
-
-
-  List<Student> get _filteredStudents {
-    if (_searchTerm.isEmpty) return _students;
-
-    return _students.where((s) {
-      final q = _searchTerm.toLowerCase();
-      return s.name.toLowerCase().contains(q) ||
-          s.email.toLowerCase().contains(q) ||
-          s.major.toLowerCase().contains(q);
-    }).toList();
-  }
-
-  @override
+class _StudentProfilesScreenState extends ConsumerState<StudentProfilesScreen> {
+  
+    @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = provider.Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
-    
+    final state = ref.watch(studentProfilesProvider);
+    final notifier = ref.read(studentProfilesProvider.notifier);
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
-      appBar: AppBar(
-        backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
-        elevation: 0,
-        title: Text(
-          'Student Profiles',
-          style: AppTextStyles.h1.copyWith(
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode : Icons.dark_mode_outlined,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.textSecondary,
-            ),
-            onPressed: () {
-              themeProvider.toggleTheme();
-            },
-          ),
-          const SizedBox(width: 8),
-          ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.red,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Logout'),
-          ),
-          const SizedBox(width: 12),
-        ],
-      ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -113,11 +33,10 @@ Future<void> _loadStudents() async {
           children: [
             /// SEARCH
             TextField(
-              onChanged: (value) =>
-                  setState(() => _searchTerm = value),
+              onChanged:notifier.updateSearch,
               decoration: InputDecoration(
                 hintText:
-                    'Search students by name, email, or major...',
+                    'Search by ID...',
                 hintStyle: TextStyle(
                   color: isDark ? AppColors.darkTextSecondary : AppColors.inputHint,
                 ),
@@ -153,13 +72,17 @@ Future<void> _loadStudents() async {
 
             /// GRID
             Expanded(
-  child: _isLoading
+  child: state.isLoading
       ? const Center(child: CircularProgressIndicator())
       : ListView.separated(
-          itemCount: _filteredStudents.length,
+          itemCount: state.filteredStudents.length,
           separatorBuilder: (_, __) => const SizedBox(height: 20),
           itemBuilder: (_, index) =>
-              _buildStudentCard(_filteredStudents[index], isDark),
+              _buildStudentCard(
+                state.filteredStudents[index], 
+                isDark,
+                notifier,
+                ),
         ),
 ),
 
@@ -172,10 +95,8 @@ Future<void> _loadStudents() async {
 
   // ---------------- CARD ----------------
 
-  Widget _buildStudentCard(Student student, bool isDark) {
-    return SizedBox(
-      height: 240, // 🎯 EXACT CARD HEIGHT (change if needed)
-      child: Container(
+  Widget _buildStudentCard(Student student, bool isDark , StudentProfilesNotifier notifier) {
+    return Container(
         padding: const EdgeInsets.all(20),
         decoration: BoxDecoration(
           color: isDark ? AppColors.darkCard : AppColors.card,
@@ -191,6 +112,7 @@ Future<void> _loadStudents() async {
         ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+         mainAxisSize: MainAxisSize.min,
         children: [
           // HEADER
           Row(
@@ -214,6 +136,19 @@ Future<void> _loadStudents() async {
                   ),
                 ],
               ),
+              Container(
+  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+  decoration: BoxDecoration(
+    color: AppColors.interactive.withOpacity(0.12),
+    borderRadius: BorderRadius.circular(8),
+  ),
+  child: Text(
+    student.collegeId ?? '-',
+    style: AppTextStyles.label.copyWith(
+      color: AppColors.interactive,
+    ),
+  ),
+),
               Container(
                 padding:
                     const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -248,13 +183,15 @@ Future<void> _loadStudents() async {
                   style: AppTextStyles.body.copyWith(
                     color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
                   ),
+                  maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
           ),
+          const SizedBox(height: 8),
 
-          const Spacer(), // 🔑 keeps layout consistent
+          const SizedBox(height: 8),
 
           // STATS
           Row(
@@ -267,23 +204,73 @@ Future<void> _loadStudents() async {
           ),
 
           const SizedBox(height: 14),
+          if (student.expanded) ...[
+  const Divider(height: 30),
+
+  if ((student.phone ?? '').isNotEmpty)
+    _infoRow(Icons.phone, student.phone!, isDark),
+
+  if ((student.address ?? '').isNotEmpty)
+    _infoRow(Icons.location_on, student.address!, isDark),
+
+  if ((student.dateOfBirth ?? '').isNotEmpty)
+    _infoRow(Icons.cake, student.dateOfBirth!, isDark),
+
+  if (student.gender != null)
+    _infoRow(Icons.person, student.gender!, isDark),
+
+  if (student.linkedinUrl != null)
+    _infoRow(Icons.link, student.linkedinUrl!, isDark),
+
+  if (student.skills != null)
+    _infoRow(Icons.star, student.skills!, isDark),
+
+  if (student.bio != null)
+    Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Text(
+        student.bio!,
+        style: AppTextStyles.body.copyWith(
+          color: isDark
+              ? AppColors.darkTextSecondary
+              : AppColors.textSecondary,
+        ),
+      ),
+    ),
+
+  if (student.profileImageUrl != null)
+    Padding(
+      padding: const EdgeInsets.only(top: 12),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.network(
+          student.profileImageUrl!,
+          height: 160,
+          width: double.infinity,
+          fit: BoxFit.cover,
+        ),
+      ),
+    ),
+],
+
 
           // ACTION
           SizedBox(
             width: double.infinity,
-            child: OutlinedButton(
-              onPressed: () {},
-              style: OutlinedButton.styleFrom(
-                foregroundColor: isDark ? AppColors.interactive : AppColors.interactive,
-                side: BorderSide(color: isDark ? AppColors.darkDivider : AppColors.border),
-              ),
-              child: const Text('View Full Profile'),
-            ),
+            child: TextButton(
+  onPressed: () {
+    notifier.toggleExpanded(student.id);
+  },
+  child: Text(
+    student.expanded ? 'Show less' : 'Show more',
+    style: TextStyle(color: AppColors.interactive),
+  ),
+),
+
           ),
         ],
       ),
-    ),
-  );
+    );
 }
 
 
@@ -307,4 +294,29 @@ Future<void> _loadStudents() async {
       ],
     );
   }
+  Widget _infoRow(IconData icon, String text, bool isDark) {
+  return Padding(
+    padding: const EdgeInsets.only(bottom: 8),
+    child: Row(
+      children: [
+        Icon(icon, size: 16,
+            color: isDark
+                ? AppColors.darkTextSecondary
+                : AppColors.textSecondary),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTextStyles.body.copyWith(
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
+
 }

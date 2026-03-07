@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
+import 'package:grad_project/Admin/ui/splashscreen.dart';
+import 'package:provider/provider.dart' as provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'signIn.dart';
 import 'Admin/ui/theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -14,9 +16,11 @@ Future<void> main() async {
   );
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: const MyApp(),
+    ProviderScope(
+      child: provider.ChangeNotifierProvider(
+        create: (_) => ThemeProvider(),
+        child: MyApp(),
+      ),
     ),
   );
 }
@@ -29,12 +33,15 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'AAST Connect',
+      title: 'AAST Connect Staff',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
         primaryColor: const Color(0xFF1565C0),
       ),
-      home: const SignInScreen(),
+      routes: {
+        '/signin': (context) => const SignInScreen(),
+      },
+      home: SplashScreen(),
       debugShowCheckedModeBanner: false,
     );
   }

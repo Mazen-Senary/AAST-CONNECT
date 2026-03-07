@@ -3,237 +3,36 @@ import 'package:intl/intl.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import 'theme_provider.dart';
-import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart' as provider;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/training_record.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/application_record.dart';
+import '../providers/approvals_provider.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
+import '../utils/download_stub.dart'
+    if (dart.library.html) '../utils/download_web.dart';
 
 
-class ApprovalsScreen extends StatefulWidget {
+class ApprovalsScreen extends ConsumerStatefulWidget {
   const ApprovalsScreen({super.key});
 
   @override
-  State<ApprovalsScreen> createState() => _ApprovalsScreenState();
+  ConsumerState<ApprovalsScreen> createState() => _ApprovalsScreenState();
 }
 
-class _ApprovalsScreenState extends State<ApprovalsScreen> {
-  String _selectedSection = 'applications'; // 'applications' or 'training'
-  String _applicationsFilter = 'PENDING'; 
-  String _trainingFilter = 'PENDING'; 
-  late List<ApplicationRecord> _applications = [];
-
-  //List<TrainingRecord> _applications = [];
-  late List<TrainingRecord> _trainingRecords = [];
-  final supabase = Supabase.instance.client;
-  
-  @override
-void initState() {
-  super.initState();
-  _loadTrainingRecords();
-  _loadApplications();
-}
-
-bool _loadingTraining = true;
-Future<void> _loadTrainingRecords() async {
-  final data = await fetchTrainingRecords();
-  
-  setState(() {
-    _trainingRecords = data;
-    _loadingTraining = false;
-  });
-}
-Future<void> _loadApplications() async {
-  final data = await fetchApplications();
-
-  debugPrint('APPLICATION COUNT = ${data.length}');
-  for (final a in data) {
-    debugPrint(
-      'APP ${a.applicationId} | ${a.status} | ${a.studentName} | ${a.collegeId}',
-    );
-  }
-
-  setState(() {
-    _applications = data;
-  });
-}
+class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
 
 
-Future<List<ApplicationRecord>> fetchApplications() async {
-  final response = await supabase
-      .from('application')
-      .select('''
-        applicationid,
-        status,
-        submissiondate,
-        applicant_name,
-        college_id,
-        coverletter,
-        rejectionreason
-      ''');
 
-
-  return response
-      .map<ApplicationRecord>((row) => ApplicationRecord.fromMap(row))
-      .toList();
-}
-List<ApplicationRecord> get _filteredApplications {
-  if (_applications.isEmpty) return [];
-  return _applications
-      .where((a) => a.status == _applicationsFilter)
-      .toList();
-}
-
-List<TrainingRecord> get _filteredTrainingHours {
-  final filtered = _trainingRecords
-      .where((t) => t.status == _trainingFilter)
-      .toList();
-  
-  // Debug: Print filtering info
-  print('Filter: "$_trainingFilter"');
-  print('Total records: ${_trainingRecords.length}');
-  print('Filtered records: ${filtered.length}');
-  for (var record in _trainingRecords) {
-    print('  Record: "${record.status}" -> matches: ${record.status == _trainingFilter}');
-  }
-  
-  return filtered;
-}
-  Future<List<TrainingRecord>> fetchTrainingRecords() async {
-  final response = await supabase
-      .from('trainingrecord')
-      .select('''
-        recordid,
-        studentid,
-        companyname,
-        supervisorname,
-        hourssubmitted,
-        startdate,
-        enddate,
-        status,
-        created_at,
-        proof_image_url,
-        student:studentid ( name )
-      ''');
-
-  return response.map<TrainingRecord>((row) {
-    return TrainingRecord.fromMap({
-      ...row,
-      'studentname': row['student']['name'],
-    });
-  }).toList();
-}
-Future<void> _approveTraining(TrainingRecord record) async {
-  print('Approving training record: ${record.recordId}');
-  
-  try {
-    await supabase
-        .from('trainingrecord')
-        .update({'status': 'accepted'})
-        .eq('recordid', record.recordId);
-
-    print('Database update successful');
-
-    setState(() {
-      _trainingRecords = _trainingRecords.map((r) {
-        if (r.recordId == record.recordId) {
-          print('Updating local state for record ${r.recordId} to APPROVED');
-          return r.copyWith(status: 'APPROVED');
-        }
-        return r;
-      }).toList();
-    });
-    
-    print('Local state update complete');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Training record APPROVED!')),
-    );
-  } catch (e) {
-    print('Error approving training: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $e')),
-    );
-  }
-}
-
-
-Future<void> _rejectTraining(TrainingRecord record) async {
-  print('Rejecting training record: ${record.recordId}');
-  
-  try {
-    await supabase
-        .from('trainingrecord')
-        .update({'status': 'REJECTED'})
-        .eq('recordid', record.recordId);
-
-    print('Database update successful');
-
-    setState(() {
-      _trainingRecords = _trainingRecords.map((r) {
-        if (r.recordId == record.recordId) {
-          print('Updating local state for record ${r.recordId} to rejected');
-          return r.copyWith(status: 'REJECTED');
-        }
-        return r;
-      }).toList();
-    });
-    
-    print('Local state update complete');
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Training record rejected!')),
-    );
-  } catch (e) {
-    print('Error rejecting training: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error: $e')),
-    );
-  }
-}
-Future<void> _approveApplication(ApplicationRecord record) async {
-  await supabase
-      .from('application')
-      .update({'status': 'ACCEPTED'})
-      .eq('applicationid', record.applicationId);
-
-  setState(() {
-    _applications = _applications.map<ApplicationRecord>((a) {
-      if (a.applicationId == record.applicationId) {
-        return a.copyWith(status: 'ACCEPTED');
-      }
-      return a;
-    }).toList();
-  });
-}
-Future<void> _rejectApplication(
-  ApplicationRecord record,
-  String? reason,
+Future<void> _showTrainingRejectDialog(
+  TrainingRecord record,
 ) async {
-  await supabase
-      .from('application')
-      .update({
-        'status': 'REJECTED',
-        'rejection_reason': reason,
-      })
-      .eq('applicationid', record.applicationId);
-
-  setState(() {
-    _applications = _applications.map<ApplicationRecord>((a) {
-      if (a.applicationId == record.applicationId) {
-        return a.copyWith(
-          status: 'REJECTED',
-          rejectionReason: reason,
-        );
-      }
-      return a;
-    }).toList();
-  });
-}
-
-Future<void> _showRejectDialog(ApplicationRecord record) async {
   final controller = TextEditingController();
-  final themeProvider = Provider.of<ThemeProvider>(context, listen: false);
+  final themeProvider = provider.Provider.of<ThemeProvider>(context, listen: false);
   final isDark = themeProvider.isDarkMode;
+  final notifier = ref.read(approvalsProvider.notifier);
 
   await showDialog(
     context: context,
@@ -260,16 +59,245 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
             // HEADER
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    color: Colors.red.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.red,
+                        size: 24,
+                      ),
+                    ),
                   ),
-                  child: const Icon(
-                    Icons.close_rounded,
-                    color: Colors.red,
-                    size: 24,
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Text(
+                    'Reject Training Record',
+                    style: AppTextStyles.h3.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark 
+                          ? AppColors.darkTextPrimary 
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            // STUDENT INFO
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: isDark 
+                    ? AppColors.darkBackground 
+                    : AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Student',
+                    style: AppTextStyles.label.copyWith(
+                      color: isDark 
+                          ? AppColors.darkTextSecondary 
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    record.studentName,
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark 
+                          ? AppColors.darkTextPrimary 
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    '${record.hoursSubmitted} hours • ${record.supervisorName}',
+                    style: AppTextStyles.body.copyWith(
+                      color: isDark 
+                          ? AppColors.darkTextSecondary 
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // REASON INPUT
+            Text(
+              'Reason for rejection (optional)',
+              style: AppTextStyles.label.copyWith(
+                color: isDark 
+                    ? AppColors.darkTextSecondary 
+                    : AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              decoration: BoxDecoration(
+                color: isDark 
+                    ? AppColors.darkBackground 
+                    : AppColors.background,
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(
+                  color: isDark 
+                      ? AppColors.darkDivider 
+                      : AppColors.border,
+                ),
+              ),
+              child: TextField(
+                controller: controller,
+                maxLines: 3,
+                style: AppTextStyles.body.copyWith(
+                  color: isDark 
+                      ? AppColors.darkTextPrimary 
+                      : AppColors.textPrimary,
+                ),
+                decoration: InputDecoration(
+                  hintText: 'Enter reason for rejecting training hours...',
+                  hintStyle: AppTextStyles.body.copyWith(
+                    color: isDark 
+                        ? AppColors.darkTextSecondary 
+                        : AppColors.textSecondary,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.all(16),
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+
+            // ACTIONS
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () async {
+                      await notifier.rejectTraining(record, null);
+                      Navigator.pop(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: isDark 
+                          ? AppColors.darkTextSecondary 
+                          : AppColors.textSecondary,
+                      side: BorderSide(
+                        color: isDark 
+                            ? AppColors.darkDivider 
+                            : AppColors.border,
+                      ),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Skip',
+                      style: AppTextStyles.label.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await notifier.rejectTraining(
+                        record,
+                        controller.text.trim(),
+                      );
+                      Navigator.pop(context);
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentAlert,
+                      foregroundColor: AppColors.accentAlertText,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text(
+                      'Reject Training',
+                      style: AppTextStyles.label.copyWith(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.accentAlertText,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+Future<void> _showRejectDialog(ApplicationRecord record) async {
+  final controller = TextEditingController();
+  final themeProvider = provider.Provider.of<ThemeProvider>(context, listen: false);
+  final isDark = themeProvider.isDarkMode;
+  final notifier = ref.read(approvalsProvider.notifier);
+
+  await showDialog(
+    context: context,
+    builder: (_) => Dialog(
+      backgroundColor: Colors.transparent,
+      child: Container(
+        margin: const EdgeInsets.all(20),
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.darkCard : AppColors.card,
+          borderRadius: BorderRadius.circular(20),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // HEADER
+            Row(
+              children: [
+                GestureDetector(
+                  onTap: () => Navigator.pop(context),
+                  child: MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: const Icon(
+                        Icons.close_rounded,
+                        color: Colors.red,
+                        size: 24,
+                      ),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -375,7 +403,10 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
               children: [
                 Expanded(
                   child: OutlinedButton(
-                    onPressed: () => Navigator.pop(context),
+                    onPressed: () async {
+                      await notifier.rejectApplication(record, null); // 👈 reject without reason
+                      Navigator.pop(context);
+                    },
                     style: OutlinedButton.styleFrom(
                       foregroundColor: isDark 
                           ? AppColors.darkTextSecondary 
@@ -402,15 +433,15 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
                 Expanded(
                   child: ElevatedButton(
                     onPressed: () async {
-                      await _rejectApplication(
+                      await notifier.rejectApplication(
                         record,
                         controller.text.trim(),
                       );
                       Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
-                      foregroundColor: Colors.white,
+                      backgroundColor: AppColors.accentAlert,
+                      foregroundColor: AppColors.accentAlertText,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -420,7 +451,7 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
                       'Reject Application',
                       style: AppTextStyles.label.copyWith(
                         fontWeight: FontWeight.w600,
-                        color: Colors.white,
+                        color: AppColors.accentAlertText,
                       ),
                     ),
                   ),
@@ -437,8 +468,10 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
 
   @override
   Widget build(BuildContext context) {
-    final themeProvider = Provider.of<ThemeProvider>(context);
+    final themeProvider = provider.Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
+    final state = ref.watch(approvalsProvider);
+    final notifier = ref.read(approvalsProvider.notifier);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
@@ -446,7 +479,7 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
         backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
         elevation: 0,
         title: Text(
-          'AAST Connect',
+          'APPROVALS',
           style: AppTextStyles.h1.copyWith(
             color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
@@ -477,33 +510,34 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Section Selector
-            _buildSectionSelector(isDark),
+            _buildSectionSelector(isDark , state, notifier),
             const SizedBox(height: 24),
             
             // Status Tabs
-            _buildStatusTabs(isDark),
+            _buildStatusTabs(isDark , state, notifier),
             const SizedBox(height: 20),
             
             // Content
             Expanded(
-              child: _selectedSection == 'applications'
-                  ? (_filteredApplications.isEmpty
+              child: state.selectedSection == 'applications'
+                  ? (state.filteredApplications.isEmpty
                       ? _emptyState('applications', isDark)
                       : ListView.separated(
-                          itemCount: _filteredApplications.length,
+                          itemCount: state.filteredApplications.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 16),
                           itemBuilder: (_, index) => _buildApplicationCard(
-                            _filteredApplications[index],
+                            state.filteredApplications[index],
                             isDark,
+                            notifier
                           ),
                         ))
-                  : (_filteredTrainingHours.isEmpty
+                  : (state.filteredTrainingHours.isEmpty
                       ? _emptyState('training', isDark)
                       : ListView.separated(
-                          itemCount: _filteredTrainingHours.length,
+                          itemCount: state.filteredTrainingHours.length,
                           separatorBuilder: (_, __) => const SizedBox(height: 16),
                           itemBuilder: (_, index) =>
-                            _buildTrainingCard(_filteredTrainingHours[index], isDark),
+                            _buildTrainingCard(state.filteredTrainingHours[index], isDark , notifier),
 
                         )),
             ),
@@ -532,26 +566,23 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
 
   // ---------------- SECTION SELECTOR ----------------
 
-  Widget _buildSectionSelector(bool isDark) {
+  Widget _buildSectionSelector(bool isDark , state, notifier) {
     return Row(
       children: [
         Expanded(
           child: GestureDetector(
             onTap: () {
-            setState(() {
-              _selectedSection = 'applications';
-              _applicationsFilter = 'PENDING'; // force refilter
-            });
+           notifier.changeSection('applications'); // force refilter
           },
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: _selectedSection == 'applications'
+                color: state.selectedSection == 'applications'
                     ? AppColors.interactive.withOpacity(0.15)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(AppColors.radius),
                 border: Border.all(
-                  color: _selectedSection == 'applications'
+                  color: state.selectedSection == 'applications'
                       ? AppColors.interactive
                       : (isDark ? AppColors.darkDivider : AppColors.border),
                 ),
@@ -561,7 +592,7 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
                 textAlign: TextAlign.center,
                 style: AppTextStyles.h3.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: _selectedSection == 'applications'
+                  color: state.selectedSection == 'applications'
                       ? AppColors.interactive
                       : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
                 ),
@@ -572,16 +603,16 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
         const SizedBox(width: 16),
         Expanded(
           child: GestureDetector(
-            onTap: () => setState(() => _selectedSection = 'training'),
+            onTap: () => notifier.changeSection('training'),
             child: Container(
               padding: const EdgeInsets.symmetric(vertical: 16),
               decoration: BoxDecoration(
-                color: _selectedSection == 'training'
+                color: state.selectedSection == 'training'
                     ? AppColors.interactive.withOpacity(0.15)
                     : Colors.transparent,
                 borderRadius: BorderRadius.circular(AppColors.radius),
                 border: Border.all(
-                  color: _selectedSection == 'training'
+                  color: state.selectedSection == 'training'
                       ? AppColors.interactive
                       : (isDark ? AppColors.darkDivider : AppColors.border),
                 ),
@@ -591,7 +622,7 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
                 textAlign: TextAlign.center,
                 style: AppTextStyles.h3.copyWith(
                   fontWeight: FontWeight.w600,
-                  color: _selectedSection == 'training'
+                  color: state.selectedSection == 'training'
                       ? AppColors.interactive
                       : (isDark ? AppColors.darkTextSecondary : AppColors.textSecondary),
                 ),
@@ -605,29 +636,21 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
 
   // ---------------- STATUS TABS ----------------
 
-  Widget _buildStatusTabs(bool isDark) {
-  final tabs = ['PENDING', 'ACCEPTED', 'REJECTED'];
+Widget _buildStatusTabs(bool isDark, state, notifier) {
+  final tabs = ['PENDING', 'APPROVED', 'REJECTED'];
 
   final currentFilter =
-      _selectedSection == 'applications'
-          ? _applicationsFilter
-          : _trainingFilter;
+      state.selectedSection == 'applications'
+          ? state.applicationsFilter
+          : state.trainingFilter;
 
   return Row(
     children: tabs.map((tab) {
-      final bool selected = currentFilter == tab;
+      final selected = currentFilter == tab;
 
       return Expanded(
         child: GestureDetector(
-          onTap: () {
-            setState(() {
-              if (_selectedSection == 'applications') {
-                _applicationsFilter = tab; // APPLICATIONS ONLY
-              } else {
-                _trainingFilter = tab; // training untouched
-              }
-            });
-          },
+          onTap: () => notifier.changeFilter(tab),
           child: Container(
             padding: const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
@@ -654,140 +677,15 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
     }).toList(),
   );
 }
-
-
   // ---------------- CARD ----------------
-
-  Widget _buildApprovalCard(
-    TrainingRecord approval,
-    bool isDark,
-    String section,
-  ) {
-    final Color statusColor = approval.status == 'PENDING'
-        ? const Color(0xFFFFC107)
-        : approval.status == 'APPROVED'
-            ? const Color(0xFF4CAF50)
-            : const Color(0xFFD32F2F);
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          /// ───── HEADER ─────
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                approval.studentName,
-                style: AppTextStyles.h3.copyWith(
-                  fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? AppColors.darkTextPrimary
-                      : AppColors.textPrimary,
-                ),
-              ),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  approval.status.toUpperCase(),
-                  style: AppTextStyles.label.copyWith(
-                    color: statusColor,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 16),
-
-          /// ───── DETAILS ─────
-          Column(
-            children: [
-              _buildDetailItem(
-                section == 'applications' ? Icons.business : Icons.access_time,
-                section == 'applications' 
-                    ? approval.companyName 
-                    : '${approval.hoursSubmitted} hours',
-                isDark,
-              ),
-              const SizedBox(height: 12),
-              _buildDetailItem(
-                section == 'applications' ? Icons.person : Icons.supervisor_account,
-                section == 'applications' 
-                    ? 'Application ID: ${approval.recordId}'
-                    : approval.supervisorName,
-                isDark,
-              ),
-              const SizedBox(height: 12),
-              _buildDetailItem(
-                Icons.calendar_today,
-                DateFormat('MMM dd, yyyy').format(approval.createdAt),
-                isDark,
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 20),
-
-          /// ───── ACTIONS ─────
-          if (approval.status == 'PENDING'&& section == 'applications')
-  Row(
-    children: [
-      Expanded(
-        child: OutlinedButton(
-          onPressed: () => _rejectTraining(approval),
-          style: OutlinedButton.styleFrom(
-            foregroundColor: Colors.red,
-            side: const BorderSide(color: Colors.red),
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-          child: const Text('Reject'),
-        ),
-      ),
-      const SizedBox(width: 12),
-      Expanded(
-        child: ElevatedButton(
-          onPressed: () => _approveTraining(approval),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.interactive,
-            foregroundColor: Colors.white,
-            padding: const EdgeInsets.symmetric(vertical: 12),
-          ),
-          child: const Text('Accept'),
-        ),
-      ),
-    ],
-  ),
-
-        ],
-      ),
-    );
-  }
   Widget _buildApplicationCard(
   ApplicationRecord record,
   bool isDark,
+  ApprovalsNotifier notifier,
 ) {
   final statusColor = record.status == 'PENDING'
       ? Colors.orange
-      : record.status == 'ACCEPTED'
+      : record.status == 'APPROVED'
           ? Colors.green
           : Colors.red;
 
@@ -836,14 +734,7 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
 
         TextButton(
           onPressed: () {
-            setState(() {
-              _applications = _applications.map<ApplicationRecord>((a) {
-                if (a.applicationId == record.applicationId) {
-                  return a.copyWith(expanded: !a.expanded);
-                }
-                return a;
-              }).toList();
-            });
+            notifier.toggleApplicationExpanded(record.applicationId);
           },
           child: Text(
             record.expanded ? 'Show less' : 'Show more',
@@ -858,13 +749,21 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
               Expanded(
                 child: OutlinedButton(
                   onPressed: () => _showRejectDialog(record),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.accentAlertText,
+                    side: const BorderSide(color: AppColors.accentAlertText),
+                  ),
                   child: const Text('Reject'),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _approveApplication(record),
+                  onPressed: () => notifier.approveApplication(record),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentSuccess,
+                    foregroundColor: AppColors.accentSuccessText,
+                  ),
                   child: const Text('Approve'),
                 ),
               ),
@@ -875,29 +774,25 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
     ),
   );
 }
-
-
-  Future<void> _downloadImage(String imageUrl) async {
-  try {
+Future<void> downloadFile(String url) async {
+  if (kIsWeb) {
+    await downloadWeb(url);   // comes from download_web.dart
+  } else {
     final dir = await getApplicationDocumentsDirectory();
-    final filePath =
-        '${dir.path}/training_proof_${DateTime.now().millisecondsSinceEpoch}.jpg';
 
-    await Dio().download(imageUrl, filePath);
+    final filePath =
+        '${dir.path}/training_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
+    await Dio().download(url, filePath);
 
     if (!mounted) return;
 
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Image downloaded to:\n$filePath')),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Failed to download image')),
+      SnackBar(content: Text('Saved to:\n$filePath')),
     );
   }
 }
-
-  void _openImagePreview(BuildContext context, String imageUrl) {
+  void _openImagePreview(BuildContext context, String imageUrl , String storagePath,) {
   showDialog(
     context: context,
     builder: (_) => Dialog(
@@ -925,25 +820,24 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
           ),
 
           // DOWNLOAD BUTTON
-          Positioned(
-            bottom: 16,
-            right: 16,
-            child: FloatingActionButton(
-              backgroundColor: Colors.white,
-              onPressed: () => _downloadImage(imageUrl),
-              child: const Icon(Icons.download, color: Colors.black),
-            ),
-          ),
+          FloatingActionButton(
+  backgroundColor: Colors.white,
+  onPressed: () {
+  downloadFile(imageUrl);
+},
+
+
+  child: const Icon(Icons.download, color: Colors.black),
+),
+
         ],
       ),
     ),
   );
 }
 
- Widget _buildTrainingCard(TrainingRecord record, bool isDark) {
-  // Debug: Print status to see what we're getting from DB
-  print('Training Record Status: "${record.status}" (Filter: "$_trainingFilter")');
-  
+ Widget _buildTrainingCard(TrainingRecord record, bool isDark , ApprovalsNotifier notifier) {
+
   final Color statusColor =
     record.status == 'PENDING'
         ? const Color(0xFFFFC107)
@@ -1012,18 +906,30 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
               record.proofImageUrl!.isNotEmpty) ...[
             const SizedBox(height: 12),
             GestureDetector(
-              onTap: () =>
-                  _openImagePreview(context, record.proofImageUrl!),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  record.proofImageUrl!,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                ),
-              ),
-            ),
+  onTap: () {
+    final path = record.proofImageUrl!
+    .split('/training-proofs/')
+    .last;
+
+
+
+    _openImagePreview(
+      context,
+      record.proofImageUrl!,
+      path,
+    );
+  },
+  child: ClipRRect(
+    borderRadius: BorderRadius.circular(12),
+    child: Image.network(
+      record.proofImageUrl!,
+      height: 180,
+      width: double.infinity,
+      fit: BoxFit.cover,
+    ),
+  ),
+),
+
           ],
         ],
 
@@ -1032,14 +938,7 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
         // SHOW MORE / LESS - ALWAYS AT BOTTOM
         TextButton(
           onPressed: () {
-            setState(() {
-  _trainingRecords = _trainingRecords.map((r) {
-    if (r.recordId == record.recordId) {
-      return r.copyWith(expanded: !r.expanded);
-    }
-    return r;
-  }).toList();
-});
+            notifier.toggleTrainingExpanded(record.recordId);
 
           },
           child: Text(
@@ -1055,9 +954,10 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
             children: [
               Expanded(
                 child: OutlinedButton(
-                  onPressed: () => _rejectTraining(record),
+                  onPressed: () => _showTrainingRejectDialog(record),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
+                    foregroundColor: AppColors.accentAlertText,
+                    side: const BorderSide(color: AppColors.accentAlertText),
                   ),
                   child: const Text('Reject'),
                 ),
@@ -1065,10 +965,10 @@ Future<void> _showRejectDialog(ApplicationRecord record) async {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () => _approveTraining(record),
+                  onPressed: () => notifier.approveTraining(record),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.interactive,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AppColors.accentSuccess,
+                    foregroundColor: AppColors.accentSuccessText,
                   ),
                   child: const Text('Accept'),
                 ),

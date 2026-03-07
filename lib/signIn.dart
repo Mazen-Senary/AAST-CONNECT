@@ -21,67 +21,47 @@ class _SignInScreenState extends State<SignInScreen> {
   final supabase = Supabase.instance.client;
 
   Future<void> _signIn() async {
-  final collegeId = _registrationController.text.trim();
+final collegeId = _registrationController.text.trim();
 
   if (collegeId.isEmpty) {
-    setState(() {
-      _loginMessage = 'Please enter your registration number';
-    });
-    return;
-  }
+  setState(() {
+    _loginMessage = 'Enter a valid Admin ID';
+  });
+  return;
+}
+
 
   setState(() {
-    _loginMessage = 'Checking registration number...';
+    _loginMessage = 'Checking admin ID...';
   });
 
   try {
     final response = await supabase.rpc(
-      'signin_with_college_id',
-      params: {
-        'input_college_id': collegeId,
-      },
-    );
+  'signin_admin',
+  params: {
+    'input_college_id': collegeId,
+  },
+);
 
     if (response == null || response.isEmpty) {
-      setState(() {
-        _loginMessage = 'Invalid registration number';
-      });
-      return;
-    }
+  setState(() {
+    _loginMessage = 'Admin not found';
+  });
+  return;
+}
 
-    final int adminId = response[0]['userid'];
-    final String role = response[0]['role'];
+final adminId = response[0]['adminid'];
 
-    if (role == 'ADMIN') {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider(
-            create: (_) => ThemeProvider(),
-            child: AdminNavigation(adminId: adminId),
-          ),
-        ),
-      );
-      return;
-    }
+Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (_) => ChangeNotifierProvider(
+      create: (_) => ThemeProvider(),
+      child: AdminNavigation(adminId: adminId),
+    ),
+  ),
+);
 
-    if (role == 'STUDENT') {
-      setState(() {
-        _loginMessage = 'Student dashboard not implemented yet';
-      });
-      return;
-    }
-
-    if (role == 'FRESH_GRAD') {
-      setState(() {
-        _loginMessage = 'Graduate dashboard not implemented yet';
-      });
-      return;
-    }
-
-    setState(() {
-      _loginMessage = 'Unauthorized role';
-    });
   } catch (e) {
   debugPrint('SIGN IN ERROR: $e');
 
@@ -111,6 +91,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     Container(
                       width: 80,
                       height: 80,
+                      
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         gradient: const LinearGradient(
@@ -128,7 +109,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     const SizedBox(height: 16),
                     const Text(
-                      'AAST Connect',
+                      'AAST Connect Staff',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 32,
@@ -138,7 +119,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                     const SizedBox(height: 4),
                     const Text(
-                      'Your path to training & opportunities',
+                      'Administrative oversight for academic training',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontFamily: 'Inter',
@@ -153,13 +134,14 @@ class _SignInScreenState extends State<SignInScreen> {
               const SizedBox(height: 60),
 
               /// Login Card
-              Expanded(
-                child: Card(
+              Card(
+                  color: const Color(0xFFFFFFFF),
                   elevation: 8,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Padding(
+                
                     padding: const EdgeInsets.all(24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -193,6 +175,7 @@ class _SignInScreenState extends State<SignInScreen> {
                             hintText: 'Enter your registration number',
                             border: OutlineInputBorder(
                               borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide.none,
                             ),
                           ),
                         ),
@@ -207,9 +190,9 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                           ),
                         ],
-
-                        const Spacer(),
-
+                        SizedBox(
+                          height: 20,
+                        ),
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -236,7 +219,7 @@ class _SignInScreenState extends State<SignInScreen> {
                     ),
                   ),
                 ),
-              ),
+            
             ],
           ),
         ),
