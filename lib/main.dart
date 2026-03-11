@@ -1,10 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import 'signIn.dart';
-import 'Admin/ui/theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
-
+import 'fresh_grads/theme/app_theme.dart';
+import 'package:provider/provider.dart';
+import 'fresh_grads/utils/profile_provider.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -14,11 +13,13 @@ Future<void> main() async {
   );
 
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: const MyApp(),
-    ),
-  );
+  MultiProvider(
+    providers: [
+      ChangeNotifierProvider(create: (_) => ProfileProvider()),
+    ],
+    child: const MyApp(),
+  ),
+);
 }
 
 
@@ -30,10 +31,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'AAST Connect',
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
-        primaryColor: const Color(0xFF1565C0),
-      ),
+      theme: AppTheme.light(),
+      darkTheme: AppTheme.dark(),
+      themeMode: ThemeMode.system,
       home: const SignInScreen(),
       debugShowCheckedModeBanner: false,
     );
