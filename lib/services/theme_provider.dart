@@ -102,12 +102,10 @@ class ThemeProvider extends ChangeNotifier {
     colorScheme: const ColorScheme.dark(
       primary: Color(0xFF4A90E2), // Softer, more visible blue
       secondary: Color(0xFF637E99),
-      surface: Color(0xFF2A2A2A), // Lighter surface color
-      background: Color(0xFF1A1A1A), // Lighter background
+      surface: Color(0xFF2A2A2A), // Lighter background
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Colors.white,
-      onBackground: Colors.white,
       error: Colors.redAccent,
       onError: Colors.black,
     ),
