@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'Admin/ui/admin_navigation.dart';
-import 'Admin/ui/theme_provider.dart';
+import 'Admin/presentation/views/admin_navigation.dart';
+import 'Admin/presentation/views/theme_provider.dart';
 // import 'Student/ui/student_navigation.dart';
 // import 'Graduate/ui/graduate_navigation.dart';
 

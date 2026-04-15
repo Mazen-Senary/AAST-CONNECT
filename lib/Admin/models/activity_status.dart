@@ -1,5 +1,5 @@
 enum ActivityStatus {
   pending,
-  newItem,
-  completed,
+  approved,
+  rejected,
 }

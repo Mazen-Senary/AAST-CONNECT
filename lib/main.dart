@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:grad_project/Admin/ui/splashscreen.dart';
+import 'package:grad_project/Admin/presentation/views/splashscreen.dart';
 import 'package:provider/provider.dart' as provider;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'signIn.dart';
-import 'Admin/ui/theme_provider.dart';
+import 'Admin/presentation/views/theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 

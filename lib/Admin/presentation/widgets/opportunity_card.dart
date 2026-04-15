@@ -1,0 +1,25 @@
+import 'package:flutter/material.dart';
+import '../../domain/entities/opportunity.dart';
+
+class OpportunityCard extends StatelessWidget {
+  final Opportunity opportunity;
+  final VoidCallback onDelete;
+  final VoidCallback onEdit;
+
+  const OpportunityCard({
+    super.key,
+    required this.opportunity,
+    required this.onDelete,
+    required this.onEdit,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    // 👉 paste your FULL card UI here
+    // replace direct calls with:
+    // onDelete()
+    // onEdit()
+
+    return Container(); // your actual UI
+  }
+}
