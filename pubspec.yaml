@@ -44,7 +44,7 @@ dependencies:
   # Provider for state management
   provider: ^6.1.1
   file_picker: ^8.0.0
-
+  url_launcher: ^6.2.5
 dev_dependencies:
   flutter_test:
     sdk: flutter

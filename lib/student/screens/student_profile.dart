@@ -136,76 +136,6 @@ class _StudentProfileState extends State<StudentProfile> {
     );
   }
 
-
-  // // Helper widgets (keep these outside the function)
-  // Widget _buildSkillChip(String skill, String level, bool isDark) {
-  //   return Container(
-  //     margin: const EdgeInsets.only(bottom: 8),
-  //     padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
-  //     decoration: BoxDecoration(
-  //       color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
-  //       borderRadius: BorderRadius.circular(10),
-  //       border: Border.all(
-  //         color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-  //       ),
-  //     ),
-  //     child: Row(
-  //       mainAxisAlignment: MainAxisAlignment.spaceBetween,
-  //       children: [
-  //         Text(
-  //           skill,
-  //           style: TextStyle(
-  //             fontWeight: FontWeight.w500,
-  //             color: isDark ? Colors.white : Colors.black87,
-  //           ),
-  //         ),
-  //         Container(
-  //           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-  //           decoration: BoxDecoration(
-  //             color: level == "Advanced"
-  //                 ? Colors.green.shade100
-  //                 : level == "Intermediate"
-  //                 ? Colors.orange.shade100
-  //                 : Colors.blue.shade100,
-  //             borderRadius: BorderRadius.circular(12),
-  //           ),
-  //           child: Text(
-  //             level,
-  //             style: TextStyle(
-  //               fontSize: 11,
-  //               color: level == "Advanced"
-  //                   ? Colors.green.shade800
-  //                   : level == "Intermediate"
-  //                   ? Colors.orange.shade800
-  //                   : Colors.blue.shade800,
-  //             ),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-  //
-  // Widget _buildInterestChip(String interest, bool isDark) {
-  //   return Container(
-  //     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-  //     decoration: BoxDecoration(
-  //       color: isDark
-  //           ? const Color(0xFF284B8C).withOpacity(0.2)
-  //           : const Color(0xFF284B8C).withOpacity(0.1),
-  //       borderRadius: BorderRadius.circular(20),
-  //       border: Border.all(color: const Color(0xFF284B8C).withOpacity(0.3)),
-  //     ),
-  //     child: Text(
-  //       interest,
-  //       style: TextStyle(
-  //         color: isDark ? Colors.white : const Color(0xFF284B8C),
-  //         fontWeight: FontWeight.w500,
-  //       ),
-  //     ),
-  //   );
-  // }
-
   void _showSavedProgramDetails(
     BuildContext context,
     String title,
@@ -325,7 +255,7 @@ class _StudentProfileState extends State<StudentProfile> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => StudentProfileSkillsModal.show(context),
+                onTap: () => StudentProfileSkillsModal.show(context, _student!.studentID),
                     child: _buildQuickAction(
                       Icons.eco_outlined,
                       "Skills & Interests",
@@ -340,7 +270,9 @@ class _StudentProfileState extends State<StudentProfile> {
               children: [
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => StudentProfileDocumentsModal.show(context,_profileId),
+                    onTap: () => StudentProfileDocumentsModal.show(context,_profileId, onUpdate: () {
+                      _fetchStudentData();
+                    }),
                     child: _buildQuickAction(
                       Icons.description_outlined,
                       "Documents",
@@ -351,7 +283,7 @@ class _StudentProfileState extends State<StudentProfile> {
                 const SizedBox(width: 10),
                 Expanded(
                   child: GestureDetector(
-                    onTap: () => StudentProfilePortfolioModal.show(context),
+                    onTap: () => StudentProfilePortfolioModal.show(context, _student!.studentID),
                     child: _buildQuickAction(
                       Icons.bookmark_border,
                       "Portfolio Links",
@@ -395,11 +327,18 @@ class _StudentProfileState extends State<StudentProfile> {
                     ? DateTime.parse(doc['uploaddate'])
                     : DateTime.now();
                 final dateStr = "${doc['documenttype']} • ${uploadDate.day}/${uploadDate.month}/${uploadDate.year}";
+
+                // extract real filename from URL
+                final filepath = doc['filepath'] ?? '';
+                final uri = Uri.parse(filepath);
+                final fullName = uri.pathSegments.isNotEmpty ? uri.pathSegments.last : '';
+                final parts = fullName.split('_');
+                final realName = parts.length > 2 ? parts.sublist(2).join('_') : doc['documenttype'] ?? '';
+
                 return GestureDetector(
-                  onTap: () => StudentProfileDocumentsModal.show(context, _profileId,onUpdate: () {
-                    _fetchStudentData();}),
+                  onTap: () => StudentProfileDocumentsModal.show(context, _profileId),
                   child: _buildDocItem(
-                    doc['documenttype'] ?? '',
+                    realName, // ← now shows real filename
                     dateStr,
                     true,
                   ),

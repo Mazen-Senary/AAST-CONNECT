@@ -1,19 +1,21 @@
 
-//new modal document
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart'; // NEW: for opening documents
 
 class StudentProfileDocumentsModal {
-  static void show(BuildContext context, int? profileId,{VoidCallback? onUpdate}) {
+  static void show(BuildContext context, int? profileId, {VoidCallback? onUpdate}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      builder: (context) => _DocumentsModalContent(profileId: profileId,
-        onUpdate: onUpdate,),
+      builder: (context) => _DocumentsModalContent(
+        profileId: profileId,
+        onUpdate: onUpdate,
+      ),
     );
   }
 }
@@ -21,6 +23,7 @@ class StudentProfileDocumentsModal {
 class _DocumentsModalContent extends StatefulWidget {
   final VoidCallback? onUpdate;
   final int? profileId;
+
   const _DocumentsModalContent({
     required this.profileId,
     this.onUpdate,
@@ -63,43 +66,38 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
 
   Future<void> _uploadDocument() async {
     try {
-      // pick file
       FilePickerResult? result = await FilePicker.platform.pickFiles(
         type: FileType.custom,
         allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
         withData: true,
       );
 
-      if (result == null) return; // user cancelled
+      if (result == null) return;
 
       setState(() => _isUploading = true);
 
       final file = result.files.first;
-      final fileName = '${widget.profileId}_${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      // CHANGED: store original filename separately for display
+      final originalFileName = file.name;
+      final storagePath = 'student_${widget.profileId}/${widget.profileId}_${DateTime.now().millisecondsSinceEpoch}_$originalFileName';
       final supabase = Supabase.instance.client;
 
-      // upload file to Supabase Storage
       await supabase.storage
           .from('documents')
-          .uploadBinary(
-        'student_${widget.profileId}/$fileName',
-        file.bytes!,
-      );
+          .uploadBinary(storagePath, file.bytes!);
 
-      // get public URL
       final fileUrl = supabase.storage
           .from('documents')
-          .getPublicUrl('student_${widget.profileId}/$fileName');
+          .getPublicUrl(storagePath);
 
-      // save to document table
+      // CHANGED: removed 'filename' field (not in DB schema)
+      // original filename is extracted from filepath URL when displaying
       await supabase.from('document').insert({
         'ownerprofileid': widget.profileId,
         'documenttype': _selectedType,
         'filepath': fileUrl,
-
       });
 
-      // refresh list
       await _fetchDocuments();
       widget.onUpdate?.call();
 
@@ -119,36 +117,64 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
     try {
       final supabase = Supabase.instance.client;
 
-      // extract file path from URL for storage deletion
       final uri = Uri.parse(filePath);
       final storagePath = uri.pathSegments
           .skipWhile((s) => s != 'documents')
           .skip(1)
           .join('/');
 
-      // delete from storage
-      await supabase.storage
-          .from('documents')
-          .remove([storagePath]);
+      await supabase.storage.from('documents').remove([storagePath]);
 
-      // delete from document table
       await supabase
           .from('document')
           .delete()
           .eq('documentid', documentId);
 
-      // refresh list
       await _fetchDocuments();
       widget.onUpdate?.call();
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Document deleted!")),
       );
-
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Error deleting: $e")),
       );
+    }
+  }
+
+  // NEW: opens document URL in browser/PDF viewer
+  Future<void> _openDocument(String filePath) async {
+    try {
+      final uri = Uri.parse(filePath);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Cannot open this file")),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error opening file: $e")),
+      );
+    }
+  }
+
+  // NEW: extracts real filename from the storage URL
+  String _extractFileName(String filepath) {
+    try {
+      final uri = Uri.parse(filepath);
+      final fullName = uri.pathSegments.last;
+      // storage path is: profileId_timestamp_originalfilename.pdf
+      // split by _ and skip first 2 parts (profileId and timestamp)
+      final parts = fullName.split('_');
+      if (parts.length > 2) {
+        return parts.sublist(2).join('_');
+      }
+      return fullName;
+    } catch (e) {
+      return 'Document';
     }
   }
 
@@ -206,7 +232,6 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // header
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -222,7 +247,6 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
           ),
           const SizedBox(height: 20),
 
-          // upload button
           ElevatedButton.icon(
             onPressed: _isUploading ? null : _showUploadOptions,
             icon: _isUploading
@@ -250,7 +274,6 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
           ),
           const SizedBox(height: 15),
 
-          // documents list
           Expanded(
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
@@ -261,10 +284,7 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
                 children: [
                   Icon(Icons.folder_open, size: 50, color: Colors.grey),
                   SizedBox(height: 10),
-                  Text(
-                    "No documents yet",
-                    style: TextStyle(color: Colors.grey),
-                  ),
+                  Text("No documents yet", style: TextStyle(color: Colors.grey)),
                   Text(
                     "Upload your CV, certificates or other files",
                     style: TextStyle(color: Colors.grey, fontSize: 12),
@@ -281,59 +301,64 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
                     : DateTime.now();
                 final dateStr = "${uploadDate.day}/${uploadDate.month}/${uploadDate.year}";
 
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 10),
-                  padding: const EdgeInsets.all(15),
-                  decoration: BoxDecoration(
-                    color: Theme.of(context).colorScheme.surface,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(10),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD6E2F2),
-                          borderRadius: BorderRadius.circular(10),
+                // CHANGED: extract real filename from URL instead of showing type
+                final realFileName = _extractFileName(doc['filepath'] ?? '');
+
+                // CHANGED: wrapped in GestureDetector to open document on tap
+                return GestureDetector(
+                  onTap: () => _openDocument(doc['filepath'] ?? ''),
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: Theme.of(context).colorScheme.surface,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(color: Colors.grey.shade200),
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFD6E2F2),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(
+                            Icons.file_present,
+                            color: Color(0xFF284B8C),
+                          ),
                         ),
-                        child: const Icon(
-                          Icons.file_present,
-                          color: Color(0xFF284B8C),
-                        ),
-                      ),
-                      const SizedBox(width: 15),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              doc['documenttype'] ?? '',
-                              style: const TextStyle(
-                                fontWeight: FontWeight.bold,
+                        const SizedBox(width: 15),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // CHANGED: shows real filename now
+                              Text(
+                                realFileName,
+                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                overflow: TextOverflow.ellipsis,
                               ),
-                            ),
-                            Text(
-                              "${doc['documenttype']} • $dateStr",
-                              style: const TextStyle(
-                                color: Colors.grey,
-                                fontSize: 12,
+                              // shows type + date
+                              Text(
+                                "${doc['documenttype']} • $dateStr",
+                                style: const TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 12,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                      IconButton(
-                        icon: const Icon(
-                          Icons.delete_outline,
-                          color: Colors.red,
+                        IconButton(
+                          icon: const Icon(Icons.delete_outline, color: Colors.red),
+                          onPressed: () => _deleteDocument(
+                            doc['documentid'].toString(),
+                            doc['filepath'] ?? '',
+                          ),
                         ),
-                        onPressed: () => _deleteDocument(
-                          doc['documentid'].toString(),
-                          doc['filepath'] ?? '',
-                        ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 );
               },

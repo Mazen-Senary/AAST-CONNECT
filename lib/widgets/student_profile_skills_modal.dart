@@ -1,118 +1,380 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class StudentProfileSkillsModal {
-  static void show(BuildContext context) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
-
+  static void show(BuildContext context, int studentId) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
-      builder: (context) => Container(
-        height: MediaQuery.of(context).size.height * 0.9,
-        decoration: BoxDecoration(
-          color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
-        ),
-        child: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(25),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      builder: (context) => _SkillsModalContent(studentId: studentId),
+    );
+  }
+}
+
+class _SkillsModalContent extends StatefulWidget {
+  final int studentId;
+  const _SkillsModalContent({required this.studentId});
+
+  @override
+  State<_SkillsModalContent> createState() => _SkillsModalContentState();
+}
+
+class _SkillsModalContentState extends State<_SkillsModalContent> {
+  List<Map<String, String>> _skills = [];
+  List<String> _interests = [];
+  bool _isLoading = true;
+  bool _isSaving = false;
+  String _selectedLevel = 'Beginner';
+  String _selectedCategory = 'Technical';
+  final List<String> _levels = ['Beginner', 'Intermediate', 'Advanced'];
+  final List<String> _categories = ['Technical', 'Soft'];
+
+  // skill name controller for autocomplete
+  String _skillInputValue = '';
+
+  // interest name controller for autocomplete
+  String _interestInputValue = '';
+
+  final List<String> _commonSkills = [
+    // Programming Languages
+    'Python', 'Java', 'JavaScript', 'TypeScript', 'C++', 'C#',
+    'Swift', 'Kotlin', 'Dart', 'PHP', 'Ruby', 'Go',
+    // Web
+    'React', 'Flutter', 'Angular', 'Vue.js', 'Node.js',
+    'HTML', 'CSS', 'Django', 'Laravel', 'Spring Boot',
+    // Data
+    'Machine Learning', 'Data Analysis', 'SQL', 'TensorFlow',
+    'PyTorch', 'Pandas', 'NumPy', 'Power BI', 'Tableau',
+    // Design
+    'UI Design', 'UX Design', 'Figma', 'Adobe XD', 'Photoshop',
+    'Illustrator', 'Canva',
+    // Tools
+    'Git', 'Docker', 'AWS', 'Firebase', 'Supabase', 'Linux',
+    'Jira', 'Postman',
+    // Soft Skills
+    'Communication', 'Leadership', 'Teamwork', 'Problem Solving',
+    'Time Management', 'Critical Thinking', 'Presentation',
+    'Negotiation', 'Adaptability',
+    // Business
+    'Project Management', 'Agile', 'Scrum', 'Microsoft Office', 'Excel',
+  ];
+
+  final List<String> _commonInterests = [
+    'Web Development', 'Mobile Development', 'Machine Learning',
+    'Artificial Intelligence', 'Data Science', 'Cybersecurity',
+    'Cloud Computing', 'DevOps', 'Blockchain', 'Game Development',
+    'UI/UX Design', 'Digital Marketing', 'Entrepreneurship',
+    'Robotics', 'Internet of Things', 'AR/VR', 'Open Source',
+    'Research', 'Teaching', 'Photography', 'Graphic Design',
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchSkills();
+  }
+
+  List<Map<String, String>> _parseSkills(String? skillsStr) {
+    if (skillsStr == null || skillsStr.isEmpty) return [];
+    return skillsStr.split(',').where((s) => s.trim().isNotEmpty).map((s) {
+      final parts = s.trim().split(':');
+      return {
+        'name': parts[0].trim(),
+        'level': parts.length > 1 ? parts[1].trim() : 'Beginner',
+        'category': parts.length > 2 ? parts[2].trim() : 'Technical',
+      };
+    }).toList();
+  }
+
+  String _serializeSkills(List<Map<String, String>> skills) {
+    return skills.map((s) => '${s['name']}:${s['level']}:${s['category']}').join(',');
+  }
+
+  List<String> _parseInterests(String? interestsStr) {
+    if (interestsStr == null || interestsStr.isEmpty) return [];
+    return interestsStr.split(',').where((s) => s.trim().isNotEmpty).map((s) => s.trim()).toList();
+  }
+
+  String _serializeInterests(List<String> interests) {
+    return interests.join(',');
+  }
+
+  Future<void> _fetchSkills() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final data = await supabase
+          .from('student')
+          .select('skills, interests')
+          .eq('studentid', widget.studentId)
+          .single();
+
+      setState(() {
+        _skills = _parseSkills(data['skills']);
+        _interests = _parseInterests(data['interests']);
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error fetching skills: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _saveToDatabase() async {
+    try {
+      setState(() => _isSaving = true);
+      final supabase = Supabase.instance.client;
+      await supabase.from('student').update({
+        'skills': _serializeSkills(_skills),
+        'interests': _serializeInterests(_interests),
+      }).eq('studentid', widget.studentId);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error saving: $e")),
+      );
+    } finally {
+      setState(() => _isSaving = false);
+    }
+  }
+
+  void _addSkill() {
+    final name = _skillInputValue.trim();
+    if (name.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please enter a skill name")),
+      );
+      return;
+    }
+    // check if skill already exists
+    if (_skills.any((s) => s['name']?.toLowerCase() == name.toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Skill already added!")),
+      );
+      return;
+    }
+    setState(() {
+      _skills.add({
+        'name': name,
+        'level': _selectedLevel,
+        'category': _selectedCategory,
+      });
+      _skillInputValue = '';
+    });
+    _saveToDatabase();
+  }
+
+  void _deleteSkill(int index) {
+    setState(() => _skills.removeAt(index));
+    _saveToDatabase();
+  }
+
+  void _addInterest() {
+    final interest = _interestInputValue.trim();
+    if (interest.isEmpty) return;
+    if (_interests.any((i) => i.toLowerCase() == interest.toLowerCase())) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Interest already added!")),
+      );
+      return;
+    }
+    setState(() {
+      _interests.add(interest);
+      _interestInputValue = '';
+    });
+    _saveToDatabase();
+  }
+
+  void _deleteInterest(int index) {
+    setState(() => _interests.removeAt(index));
+    _saveToDatabase();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.9,
+      decoration: BoxDecoration(
+        color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+      ),
+      child: Column(
+        children: [
+          // header
+          Padding(
+            padding: const EdgeInsets.all(25),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Text(
+                  "Skills & Interests",
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: isDark ? Colors.white : Colors.black,
+                  ),
+                ),
+                IconButton(
+                  icon: Icon(Icons.close,
+                      color: isDark ? Colors.white : Colors.black),
+                  onPressed: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 25),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  // Skills section header
                   Text(
-                    "Skills & Interests",
+                    "Skills",
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 20,
                       fontWeight: FontWeight.bold,
                       color: isDark ? Colors.white : Colors.black,
                     ),
                   ),
-                  IconButton(
-                    icon: Icon(
-                      Icons.close,
-                      color: isDark ? Colors.white : Colors.black,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
-                ],
-              ),
-            ),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 25),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Skills",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black,
+                  const SizedBox(height: 15),
+
+                  // Add skill form
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF2C2C2C)
+                          : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(15),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
                       ),
                     ),
-                    const SizedBox(height: 15),
-                    Container(
-                      padding: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF2C2C2C) : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(15),
-                        border: Border.all(
-                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
+                    child: Column(
+                      children: [
+                        // skill autocomplete
+                        Autocomplete<String>(
+                          optionsBuilder: (TextEditingValue value) {
+                            _skillInputValue = value.text;
+                            if (value.text.isEmpty) {
+                              return const Iterable<String>.empty();
+                            }
+                            return _commonSkills.where((skill) =>
+                                skill.toLowerCase().contains(
+                                  value.text.toLowerCase(),
+                                ),
+                            );
+                          },
+                          onSelected: (String selection) {
+                            setState(() => _skillInputValue = selection);
+                          },
+                          optionsViewBuilder: (context, onSelected, options) {
+                            return Align(
+                              alignment: Alignment.topLeft,
+                              child: Material(
+                                elevation: 4,
+                                borderRadius: BorderRadius.circular(12),
+                                child: Container(
+                                  constraints: const BoxConstraints(maxHeight: 200),
+                                  decoration: BoxDecoration(
+                                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  child: ListView.builder(
+                                    shrinkWrap: true,
+                                    itemCount: options.length,
+                                    itemBuilder: (context, index) {
+                                      final option = options.elementAt(index);
+                                      return ListTile(
+                                        title: Text(
+                                          option,
+                                          style: TextStyle(
+                                            color: isDark ? Colors.white : Colors.black,
+                                          ),
+                                        ),
+                                        onTap: () => onSelected(option),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                          fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                            return TextField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              decoration: InputDecoration(
+                                hintText: "Type or search a skill...",
+                                hintStyle: TextStyle(
+                                  color: isDark ? Colors.grey.shade400 : Colors.grey,
+                                ),
+                                border: InputBorder.none,
+                              ),
+                              style: TextStyle(
+                                color: isDark ? Colors.white : Colors.black,
+                              ),
+                            );
+                          },
                         ),
-                      ),
-                      child: Column(
-                        children: [
-                          TextField(
-                            decoration: InputDecoration(
-                              hintText: "Add a new skill...",
-                              hintStyle: TextStyle(
-                                color: isDark ? Colors.grey.shade400 : Colors.grey,
-                              ),
-                              border: InputBorder.none,
-                            ),
-                            style: TextStyle(
-                              color: isDark ? Colors.white : Colors.black,
-                            ),
-                          ),
-                          const SizedBox(height: 15),
-                          Row(
-                            children: [
-                              Expanded(child: _buildDropdown("Category", isDark)),
-                              const SizedBox(width: 10),
-                              Expanded(child: _buildDropdown("Level", isDark)),
-                            ],
-                          ),
-                          const SizedBox(height: 10),
-                          Row(
-                            children: [
-                              Expanded(child: _buildDropdown("Technical", isDark)),
-                              const SizedBox(width: 10),
-                              Expanded(child: _buildDropdown("Beginner", isDark)),
-                            ],
-                          ),
-                          const SizedBox(height: 15),
-                          SizedBox(
-                            width: double.infinity,
-                            child: ElevatedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.add),
-                              label: const Text("Add Skill"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF284B8C),
-                                foregroundColor: Colors.white,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+
+                        const SizedBox(height: 15),
+
+                        // category and level dropdowns
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _buildRealDropdown(
+                                value: _selectedCategory,
+                                items: _categories,
+                                isDark: isDark,
+                                onChanged: (val) => setState(() => _selectedCategory = val!),
                               ),
                             ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: _buildRealDropdown(
+                                value: _selectedLevel,
+                                items: _levels,
+                                isDark: isDark,
+                                onChanged: (val) => setState(() => _selectedLevel = val!),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        const SizedBox(height: 15),
+
+                        SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _addSkill,
+                            icon: const Icon(Icons.add),
+                            label: const Text("Add Skill"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF284B8C),
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 25),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // Technical Skills list
+                  if (_skills.where((s) => s['category'] == 'Technical').isNotEmpty) ...[
                     Text(
                       "Technical Skills",
                       style: TextStyle(
@@ -122,10 +384,19 @@ class StudentProfileSkillsModal {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildSkillChip("React", "Advanced", isDark),
-                    _buildSkillChip("TypeScript", "Intermediate", isDark),
-                    _buildSkillChip("Python", "Advanced", isDark),
+                    ..._skills.asMap().entries
+                        .where((e) => e.value['category'] == 'Technical')
+                        .map((e) => _buildSkillChip(
+                      e.value['name']!,
+                      e.value['level']!,
+                      isDark,
+                      e.key,
+                    )),
                     const SizedBox(height: 20),
+                  ],
+
+                  // Soft Skills list
+                  if (_skills.where((s) => s['category'] == 'Soft').isNotEmpty) ...[
                     Text(
                       "Soft Skills",
                       style: TextStyle(
@@ -135,121 +406,225 @@ class StudentProfileSkillsModal {
                       ),
                     ),
                     const SizedBox(height: 10),
-                    _buildSkillChip("Communication", "Advanced", isDark),
-                    _buildSkillChip("Team Leadership", "Intermediate", isDark),
+                    ..._skills.asMap().entries
+                        .where((e) => e.value['category'] == 'Soft')
+                        .map((e) => _buildSkillChip(
+                      e.value['name']!,
+                      e.value['level']!,
+                      isDark,
+                      e.key,
+                    )),
                     const SizedBox(height: 25),
-                    Text(
-                      "Interests",
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: isDark ? Colors.white : Colors.black,
+                  ],
+
+                  // no skills message
+                  if (_skills.isEmpty) ...[
+                    Center(
+                      child: Text(
+                        "No skills added yet",
+                        style: TextStyle(color: Colors.grey.shade500),
                       ),
                     ),
-                    const SizedBox(height: 15),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 15),
-                      decoration: BoxDecoration(
-                        color: isDark ? const Color(0xFF2C2C2C) : Colors.grey.shade50,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
-                        ),
-                      ),
-                      child: TextField(
-                        decoration: InputDecoration(
-                          hintText: "Add an interest...",
-                          hintStyle: TextStyle(
-                            color: isDark ? Colors.grey.shade400 : Colors.grey,
-                          ),
-                          border: InputBorder.none,
-                          suffixIcon: IconButton(
-                            icon: const Icon(Icons.add, color: Color(0xFF284B8C)),
-                            onPressed: () {},
-                          ),
-                        ),
-                        style: TextStyle(
-                          color: isDark ? Colors.white : Colors.black,
-                        ),
+                    const SizedBox(height: 25),
+                  ],
+
+                  // Interests section
+                  Text(
+                    "Interests",
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: isDark ? Colors.white : Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 15),
+
+                  // interest autocomplete field
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 15),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF2C2C2C)
+                          : Colors.grey.shade50,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark
+                            ? Colors.grey.shade800
+                            : Colors.grey.shade200,
                       ),
                     ),
-                    const SizedBox(height: 15),
-                    Wrap(
-                      spacing: 8,
-                      runSpacing: 8,
+                    child: Row(
                       children: [
-                        _buildInterestChip("Web Development", isDark),
-                        _buildInterestChip("Machine Learning", isDark),
-                        _buildInterestChip("UI/UX Design", isDark),
-                        _buildInterestChip("Cloud Computing", isDark),
+                        Expanded(
+                          child: Autocomplete<String>(
+                            optionsBuilder: (TextEditingValue value) {
+                              _interestInputValue = value.text;
+                              if (value.text.isEmpty) {
+                                return const Iterable<String>.empty();
+                              }
+                              return _commonInterests.where((interest) =>
+                                  interest.toLowerCase().contains(
+                                    value.text.toLowerCase(),
+                                  ),
+                              );
+                            },
+                            onSelected: (String selection) {
+                              setState(() => _interestInputValue = selection);
+                              _addInterest();
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    constraints: const BoxConstraints(maxHeight: 200),
+                                    decoration: BoxDecoration(
+                                      color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ListView.builder(
+                                      shrinkWrap: true,
+                                      itemCount: options.length,
+                                      itemBuilder: (context, index) {
+                                        final option = options.elementAt(index);
+                                        return ListTile(
+                                          title: Text(
+                                            option,
+                                            style: TextStyle(
+                                              color: isDark ? Colors.white : Colors.black,
+                                            ),
+                                          ),
+                                          onTap: () => onSelected(option),
+                                        );
+                                      },
+                                    ),
+                                  ),
+                                ),
+                              );
+                            },
+                            fieldViewBuilder: (context, controller, focusNode, onSubmitted) {
+                              return TextField(
+                                controller: controller,
+                                focusNode: focusNode,
+                                decoration: InputDecoration(
+                                  hintText: "Add an interest...",
+                                  hintStyle: TextStyle(
+                                    color: isDark ? Colors.grey.shade400 : Colors.grey,
+                                  ),
+                                  border: InputBorder.none,
+                                ),
+                                style: TextStyle(
+                                  color: isDark ? Colors.white : Colors.black,
+                                ),
+                                onSubmitted: (_) => _addInterest(),
+                              );
+                            },
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.add, color: Color(0xFF284B8C)),
+                          onPressed: _addInterest,
+                        ),
                       ],
                     ),
-                    const SizedBox(height: 25),
-                    Container(
-                      padding: const EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                        color: isDark
-                            ? const Color(0xFF284B8C).withOpacity(0.2)
-                            : const Color(0xFFD6E2F2).withOpacity(0.3),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: const Color(0xFF284B8C).withOpacity(0.3),
-                        ),
+                  ),
+
+                  const SizedBox(height: 15),
+
+                  // interest chips
+                  _interests.isEmpty
+                      ? Text(
+                    "No interests added yet",
+                    style: TextStyle(color: Colors.grey.shade500),
+                  )
+                      : Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: _interests.asMap().entries.map((e) =>
+                        _buildInterestChip(e.value, isDark, e.key),
+                    ).toList(),
+                  ),
+
+                  const SizedBox(height: 25),
+
+                  // tip box
+                  Container(
+                    padding: const EdgeInsets.all(15),
+                    decoration: BoxDecoration(
+                      color: isDark
+                          ? const Color(0xFF284B8C).withOpacity(0.2)
+                          : const Color(0xFFD6E2F2).withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: const Color(0xFF284B8C).withOpacity(0.3),
                       ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            Icons.lightbulb_outline,
-                            color: isDark ? Colors.white : const Color(0xFF284B8C),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              "Improve Your Profile\nAdding skills and interests helps match you with relevant opportunities and training programs.",
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: isDark ? Colors.grey.shade300 : Colors.grey.shade700,
-                                height: 1.4,
-                              ),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(
+                          Icons.lightbulb_outline,
+                          color: isDark
+                              ? Colors.white
+                              : const Color(0xFF284B8C),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Improve Your Profile\nAdding skills and interests helps match you with relevant opportunities and training programs.",
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: isDark
+                                  ? Colors.grey.shade300
+                                  : Colors.grey.shade700,
+                              height: 1.4,
                             ),
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 30),
-                  ],
+                  ),
+                  const SizedBox(height: 30),
+                ],
+              ),
+            ),
+          ),
+
+          // Done button
+          Padding(
+            padding: const EdgeInsets.all(25),
+            child: SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF284B8C),
+                  padding: const EdgeInsets.symmetric(vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: _isSaving ? null : () => Navigator.pop(context),
+                child: Text(
+                  _isSaving ? "Saving..." : "Done",
+                  style: const TextStyle(color: Colors.white, fontSize: 16),
                 ),
               ),
             ),
-            Padding(
-              padding: const EdgeInsets.all(25),
-              child: SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF284B8C),
-                    padding: const EdgeInsets.symmetric(vertical: 15),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text(
-                    "Done",
-                    style: TextStyle(color: Colors.white, fontSize: 16),
-                  ),
-                ),
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 
-  static Widget _buildDropdown(String label, bool isDark) {
+  Widget _buildRealDropdown({
+    required String value,
+    required List<String> items,
+    required bool isDark,
+    required void Function(String?) onChanged,
+  }) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF3C3C3C) : Colors.white,
         borderRadius: BorderRadius.circular(8),
@@ -257,25 +632,28 @@ class StudentProfileSkillsModal {
           color: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
         ),
       ),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
+      child: DropdownButton<String>(
+        value: value,
+        items: items.map((item) => DropdownMenuItem(
+          value: item,
+          child: Text(
+            item,
             style: TextStyle(
-              color: isDark ? Colors.grey.shade400 : Colors.grey,
+              color: isDark ? Colors.white : Colors.black,
+              fontSize: 13,
             ),
           ),
-          Icon(
-            Icons.arrow_drop_down,
-            color: isDark ? Colors.grey.shade400 : Colors.grey,
-          ),
-        ],
+        )).toList(),
+        onChanged: onChanged,
+        isExpanded: true,
+        underline: const SizedBox(),
+        dropdownColor: isDark ? const Color(0xFF3C3C3C) : Colors.white,
+        style: TextStyle(color: isDark ? Colors.white : Colors.black),
       ),
     );
   }
 
-  static Widget _buildSkillChip(String skill, String level, bool isDark) {
+  Widget _buildSkillChip(String skill, String level, bool isDark, int index) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
       padding: const EdgeInsets.symmetric(horizontal: 15, vertical: 10),
@@ -296,36 +674,45 @@ class StudentProfileSkillsModal {
               color: isDark ? Colors.white : Colors.black87,
             ),
           ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-            decoration: BoxDecoration(
-              color: level == "Advanced"
-                  ? Colors.green.shade100
-                  : level == "Intermediate"
-                  ? Colors.orange.shade100
-                  : Colors.blue.shade100,
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              level,
-              style: TextStyle(
-                fontSize: 11,
-                color: level == "Advanced"
-                    ? Colors.green.shade800
-                    : level == "Intermediate"
-                    ? Colors.orange.shade800
-                    : Colors.blue.shade800,
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: level == "Advanced"
+                      ? Colors.green.shade100
+                      : level == "Intermediate"
+                      ? Colors.orange.shade100
+                      : Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Text(
+                  level,
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: level == "Advanced"
+                        ? Colors.green.shade800
+                        : level == "Intermediate"
+                        ? Colors.orange.shade800
+                        : Colors.blue.shade800,
+                  ),
+                ),
               ),
-            ),
+              const SizedBox(width: 8),
+              GestureDetector(
+                onTap: () => _deleteSkill(index),
+                child: Icon(Icons.close, size: 16, color: Colors.grey.shade500),
+              ),
+            ],
           ),
         ],
       ),
     );
   }
 
-  static Widget _buildInterestChip(String interest, bool isDark) {
+  Widget _buildInterestChip(String interest, bool isDark, int index) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
         color: isDark
             ? const Color(0xFF284B8C).withOpacity(0.2)
@@ -333,12 +720,26 @@ class StudentProfileSkillsModal {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(color: const Color(0xFF284B8C).withOpacity(0.3)),
       ),
-      child: Text(
-        interest,
-        style: TextStyle(
-          color: isDark ? Colors.white : const Color(0xFF284B8C),
-          fontWeight: FontWeight.w500,
-        ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            interest,
+            style: TextStyle(
+              color: isDark ? Colors.white : const Color(0xFF284B8C),
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(width: 6),
+          GestureDetector(
+            onTap: () => _deleteInterest(index),
+            child: Icon(
+              Icons.close,
+              size: 14,
+              color: isDark ? Colors.white70 : const Color(0xFF284B8C),
+            ),
+          ),
+        ],
       ),
     );
   }
