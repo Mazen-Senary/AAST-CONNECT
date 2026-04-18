@@ -8,10 +8,17 @@ class ProfileProvider extends ChangeNotifier {
   String major = 'Computer Science';
   String academicYear = 'Senior';
   String gpa = '3.7';
-  String bio = 'Recent graduate seeking opportunities in software development and data analytics.';
+  String bio =
+      'Recent graduate seeking opportunities in software development and data analytics.';
+  String collegeId = ''; // ADD THIS
 
   String get fullName => '$firstName $lastName';
   String get initials => '${firstName[0]}${lastName[0]}'.toUpperCase();
+
+  void setCollegeId(String id) {
+    collegeId = id;
+    notifyListeners();
+  }
 
   void updateProfile({
     required String newFirstName,
