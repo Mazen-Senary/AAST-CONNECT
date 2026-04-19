@@ -33,7 +33,7 @@ class MyApp extends StatelessWidget {
             theme: themeProvider.lightTheme,
             darkTheme: themeProvider.darkTheme,
             themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
-            home: MainNavigation(),
+            home: const MainNavigation(),
           );
         },
       ),
@@ -50,6 +50,7 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
+  int _previousIndex = 0; // track previous tab
 
   void _goToTraining() {
     setState(() {
@@ -64,9 +65,10 @@ class _MainNavigationState extends State<MainNavigation> {
         index: _currentIndex,
         children: [
           StudentHome(onSeeAll: _goToTraining),
-          StudentOpportunities(),
-          const StudentProfile(),
-          StudentSupport(),
+          const StudentOpportunities(),
+          // pass shouldRefresh=true when switching TO profile tab
+          StudentProfile(shouldRefresh: _currentIndex == 2 && _previousIndex != 2),
+          const StudentSupport(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -77,6 +79,7 @@ class _MainNavigationState extends State<MainNavigation> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         onTap: (index) {
           setState(() {
+            _previousIndex = _currentIndex;
             _currentIndex = index;
           });
         },
