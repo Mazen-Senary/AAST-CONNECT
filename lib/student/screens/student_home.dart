@@ -93,18 +93,45 @@ import '../../widgets/student_opportunities_details_modal.dart';
       setState(() => _isLoading = false);
     }
   }
+  // void _showApplyModal(BuildContext context, String title) {
+  //   StudentOpportunitiesApplyModal.show(context, {'title': title}, null);
+  // }
+  //
   void _showApplyModal(BuildContext context, String title) {
-    StudentOpportunitiesApplyModal.show(context, {'title': title}, null);
+    StudentOpportunitiesApplyModal.show(context, {'title': title}, () {});
   }
-
   void _showDetailsModal(
       BuildContext context,
       String title,
       String company,
       String hours,
       ) {
-    StudentOpportunitiesDetailsModal.show(context, title, company, hours);
+    StudentOpportunitiesDetailsModal.show(
+      context,
+      {
+        'title': title,
+        'company': company,
+        'type': hours,
+        'description': null,
+        'requirements': null,
+        'location': null,
+        'workMode': null,
+        'paidStatus': null,
+        'startDate': null,
+        'applied': false,
+      },
+          () {}, // no apply action from home screen
+    );
   }
+
+  // void _showDetailsModal(
+  //     BuildContext context,
+  //     String title,
+  //     String company,
+  //     String hours,
+  //     ) {
+  //   StudentOpportunitiesDetailsModal.show(context, title, company, hours);
+  // }
 
   void _showAllDeadlines(BuildContext context) {
     showModalBottomSheet(
