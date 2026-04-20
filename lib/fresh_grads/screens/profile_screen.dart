@@ -1,5 +1,10 @@
+ // Use show to avoid namespace conflicts on web
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart' hide FormField;
 import 'package:provider/provider.dart';
+import 'package:file_picker/file_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
 import '../utils/profile_provider.dart';
@@ -24,8 +29,6 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  // Profile data now lives in ProfileProvider — see providers/profile_provider.dart
-
   final List<Skill> _skills = [
     Skill(name: 'React', category: 'Technical', level: 'Advanced'),
     Skill(name: 'TypeScript', category: 'Technical', level: 'Intermediate'),
@@ -38,14 +41,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     'Web Development', 'Machine Learning', 'UI/UX Design', 'Cloud Computing'
   ];
 
-  final List<Document> _documents = [
-    Document(name: 'Resume_Ahmed_Gomaa.pdf', type: 'CV', date: 'Jan 20', size: '245 KB', status: 'Approved'),
-    Document(name: 'Cover_Letter.pdf', type: 'Cover Letter', date: 'Jan 15', size: '180 KB', status: 'Approved'),
-    Document(name: 'Graduation_Certificate.pdf', type: 'Certificate', date: 'Jan 10', size: '890 KB', status: 'Pending Review'),
-    Document(name: 'Academic_Transcript.pdf', type: 'Transcript', date: 'Dec 20', size: '156 KB', status: 'Rejected',
-        rejectionReason: 'Document is not clear. Please upload a higher quality scan.'),
-  ];
-
   final List<PortfolioLink> _portfolioLinks = [
     PortfolioLink(title: 'GitHub Profile', url: 'https://github.com/ahmedgomaa',
         icon: Icons.code, iconBg: const Color(0xFFEEEEEE), iconColor: const Color(0xFF333333)),
@@ -54,6 +49,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
     PortfolioLink(title: 'Personal Portfolio', url: 'https://ahmedgomaa.dev',
         icon: Icons.language, iconBg: const Color(0xFFFFF3E0), iconColor: const Color(0xFFFF9800)),
   ];
+
+  List<Document> _documents = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRealDocuments();
+  }
+
+  Future<void> _fetchRealDocuments() async {
+    try {
+      final supabase = Supabase.instance.client;
+      final files = await supabase.storage.from('documents').list(path: 'student_6');
+
+      if (mounted) {
+        setState(() {
+          _documents = files
+              .where((file) => file.name != '.emptyFolderPlaceholder') 
+              .map((file) {
+            final ext = file.name.split('.').last.toUpperCase();
+            return Document(
+              name: file.name,
+              type: ext,
+              date: 'Recent', 
+              size: 'Uploaded',
+              status: 'Pending Review',
+            );
+          }).toList();
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching documents: $e');
+    }
+  }
 
 
   @override
@@ -76,7 +105,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
           const SizedBox(height: 20),
 
-          // ── Action Buttons Grid ──
           Row(children: [
             ActionButton(label: 'Edit Profile', icon: Icons.edit_outlined,
                 bg: AppColors.lightBlue, color: AppColors.accentBlue, isDark: isDark,
@@ -98,7 +126,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ]),
           const SizedBox(height: 20),
 
-          // ── Profile Info Card ──
           ProfileInfoCard(
             initials: profile.initials,
             firstName: profile.firstName, lastName: profile.lastName,
@@ -107,21 +134,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
             isDark: isDark,
           ),
           const SizedBox(height: 16),
-
-          // ── Application Summary ──
           ApplicationSummaryCard(isDark: isDark),
           const SizedBox(height: 16),
-
-          // ── Documents List ──
           DocumentsListSection(documents: _documents, isDark: isDark,
               onManage: () => _showDocuments(context, isDark)),
           const SizedBox(height: 16),
-
-          // ── Saved Jobs ──
           SavedJobsSection(isDark: isDark),
           const SizedBox(height: 16),
 
-          // ── Resume Checker Button ──
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
@@ -140,6 +160,222 @@ class _ProfileScreenState extends State<ProfileScreen> {
           const SizedBox(height: 24),
         ],
       ),
+    );
+  }
+
+  // ─── Documents Modal ───────────────────────────────────────────────────────
+  void _showDocuments(BuildContext context, bool isDark) {
+    bool isUploading = false; 
+
+    showDialog(
+      context: context,
+      barrierColor: Colors.black.withOpacity(0.4),
+      builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
+        final approved = _documents.where((d) => d.status == 'Approved').length;
+        final pending = _documents.where((d) => d.status == 'Pending Review').length;
+        final rejected = _documents.where((d) => d.status == 'Rejected').length;
+
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
+          child: Container(
+            decoration: BoxDecoration(
+              color: isDark ? AppColors.darkCardBg : Colors.white,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Column(mainAxisSize: MainAxisSize.min, children: [
+              Padding(padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
+                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                    Text('Document Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
+                    Text('Upload and manage your documents', style: TextStyle(fontSize: 12,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
+                  ]),
+                  GestureDetector(onTap: () => Navigator.pop(ctx),
+                      child: Icon(Icons.close, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
+                ]),
+              ),
+              Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(20),
+                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+                  Row(children: [
+                    DocStatChip(value: '${_documents.length}', label: 'Total', bg: AppColors.lightBlue, color: AppColors.accentBlue),
+                    const SizedBox(width: 8),
+                    DocStatChip(value: '$approved', label: 'Approved', bg: AppColors.lightGreen, color: AppColors.primaryGreen),
+                    const SizedBox(width: 8),
+                    DocStatChip(value: '$pending', label: 'Pending', bg: AppColors.lightOrange, color: AppColors.accentOrange),
+                    const SizedBox(width: 8),
+                    DocStatChip(value: '$rejected', label: 'Rejected', bg: const Color(0xFFFCE4EC), color: const Color(0xFFE91E63)),
+                  ]),
+                  const SizedBox(height: 16),
+
+                  Container(
+                    width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 24),
+                    decoration: BoxDecoration(
+                      color: isDark ? AppColors.darkSurface : const Color(0xFFF8F8F8),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
+                    ),
+                    child: Column(children: [
+                      Container(width: 52, height: 52,
+                          decoration: BoxDecoration(color: AppColors.lightBlue, borderRadius: BorderRadius.circular(14)),
+                          child: const Icon(Icons.upload_outlined, color: AppColors.accentBlue, size: 26)),
+                      const SizedBox(height: 12),
+                      Text('Drop files here or click to upload',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
+                      const SizedBox(height: 4),
+                      Text('PDF, DOC, DOCX up to 10MB',
+                          style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
+                      const SizedBox(height: 14),
+                      
+                      ElevatedButton(
+                  onPressed: isUploading ? null : () async {
+  try {
+    FilePickerResult? result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'doc', 'docx'],
+      withData: true, // IMPORTANT: always get bytes (works on all platforms)
+    );
+
+    if (result != null) {
+      final file = result.files.first;
+      final ext = file.extension?.toLowerCase();
+
+      if (ext != 'pdf' && ext != 'doc' && ext != 'docx') {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Unsupported file. Only PDF, DOC, or DOCX allowed.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      if (file.bytes == null) {
+        throw Exception('File bytes are null (this should not happen).');
+      }
+
+      setS(() => isUploading = true);
+
+      final supabase = Supabase.instance.client;
+      final uniqueFileName =
+          '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
+      final storagePath = 'student_6/$uniqueFileName';
+
+      // ✅ SINGLE upload method for ALL platforms
+      await supabase.storage.from('documents').uploadBinary(
+        storagePath,
+        file.bytes!,
+        fileOptions: const FileOptions(upsert: true),
+      );
+
+      setState(() {
+        _documents.insert(
+          0,
+          Document(
+            name: uniqueFileName,
+            type: ext!.toUpperCase(),
+            date: 'Just now',
+            size: '${(file.size / 1024).toStringAsFixed(0)} KB',
+            status: 'Pending Review',
+          ),
+        );
+      });
+
+      setS(() {});
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Document uploaded successfully!'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    }
+  } catch (e) {
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading file: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  } finally {
+    setS(() => isUploading = false);
+  }
+},
+                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.applyButton,
+                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
+                        child: isUploading 
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                          : const Text('Browse Files', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                      ),
+                    ]),
+                  ),
+                  const SizedBox(height: 20),
+
+                  Text('Your Documents', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
+                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
+                  const SizedBox(height: 12),
+
+                  ..._documents.map((doc) => Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: DocumentItem(
+                      doc: doc, 
+                      isDark: isDark,
+                      onDelete: () async {
+                        try {
+                          final supabase = Supabase.instance.client;
+                          
+                          // FIX 3: Actually delete from Supabase storage
+                          await supabase.storage
+                              .from('documents')
+                              .remove(['student_6/${doc.name}']);
+
+                          // Only remove from UI if the storage delete succeeds
+                          setState(() {
+                            _documents.remove(doc);
+                          });
+                          setS(() {}); // Update the dialog state
+                          
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Document deleted from storage'), backgroundColor: Colors.blueGrey),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to delete: $e'), backgroundColor: Colors.red),
+                            );
+                          }
+                        }
+                      }
+                    ),
+                  )),
+                ]),
+              )),
+
+              Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                child: SizedBox(width: double.infinity,
+                  child: ElevatedButton(onPressed: () => Navigator.pop(ctx),
+                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.applyButton,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
+                    child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
+                  ),
+                ),
+              ),
+            ]),
+          ),
+        );
+      }),
     );
   }
 
@@ -169,7 +405,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // Header
               Padding(padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
                 child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
                   Text('Edit Profile', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
@@ -181,7 +416,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               const SizedBox(height: 16),
               Flexible(child: SingleChildScrollView(padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // Avatar
                   Center(child: Stack(children: [
                     Container(width: 80, height: 80,
                       decoration: BoxDecoration(color: AppColors.accentBlue.withOpacity(0.7),
@@ -201,7 +435,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary))),
                   const SizedBox(height: 20),
 
-                  // Basic Info
                   SectionBox(title: 'Basic Information', isDark: isDark, children: [
                     Row(children: [
                       Expanded(child: FormField(label: 'First Name', controller: fnCtrl,
@@ -219,7 +452,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ]),
                   const SizedBox(height: 12),
 
-                  // Academic Info
                   SectionBox(title: 'Academic Information', isDark: isDark, children: [
                     FormField(label: 'Major', controller: majorCtrl, isDark: isDark),
                     const SizedBox(height: 12),
@@ -251,7 +483,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ]),
                   const SizedBox(height: 12),
 
-                  // Bio
                   SectionBox(title: 'Bio', isDark: isDark, children: [
                     StatefulBuilder(builder: (_, setBio) => Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
@@ -288,7 +519,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ]),
               )),
 
-              // Actions
               Padding(padding: const EdgeInsets.fromLTRB(20, 8, 20, 20),
                 child: Row(children: [
                   Expanded(child: OutlinedButton(
@@ -371,7 +601,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(20),
                 child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
 
-                  // Skills header
                   Row(children: [
                     Icon(Icons.military_tech_outlined, color: AppColors.accentBlue, size: 20),
                     const SizedBox(width: 8),
@@ -380,7 +609,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ]),
                   const SizedBox(height: 12),
 
-                  // Add skill form
                   Container(padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.darkSurface : const Color(0xFFF8F8F8),
@@ -458,7 +686,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
 
-                  // Technical Skills
                   if (techSkills.isNotEmpty) ...[
                     Text('Technical Skills', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
                         color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
@@ -470,7 +697,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 14),
                   ],
 
-                  // Soft Skills
                   if (softSkills.isNotEmpty) ...[
                     Text('Soft Skills', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600,
                         color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
@@ -482,7 +708,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 20),
                   ],
 
-                  // Interests
                   Row(children: [
                     Icon(Icons.blur_circular_outlined, color: AppColors.accentBlue, size: 20),
                     const SizedBox(width: 8),
@@ -529,7 +754,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ).toList()),
                   const SizedBox(height: 16),
 
-                  // Tip box
                   Container(padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(color: AppColors.lightOrange, borderRadius: BorderRadius.circular(12)),
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -544,110 +768,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ]),
                   ),
                   const SizedBox(height: 16),
-                ]),
-              )),
-
-              Padding(padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
-                child: SizedBox(width: double.infinity,
-                  child: ElevatedButton(onPressed: () => Navigator.pop(ctx),
-                    style: ElevatedButton.styleFrom(backgroundColor: AppColors.applyButton,
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), elevation: 0),
-                    child: const Text('Done', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 15)),
-                  ),
-                ),
-              ),
-            ]),
-          ),
-        );
-      }),
-    );
-  }
-
-  // ─── Documents Modal ───────────────────────────────────────────────────────
-  void _showDocuments(BuildContext context, bool isDark) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.4),
-      builder: (ctx) => StatefulBuilder(builder: (ctx, setS) {
-        final approved = _documents.where((d) => d.status == 'Approved').length;
-        final pending = _documents.where((d) => d.status == 'Pending Review').length;
-        final rejected = _documents.where((d) => d.status == 'Rejected').length;
-
-        return Dialog(
-          backgroundColor: Colors.transparent,
-          insetPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 40),
-          child: Container(
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkCardBg : Colors.white,
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Column(mainAxisSize: MainAxisSize.min, children: [
-              Padding(padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
-                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Document Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
-                    Text('Upload and manage your documents', style: TextStyle(fontSize: 12,
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-                  ]),
-                  GestureDetector(onTap: () => Navigator.pop(ctx),
-                      child: Icon(Icons.close, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-                ]),
-              ),
-              Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(20),
-                child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                  // Stats
-                  Row(children: [
-                    DocStatChip(value: '${_documents.length}', label: 'Total', bg: AppColors.lightBlue, color: AppColors.accentBlue),
-                    const SizedBox(width: 8),
-                    DocStatChip(value: '$approved', label: 'Approved', bg: AppColors.lightGreen, color: AppColors.primaryGreen),
-                    const SizedBox(width: 8),
-                    DocStatChip(value: '$pending', label: 'Pending', bg: AppColors.lightOrange, color: AppColors.accentOrange),
-                    const SizedBox(width: 8),
-                    DocStatChip(value: '$rejected', label: 'Rejected', bg: const Color(0xFFFCE4EC), color: const Color(0xFFE91E63)),
-                  ]),
-                  const SizedBox(height: 16),
-
-                  // Upload zone
-                  Container(
-                    width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 24),
-                    decoration: BoxDecoration(
-                      color: isDark ? AppColors.darkSurface : const Color(0xFFF8F8F8),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.grey.shade300, style: BorderStyle.solid),
-                    ),
-                    child: Column(children: [
-                      Container(width: 52, height: 52,
-                          decoration: BoxDecoration(color: AppColors.lightBlue, borderRadius: BorderRadius.circular(14)),
-                          child: const Icon(Icons.upload_outlined, color: AppColors.accentBlue, size: 26)),
-                      const SizedBox(height: 12),
-                      Text('Drop files here or click to upload',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500,
-                              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
-                      const SizedBox(height: 4),
-                      Text('PDF, DOC, DOCX up to 10MB',
-                          style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-                      const SizedBox(height: 14),
-                      ElevatedButton(onPressed: () {},
-                        style: ElevatedButton.styleFrom(backgroundColor: AppColors.applyButton,
-                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), elevation: 0),
-                        child: const Text('Browse Files', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                      ),
-                    ]),
-                  ),
-                  const SizedBox(height: 20),
-
-                  Text('Your Documents', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
-                      color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
-                  const SizedBox(height: 12),
-
-                  ..._documents.map((doc) => Padding(
-                    padding: const EdgeInsets.only(bottom: 10),
-                    child: DocumentItem(doc: doc, isDark: isDark,
-                        onDelete: () { setState(() => _documents.remove(doc)); setS(() {}); }),
-                  )),
                 ]),
               )),
 
@@ -697,7 +817,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
               Flexible(child: SingleChildScrollView(padding: const EdgeInsets.all(20),
                 child: Column(children: [
-                  // Add new link
                   GestureDetector(
                     onTap: () => _showAddLinkDialog(ctx, isDark, setS),
                     child: Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 14),
@@ -742,7 +861,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   )),
                   const SizedBox(height: 8),
 
-                  // Tip
                   Container(padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(color: AppColors.lightGreen, borderRadius: BorderRadius.circular(12)),
                     child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -819,7 +937,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
               Row(children: [
                 Container(width: 40, height: 40,
-                    decoration: BoxDecoration(color: const Color(0xFFEDE7F6), shape: BoxShape.circle),
+                    decoration: const BoxDecoration(color: Color(0xFFEDE7F6), shape: BoxShape.circle),
                     child: const Icon(Icons.auto_awesome, color: Color(0xFF7C4DFF), size: 20)),
                 const SizedBox(width: 12),
                 Text('Resume Checker', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold,
@@ -830,7 +948,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ]),
             const SizedBox(height: 24),
 
-            // Upload zone
             Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 32),
               decoration: BoxDecoration(
                 color: isDark ? AppColors.darkSurface : const Color(0xFFF8F8F8),
