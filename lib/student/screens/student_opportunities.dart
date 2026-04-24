@@ -213,7 +213,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
     StudentOpportunitiesDetailsModal.show(
       context,
       program,
-          () => _submitApplication(program),
+      () => _showApplyModal(context, program),
     );
   }
 

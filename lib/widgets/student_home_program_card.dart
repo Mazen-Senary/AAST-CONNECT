@@ -6,7 +6,8 @@ class StudentHomeProgramCard extends StatelessWidget {
   final String subtitle;
   final String hours;
   final VoidCallback onViewDetails;
-  final VoidCallback onApply;
+  final VoidCallback? onApply;
+  final bool isApplied;
 
   const StudentHomeProgramCard({
     super.key,
@@ -14,7 +15,8 @@ class StudentHomeProgramCard extends StatelessWidget {
     required this.subtitle,
     required this.hours,
     required this.onViewDetails,
-    required this.onApply,
+    this.onApply,
+    this.isApplied = false,
   });
 
   @override
@@ -72,22 +74,24 @@ class StudentHomeProgramCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 10),
-              Expanded(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF637E99),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: onApply,
-                  child: const Text(
-                    "Apply Now",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                ),
-              ),
+               Expanded(
+                 child: ElevatedButton(
+                   style: ElevatedButton.styleFrom(
+                     backgroundColor: isApplied 
+                         ? Colors.green 
+                         : const Color(0xFF637E99),
+                     padding: const EdgeInsets.symmetric(vertical: 12),
+                   ),
+                   onPressed: onApply,
+                   child: Text(
+                     isApplied ? "Applied ✓" : "Apply Now",
+                     style: const TextStyle(
+                       color: Colors.white,
+                       fontWeight: FontWeight.bold,
+                     ),
+                   ),
+                 ),
+               ),
             ],
           ),
         ],

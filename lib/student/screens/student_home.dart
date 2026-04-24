@@ -10,6 +10,7 @@ import '../../widgets/student_home_section_header.dart';
 import '../../widgets/student_home_stat_card.dart';
 import '../../widgets/student_opportunities_apply_modal.dart';
 import '../../widgets/student_opportunities_details_modal.dart';
+import '../../services/vacancy_service.dart';
  class StudentHome extends StatefulWidget {
   final VoidCallback onSeeAll;
    const StudentHome({super.key,required this.onSeeAll});
@@ -28,6 +29,11 @@ import '../../widgets/student_opportunities_details_modal.dart';
   // upcoming deadlines from vacancies closing soon
   List<Map<String, dynamic>> _deadlines = [];
   bool _isLoading = true;
+  int? _profileId;
+  List<Map<String, dynamic>> _applications = [];
+
+  final VacancyService _vacancyService = VacancyService();
+//
   @override
   void initState() {
     super.initState();
@@ -47,6 +53,14 @@ import '../../widgets/student_opportunities_details_modal.dart';
           .select()
           .eq('studentid', userId)
           .single();
+
+      // fetch profileId
+      final profile = await supabase
+          .from('profile')
+          .select('profileid')
+          .eq('userid', userId)
+          .maybeSingle();
+      _profileId = profile?['profileid'];
 
       // fetch pending applications count
       final pendingData = await supabase
@@ -79,6 +93,9 @@ import '../../widgets/student_opportunities_details_modal.dart';
           .order('deadline', ascending: true)
           .limit(2);
 
+      // fetch user applications
+      _applications = await _vacancyService.getUserApplications(userId);
+
       setState(() {
         _studentName = studentData['name'] ?? '';
         _completedHours = (studentData['completedtraininghours'] ?? 0).toDouble();
@@ -93,19 +110,46 @@ import '../../widgets/student_opportunities_details_modal.dart';
       setState(() => _isLoading = false);
     }
   }
+
+  bool _hasApplied(String? vacancyId) {
+    if (vacancyId == null) return false;
+    return _applications.any((app) => app['vacancyid'].toString() == vacancyId.toString());
+  }
+
   // void _showApplyModal(BuildContext context, String title) {
   //   StudentOpportunitiesApplyModal.show(context, {'title': title}, null);
   // }
   //
-  void _showApplyModal(BuildContext context, String title) {
-    StudentOpportunitiesApplyModal.show(context, {'title': title}, () {});
+  // void _showApplyModal(BuildContext context, String title) {
+  //   StudentOpportunitiesApplyModal.show(context, {'title': title}, () {});
+  // }
+
+  void _showApplyModal(BuildContext context, Map<String, dynamic> vacancy) {
+    StudentOpportunitiesApplyModal.show(
+      context,
+      {
+        'title': vacancy['title'] ?? '',
+        'company': vacancy['company_name'] ?? '',
+        'vacancyId': vacancy['vacancyid'] ?? '',
+      },
+          () => _fetchData(), // Refresh data after apply
+      profileId: _profileId,
+      studentId: 5,
+      collegeId: 'STD2023005',
+      studentName: _studentName,
+    );
   }
+//
   void _showDetailsModal(
       BuildContext context,
       String title,
       String company,
       String hours,
+      Map<String, dynamic> vacancy,
       ) {
+    final vacancyId = vacancy['vacancyid']?.toString() ?? '';
+    final isApplied = _hasApplied(vacancyId);
+    
     StudentOpportunitiesDetailsModal.show(
       context,
       {
@@ -118,9 +162,9 @@ import '../../widgets/student_opportunities_details_modal.dart';
         'workMode': null,
         'paidStatus': null,
         'startDate': null,
-        'applied': false,
+        'applied': isApplied,
       },
-          () {}, // no apply action from home screen
+      () => _showApplyModal(context, vacancy),
     );
   }
 
@@ -264,7 +308,7 @@ import '../../widgets/student_opportunities_details_modal.dart';
       ),
     );
   }
-
+//
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -351,6 +395,9 @@ import '../../widgets/student_opportunities_details_modal.dart';
                   onActionTap: widget.onSeeAll,
                 ),
                 ..._vacancies.map((vacancy) {
+                  final vacancyId = vacancy['vacancyid']?.toString() ?? '';
+                  final isApplied = _hasApplied(vacancyId);
+                  
                   return StudentHomeProgramCard(
                     title: vacancy['title'] ?? '',
                     subtitle: vacancy['company_name'] ?? '',
@@ -362,11 +409,13 @@ import '../../widgets/student_opportunities_details_modal.dart';
                       vacancy['title'] ?? '',
                       vacancy['company_name'] ?? '',
                       vacancy['type'] ?? '',
+                      vacancy,
                     ),
-                    onApply: () => _showApplyModal(
+                    onApply: isApplied ? null : () => _showApplyModal(
                       context,
-                      vacancy['title'] ?? '',
+                      vacancy,
                     ),
+                    isApplied: isApplied,
                   );
                 }),
                 const SizedBox(height: 40),
