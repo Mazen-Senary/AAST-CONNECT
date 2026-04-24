@@ -64,6 +64,7 @@ class VacancyService {
     required String applicantName,
     required String collegeId,
     String? coverLetter,
+    String? documentId, // NEW
   }) async {
     try {
       await _supabase.from('application').insert({
@@ -74,11 +75,35 @@ class VacancyService {
         'coverletter': coverLetter,
         'status': 'PENDING',
         'submissiondate': DateTime.now().toIso8601String(),
+        if (documentId != null) 'document_id': documentId, // NEW
       });
     } catch (e) {
       throw Exception('Failed to submit application: $e');
     }
   }
+
+
+  // Future<void> submitApplication({
+  //   required String vacancyId,
+  //   required int applicantId,
+  //   required String applicantName,
+  //   required String collegeId,
+  //   String? coverLetter,
+  // }) async {
+  //   try {
+  //     await _supabase.from('application').insert({
+  //       'vacancyid': vacancyId,
+  //       'applicantid': applicantId,
+  //       'applicant_name': applicantName,
+  //       'college_id': collegeId,
+  //       'coverletter': coverLetter,
+  //       'status': 'PENDING',
+  //       'submissiondate': DateTime.now().toIso8601String(),
+  //     });
+  //   } catch (e) {
+  //     throw Exception('Failed to submit application: $e');
+  //   }
+  // }
 
   // Check if user has already applied to a vacancy
   Future<bool> hasUserApplied(String vacancyId, int userId) async {
