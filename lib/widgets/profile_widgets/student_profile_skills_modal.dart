@@ -259,12 +259,12 @@ class _SkillsModalContentState extends State<_SkillsModalContent> {
               ),
             ),
 
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 25),
-              child: Column(
+           Expanded(
+             child: _isLoading
+                 ? const Center(child: CircularProgressIndicator())
+                 : SingleChildScrollView(
+               padding: const EdgeInsets.symmetric(horizontal: 25).copyWith(bottom: 150),
+               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   // Skills section header

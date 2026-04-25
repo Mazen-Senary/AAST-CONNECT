@@ -20,6 +20,7 @@ class StudentProfileEditModal extends StatefulWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
@@ -145,6 +146,7 @@ class _StudentProfileEditModalState extends State<StudentProfileEditModal> {
 
           Expanded(
             child: SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 200),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
