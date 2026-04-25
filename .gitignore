@@ -46,3 +46,8 @@ app.*.map.json
 
 # Supabase configuration (contains sensitive data)
 lib/supabase_config.dart
+
+# Local documentation files (not to be pushed)
+*.md
+!README.md
+

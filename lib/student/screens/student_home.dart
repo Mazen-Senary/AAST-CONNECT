@@ -1,7 +1,9 @@
 // new code for the home page stateful
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 import '../../widgets/app_bar_with_logout.dart';
 import '../../widgets/home_widgets/student_home_deadline_card.dart';
@@ -19,21 +21,24 @@ import '../../services/vacancy_service.dart';
    State<StudentHome> createState() => _StudentHomeState();
  }
  
- class _StudentHomeState extends State<StudentHome> {
-  String _studentName = '';
-  double _completedHours = 0;
-  double _totalHours = 0;
-  int _pendingCount = 0;
-  int _approvedCount = 0;
-  // vacancies for "Available Programs"
-  List<Map<String, dynamic>> _vacancies = [];
-  // upcoming deadlines from vacancies closing soon
-  List<Map<String, dynamic>> _deadlines = [];
-  bool _isLoading = true;
-  int? _profileId;
-  List<Map<String, dynamic>> _applications = [];
+  class _StudentHomeState extends State<StudentHome> {
+   String _studentName = '';
+   double _completedHours = 0;
+   double _totalHours = 0;
+   int _pendingCount = 0;
+   int _approvedCount = 0;
+   // vacancies for "Available Programs"
+   List<Map<String, dynamic>> _vacancies = [];
+   // upcoming deadlines from vacancies closing soon
+   List<Map<String, dynamic>> _deadlines = [];
+   bool _isLoading = true;
+   int? _profileId;
+   List<Map<String, dynamic>> _applications = [];
 
-  final VacancyService _vacancyService = VacancyService();
+   final VacancyService _vacancyService = VacancyService();
+   
+   // Method channel for Android
+   static const platform = MethodChannel('com.aastconnect.app/url_launcher');
 //
   @override
   void initState() {
@@ -45,8 +50,7 @@ import '../../services/vacancy_service.dart';
     try {
       final supabase = Supabase.instance.client;
       //final userId = supabase.auth.currentUser?.id;//e3mlha uncomment  lama yb2a fi user login screen
-      final userId = 5; // temporary hardcoded user ID for testing, replace with actual user ID from auth
-      if (userId == null) return;
+      final userId = 5;
 
       // fetch student info
       final studentData = await supabase
@@ -128,8 +132,12 @@ import '../../services/vacancy_service.dart';
   void _showApplyModal(BuildContext context, Map<String, dynamic> vacancy) {
     // Check if application is external
     if (vacancy['application_method'] == 'EXTERNAL' && vacancy['external_apply_url'] != null) {
-      _launchExternalUrl(vacancy['external_apply_url']);
-      return;
+      final url = vacancy['external_apply_url'].toString().trim();
+      print('Launching external URL: $url');
+      if (url.isNotEmpty) {
+        _launchExternalUrl(url);
+        return;
+      }
     }
     
     StudentOpportunitiesApplyModal.show(
@@ -149,12 +157,88 @@ import '../../services/vacancy_service.dart';
 
   Future<void> _launchExternalUrl(String url) async {
     try {
-      final uri = Uri.parse(url);
-      if (await canLaunchUrl(uri)) {
-        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      print('=== DEBUG: _launchExternalUrl ===');
+      print('Input URL: "$url"');
+      
+      // Ensure URL has a scheme
+      String urlToLaunch = url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        urlToLaunch = 'https://$url';
+        print('Added https:// scheme -> "$urlToLaunch"');
+      }
+      
+      final uri = Uri.parse(urlToLaunch);
+      print('Parsed URI: $uri');
+      
+      // Try platform default first
+      print('Trying LaunchMode.platformDefault...');
+      try {
+        bool success = await launchUrl(
+          uri,
+          mode: LaunchMode.platformDefault,
+        );
+        if (success) {
+          print('URL launched successfully with platformDefault!');
+          return;
+        }
+      } catch (e1) {
+        print('platformDefault failed: $e1');
+      }
+      
+      // Fallback 1: Try in-app browser
+      print('Trying LaunchMode.inAppBrowserView...');
+      try {
+        bool success = await launchUrl(
+          uri,
+          mode: LaunchMode.inAppBrowserView,
+        );
+        if (success) {
+          print('URL launched successfully with inAppBrowserView!');
+          return;
+        }
+      } catch (e2) {
+        print('inAppBrowserView failed: $e2');
+      }
+      
+      // Fallback 2: Try Android native
+      print('Trying Android native method...');
+      try {
+        await platform.invokeMethod('launchURL', {'url': urlToLaunch});
+        print('URL launched successfully with Android native method!');
+        return;
+      } catch (e3) {
+        print('Android native method failed: $e3');
+      }
+      
+      // All failed
+      if (mounted) {
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Could not open URL',
+            message: urlToLaunch,
+            contentType: ContentType.failure,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
       }
     } catch (e) {
       print('Error launching URL: $e');
+      if (mounted) {
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Error',
+            message: e.toString(),
+            contentType: ContentType.failure,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
     }
   }
 //
@@ -430,7 +514,7 @@ import '../../services/vacancy_service.dart';
                       vacancy['type'] ?? '',
                       vacancy,
                     ),
-                    onApply: (isApplied || isExternal) ? null : () => _showApplyModal(
+                    onApply: isApplied ? null : () => _showApplyModal(
                       context,
                       vacancy,
                     ),

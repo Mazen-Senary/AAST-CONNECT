@@ -75,7 +75,7 @@ class VacancyService {
         'coverletter': coverLetter,
         'status': 'PENDING',
         'submissiondate': DateTime.now().toIso8601String(),
-        if (documentId != null) 'document_id': documentId, // NEW
+        'document_id': ?documentId, // NEW
       });
     } catch (e) {
       throw Exception('Failed to submit application: $e');

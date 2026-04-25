@@ -1,6 +1,7 @@
 
 //new opportunities screen with save program feature and better error handling
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
@@ -35,6 +36,9 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
   List<Map<String, dynamic>> _applications = [];
   List<String> _savedVacancyIds = [];
   int? _currentUserId;
+  
+  // Method channel for Android
+  static const platform = MethodChannel('com.aastconnect.app/url_launcher');
 
   @override
   void initState() {
@@ -61,6 +65,15 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
 
       // load vacancies
       final vacancies = await _vacancyService.getStudentVacancies();
+      
+      // Debug: Log external vacancies
+      for (var v in vacancies) {
+        if (v.applicationMethod == 'EXTERNAL') {
+          print('DEBUG: Loaded external vacancy: "${v.title}"');
+          print('  - Application Method: ${v.applicationMethod}');
+          print('  - External URL: "${v.externalApplyUrl}"');
+        }
+      }
 
       // load user applications
       _applications = await _vacancyService.getUserApplications(_currentUserId!);
@@ -175,6 +188,14 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
             (app) => app['vacancyid'] == vacancy.vacancyId,
       );
       program['applied'] = hasApplied;
+      
+      // Debug logging
+      if (vacancy.applicationMethod == 'EXTERNAL') {
+        print('DEBUG: External vacancy "${vacancy.title}"');
+        print('  - externalApplyUrl: "${vacancy.externalApplyUrl}"');
+        print('  - program externalApplyUrl: "${program['externalApplyUrl']}"');
+      }
+      
       return program;
     })
         .toList();
@@ -197,34 +218,145 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
   //         () => _submitApplication(program),
   //   );
   // }
-   void _showApplyModal(BuildContext context, Map<String, dynamic> program) {
-     // Check if application is external
-     if (program['applicationMethod'] == 'EXTERNAL' && program['externalApplyUrl'] != null) {
-       _launchExternalUrl(program['externalApplyUrl']);
-       return;
-     }
-     
-     StudentOpportunitiesApplyModal.show(
-       context,
-       program,
-           () => _loadData(),
-       profileId: _profileId, // need to add this variable
-       studentId: _currentUserId,
-       collegeId: 'STD2023005', // temp hardcode
-       studentName: 'Mohamed Tarek', // temp hardcode
-     );
-   }
+    void _showApplyModal(BuildContext context, Map<String, dynamic> program) {
+      // Check if application is external
+      print('=== DEBUG: _showApplyModal ===');
+      print('applicationMethod: ${program['applicationMethod']}');
+      print('externalApplyUrl: ${program['externalApplyUrl']}');
+      print('Program keys: ${program.keys.toList()}');
+      
+      if (program['applicationMethod'] == 'EXTERNAL' && program['externalApplyUrl'] != null) {
+        final url = program['externalApplyUrl'].toString().trim();
+        print('URL to launch: "$url"');
+        print('URL is empty: ${url.isEmpty}');
+        if (url.isNotEmpty) {
+          _launchExternalUrl(url);
+          return;
+        } else {
+          print('ERROR: URL is empty string');
+          final snackBar = SnackBar(
+            elevation: 0,
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            content: const AwesomeSnackbarContent(
+              title: 'Empty URL',
+              message: 'External URL is empty in database',
+              contentType: ContentType.warning,
+            ),
+          );
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(snackBar);
+          }
+          return;
+        }
+      }
+      
+      print('Not external or URL is null, showing internal apply modal');
+      StudentOpportunitiesApplyModal.show(
+        context,
+        program,
+            () => _loadData(),
+        profileId: _profileId, // need to add this variable
+        studentId: _currentUserId,
+        collegeId: 'STD2023005', // temp hardcode
+        studentName: 'Mohamed Tarek', // temp hardcode
+      );
+    }
 
-   Future<void> _launchExternalUrl(String url) async {
-     try {
-       final uri = Uri.parse(url);
-       if (await canLaunchUrl(uri)) {
-         await launchUrl(uri, mode: LaunchMode.externalApplication);
-       }
-     } catch (e) {
-       print('Error launching URL: $e');
-     }
-   }
+    Future<void> _launchExternalUrl(String url) async {
+      try {
+        print('=== DEBUG: _launchExternalUrl ===');
+        print('Input URL: "$url"');
+        print('Input URL length: ${url.length}');
+        
+        // Ensure URL has a scheme
+        String urlToLaunch = url;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+          urlToLaunch = 'https://$url';
+          print('Added https:// scheme -> "$urlToLaunch"');
+        }
+        
+        final uri = Uri.parse(urlToLaunch);
+        print('Parsed URI: $uri');
+        print('URI scheme: ${uri.scheme}');
+        print('URI host: ${uri.host}');
+        
+        // Try platform default first (works on most devices)
+        print('Trying LaunchMode.platformDefault...');
+        try {
+          bool success = await launchUrl(
+            uri,
+            mode: LaunchMode.platformDefault,
+          );
+          if (success) {
+            print('URL launched successfully with platformDefault!');
+            return;
+          } else {
+            print('launchUrl returned false with platformDefault');
+          }
+        } catch (e1) {
+          print('platformDefault failed: $e1');
+        }
+        
+        // Fallback 1: Try in-app browser
+        print('Trying LaunchMode.inAppBrowserView...');
+        try {
+          bool success = await launchUrl(
+            uri,
+            mode: LaunchMode.inAppBrowserView,
+          );
+          if (success) {
+            print('URL launched successfully with inAppBrowserView!');
+            return;
+          }
+        } catch (e2) {
+          print('inAppBrowserView failed: $e2');
+        }
+        
+        // Fallback 2: Try Android native (for emulator)
+        print('Trying Android native method...');
+        try {
+          await platform.invokeMethod('launchURL', {'url': urlToLaunch});
+          print('URL launched successfully with Android native method!');
+          return;
+        } catch (e3) {
+          print('Android native method failed: $e3');
+        }
+        
+        // All attempts failed
+        print('ERROR: All launch attempts failed');
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          duration: const Duration(seconds: 4),
+          content: AwesomeSnackbarContent(
+            title: 'Could not open URL',
+            message: urlToLaunch,
+            contentType: ContentType.failure,
+          ),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+      } catch (e) {
+        print('EXCEPTION in _launchExternalUrl: $e');
+        print('Exception type: ${e.runtimeType}');
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Error',
+            message: e.toString(),
+            contentType: ContentType.failure,
+          ),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+      }
+    }
 
 
    Future<void> _submitApplication(Map<String, dynamic> program) async {
