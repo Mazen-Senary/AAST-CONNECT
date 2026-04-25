@@ -1,9 +1,9 @@
-
 //new code
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import '../../services/vacancy_service.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../../services/vacancy_service.dart';
 
 class StudentOpportunitiesApplyModal {
   static void show(
@@ -18,6 +18,7 @@ class StudentOpportunitiesApplyModal {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
@@ -467,7 +468,7 @@ class _ApplyModalContentState extends State<_ApplyModalContent> {
               width: double.infinity,
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF284B8C),
+                  backgroundColor: const Color(0xFF637E99),
                   padding: const EdgeInsets.all(15),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(12),

@@ -1,17 +1,18 @@
 
 //new opportunities screen with save program feature and better error handling
-
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import '../../services/vacancy_service.dart';
 import '../../models/vacancy.dart';
 import '../../widgets/app_bar_with_logout.dart';
 import '../../widgets/loading_widget.dart';
-import '../../widgets/student_opportunities_search_bar.dart';
-import '../../widgets/student_opportunities_filter_chips.dart';
-import '../../widgets/student_opportunities_program_card.dart';
-import '../../widgets/student_opportunities_apply_modal.dart';
-import '../../widgets/student_opportunities_details_modal.dart';
+import '../../widgets/opportunities_wigdet/student_opportunities_search_bar.dart';
+import '../../widgets/opportunities_wigdet/student_opportunities_filter_chips.dart';
+import '../../widgets/opportunities_wigdet/student_opportunities_program_card.dart';
+import '../../widgets/opportunities_wigdet/student_opportunities_apply_modal.dart';
+import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.dart';
 
 class StudentOpportunities extends StatefulWidget {
   const StudentOpportunities({super.key});
@@ -101,30 +102,54 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
       final supabase = Supabase.instance.client;
       final isSaved = _savedVacancyIds.contains(vacancyId);
 
-      if (isSaved) {
-        await supabase
-            .from('saved_programs')
-            .delete()
-            .eq('studentid', _currentUserId ?? 5)
-            .eq('vacancyid', vacancyId);
-        setState(() => _savedVacancyIds.remove(vacancyId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Removed from saved programs")),
-        );
-      } else {
-        await supabase.from('saved_programs').insert({
-          'studentid': _currentUserId ?? 5,
-          'vacancyid': vacancyId,
-        });
-        setState(() => _savedVacancyIds.add(vacancyId));
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Saved to your programs!")),
-        );
-      }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
+       if (isSaved) {
+         await supabase
+             .from('saved_programs')
+             .delete()
+             .eq('studentid', _currentUserId ?? 5)
+             .eq('vacancyid', vacancyId);
+         setState(() => _savedVacancyIds.remove(vacancyId));
+         final snackBar = SnackBar(
+           elevation: 0,
+           behavior: SnackBarBehavior.floating,
+           backgroundColor: Colors.transparent,
+           content: AwesomeSnackbarContent(
+             title: 'Success',
+             message: 'Removed from saved programs',
+             contentType: ContentType.success,
+           ),
+         );
+         ScaffoldMessenger.of(context).showSnackBar(snackBar);
+       } else {
+         await supabase.from('saved_programs').insert({
+           'studentid': _currentUserId ?? 5,
+           'vacancyid': vacancyId,
+         });
+         setState(() => _savedVacancyIds.add(vacancyId));
+         final snackBar = SnackBar(
+           elevation: 0,
+           behavior: SnackBarBehavior.floating,
+           backgroundColor: Colors.transparent,
+           content: AwesomeSnackbarContent(
+             title: 'Success',
+             message: 'Saved to your programs!',
+             contentType: ContentType.success,
+           ),
+         );
+         ScaffoldMessenger.of(context).showSnackBar(snackBar);
+       }
+     } catch (e) {
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: AwesomeSnackbarContent(
+           title: 'Error',
+           message: 'Error: $e',
+           contentType: ContentType.failure,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
   }
 
@@ -172,42 +197,72 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
   //         () => _submitApplication(program),
   //   );
   // }
-  void _showApplyModal(BuildContext context, Map<String, dynamic> program) {
-    StudentOpportunitiesApplyModal.show(
-      context,
-      program,
-          () => _loadData(),
-      profileId: _profileId, // need to add this variable
-      studentId: _currentUserId,
-      collegeId: 'STD2023005', // temp hardcode
-      studentName: 'Mohamed Tarek', // temp hardcode
-    );
-  }
+   void _showApplyModal(BuildContext context, Map<String, dynamic> program) {
+     // Check if application is external
+     if (program['applicationMethod'] == 'EXTERNAL' && program['externalApplyUrl'] != null) {
+       _launchExternalUrl(program['externalApplyUrl']);
+       return;
+     }
+     
+     StudentOpportunitiesApplyModal.show(
+       context,
+       program,
+           () => _loadData(),
+       profileId: _profileId, // need to add this variable
+       studentId: _currentUserId,
+       collegeId: 'STD2023005', // temp hardcode
+       studentName: 'Mohamed Tarek', // temp hardcode
+     );
+   }
+
+   Future<void> _launchExternalUrl(String url) async {
+     try {
+       final uri = Uri.parse(url);
+       if (await canLaunchUrl(uri)) {
+         await launchUrl(uri, mode: LaunchMode.externalApplication);
+       }
+     } catch (e) {
+       print('Error launching URL: $e');
+     }
+   }
 
 
-  Future<void> _submitApplication(Map<String, dynamic> program) async {
-    try {
-      await _vacancyService.submitApplication(
-        vacancyId: program['vacancyId'],
-        applicantId: _currentUserId ?? 5,
-        applicantName: 'Current User',
-        collegeId: 'STD2023005',
-      );
+   Future<void> _submitApplication(Map<String, dynamic> program) async {
+     try {
+       await _vacancyService.submitApplication(
+         vacancyId: program['vacancyId'],
+         applicantId: _currentUserId ?? 5,
+         applicantName: 'Current User',
+         collegeId: 'STD2023005',
+       );
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Application Submitted Successfully!")),
-      );
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: const AwesomeSnackbarContent(
+           title: 'Success',
+           message: 'Application Submitted Successfully!',
+           contentType: ContentType.success,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
 
-      _loadData();
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Failed to submit application: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
+       _loadData();
+     } catch (e) {
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: AwesomeSnackbarContent(
+           title: 'Error',
+           message: 'Failed to submit application: $e',
+           contentType: ContentType.failure,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
+     }
+   }
 
   void _showDetailsModal(BuildContext context, Map<String, dynamic> program) {
     StudentOpportunitiesDetailsModal.show(

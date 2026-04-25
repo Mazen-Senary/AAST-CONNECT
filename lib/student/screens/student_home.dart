@@ -1,15 +1,16 @@
 // new code for the home page stateful
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../../widgets/app_bar_with_logout.dart';
-import '../../widgets/student_home_deadline_card.dart';
-import '../../widgets/student_home_program_card.dart';
-import '../../widgets/student_home_progress_card.dart';
-import '../../widgets/student_home_section_header.dart';
-import '../../widgets/student_home_stat_card.dart';
-import '../../widgets/student_opportunities_apply_modal.dart';
-import '../../widgets/student_opportunities_details_modal.dart';
+import '../../widgets/home_widgets/student_home_deadline_card.dart';
+import '../../widgets/home_widgets/student_home_program_card.dart';
+import '../../widgets/home_widgets/student_home_progress_card.dart';
+import '../../widgets/home_widgets/student_home_section_header.dart';
+import '../../widgets/home_widgets/student_home_stat_card.dart';
+import '../../widgets/opportunities_wigdet/student_opportunities_apply_modal.dart';
+import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.dart';
 import '../../services/vacancy_service.dart';
  class StudentHome extends StatefulWidget {
   final VoidCallback onSeeAll;
@@ -125,6 +126,12 @@ import '../../services/vacancy_service.dart';
   // }
 
   void _showApplyModal(BuildContext context, Map<String, dynamic> vacancy) {
+    // Check if application is external
+    if (vacancy['application_method'] == 'EXTERNAL' && vacancy['external_apply_url'] != null) {
+      _launchExternalUrl(vacancy['external_apply_url']);
+      return;
+    }
+    
     StudentOpportunitiesApplyModal.show(
       context,
       {
@@ -138,6 +145,17 @@ import '../../services/vacancy_service.dart';
       collegeId: 'STD2023005',
       studentName: _studentName,
     );
+  }
+
+  Future<void> _launchExternalUrl(String url) async {
+    try {
+      final uri = Uri.parse(url);
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri, mode: LaunchMode.externalApplication);
+      }
+    } catch (e) {
+      print('Error launching URL: $e');
+    }
   }
 //
   void _showDetailsModal(
@@ -397,6 +415,7 @@ import '../../services/vacancy_service.dart';
                 ..._vacancies.map((vacancy) {
                   final vacancyId = vacancy['vacancyid']?.toString() ?? '';
                   final isApplied = _hasApplied(vacancyId);
+                  final isExternal = vacancy['application_method'] == 'EXTERNAL';
                   
                   return StudentHomeProgramCard(
                     title: vacancy['title'] ?? '',
@@ -411,11 +430,12 @@ import '../../services/vacancy_service.dart';
                       vacancy['type'] ?? '',
                       vacancy,
                     ),
-                    onApply: isApplied ? null : () => _showApplyModal(
+                    onApply: (isApplied || isExternal) ? null : () => _showApplyModal(
                       context,
                       vacancy,
                     ),
                     isApplied: isApplied,
+                    isExternal: isExternal,
                   );
                 }),
                 const SizedBox(height: 40),

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'rounded_container.dart';
+import '../rounded_container.dart';
 
 class StudentHomeProgressCard extends StatelessWidget {
   final double completedHours;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class StudentProfilePortfolioModal {
   static void show(BuildContext context, int studentId) {
@@ -114,25 +115,41 @@ class _PortfolioModalContentState extends State<_PortfolioModalContent> {
         'portfolio_links': _serializeLinks(otherLinks),
         'linkedin_url': linkedinLink['url'] ?? '',
       }).eq('studentid', widget.studentId);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saving: $e")),
-      );
+     } catch (e) {
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: AwesomeSnackbarContent(
+           title: 'Error',
+           message: 'Error saving: $e',
+           contentType: ContentType.failure,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     } finally {
       setState(() => _isSaving = false);
     }
   }
 
-  void _addLink() {
-    final title = _titleController.text.trim();
-    final url = _urlController.text.trim();
+   void _addLink() {
+     final title = _titleController.text.trim();
+     final url = _urlController.text.trim();
 
-    if (title.isEmpty || url.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter both title and URL")),
-      );
-      return;
-    }
+     if (title.isEmpty || url.isEmpty) {
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: const AwesomeSnackbarContent(
+           title: 'Error',
+           message: 'Please enter both title and URL',
+           contentType: ContentType.failure,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
+       return;
+     }
 
     // add https:// if missing
     final finalUrl = url.startsWith('http') ? url : 'https://$url';
@@ -160,10 +177,18 @@ class _PortfolioModalContentState extends State<_PortfolioModalContent> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       }
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Cannot open this link")),
-      );
+     } catch (e) {
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: const AwesomeSnackbarContent(
+           title: 'Error',
+           message: 'Cannot open this link',
+           contentType: ContentType.failure,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
   }
 

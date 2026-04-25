@@ -1,14 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import '../../services/theme_provider.dart';
-import '../../widgets/student_profile_edit_modal.dart';
+import '../../widgets/profile_widgets/student_profile_edit_modal.dart';
 import '../../widgets/rounded_container.dart';
-import '../../widgets/student_home_section_header.dart';
+import '../../widgets/home_widgets/student_home_section_header.dart';
 import '../../widgets/profile_info_field.dart';
-import '../../widgets/student_profile_skills_modal.dart';
-import '../../widgets/student_profile_documents_modal.dart';
-import '../../widgets/student_profile_portfolio_modal.dart';
-import '../../widgets/student_profile_submit_hours_modal.dart';
+import '../../widgets/profile_widgets/student_profile_skills_modal.dart';
+import '../../widgets/profile_widgets/student_profile_documents_modal.dart';
+import '../../widgets/profile_widgets/student_profile_portfolio_modal.dart';
+import '../../widgets/profile_widgets/student_profile_submit_hours_modal.dart';
 import '../../models/student.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -96,30 +97,46 @@ class _StudentProfileState extends State<StudentProfile> {
     }
   }
 
-  Future<void> _unsaveProgram(String vacancyId) async {
-    try {
-      final supabase = Supabase.instance.client;
-      await supabase
-          .from('saved_programs')
-          .delete()
-          .eq('studentid', _student!.studentID)
-          .eq('vacancyid', vacancyId);
+   Future<void> _unsaveProgram(String vacancyId) async {
+     try {
+       final supabase = Supabase.instance.client;
+       await supabase
+           .from('saved_programs')
+           .delete()
+           .eq('studentid', _student!.studentID)
+           .eq('vacancyid', vacancyId);
 
-      setState(() {
-        _savedPrograms.removeWhere(
-              (saved) => saved['vacancyid'].toString() == vacancyId,
-        );
-      });
+       setState(() {
+         _savedPrograms.removeWhere(
+               (saved) => saved['vacancyid'].toString() == vacancyId,
+         );
+       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Removed from saved programs")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error: $e")),
-      );
-    }
-  }
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: const AwesomeSnackbarContent(
+           title: 'Success',
+           message: 'Removed from saved programs',
+           contentType: ContentType.success,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
+     } catch (e) {
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: AwesomeSnackbarContent(
+           title: 'Error',
+           message: 'Error: $e',
+           contentType: ContentType.failure,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
+     }
+   }
 
   void _showEditProfileModal(BuildContext context) {
     StudentProfileEditModal.show(context, {
@@ -146,14 +163,30 @@ class _StudentProfileState extends State<StudentProfile> {
         })
             .eq('studentid', _student!.studentID);
 
-        await _fetchStudentData();
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Profile updated successfully!")),
-        );
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error: $e")),
-        );
+         await _fetchStudentData();
+         final snackBar = SnackBar(
+           elevation: 0,
+           behavior: SnackBarBehavior.floating,
+           backgroundColor: Colors.transparent,
+           content: const AwesomeSnackbarContent(
+             title: 'Success',
+             message: 'Profile updated successfully!',
+             contentType: ContentType.success,
+           ),
+         );
+         ScaffoldMessenger.of(context).showSnackBar(snackBar);
+       } catch (e) {
+         final snackBar = SnackBar(
+           elevation: 0,
+           behavior: SnackBarBehavior.floating,
+           backgroundColor: Colors.transparent,
+           content: AwesomeSnackbarContent(
+             title: 'Error',
+             message: 'Error: $e',
+             contentType: ContentType.failure,
+           ),
+         );
+         ScaffoldMessenger.of(context).showSnackBar(snackBar);
       }
     });
   }
@@ -193,12 +226,20 @@ class _StudentProfileState extends State<StudentProfile> {
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF284B8C),
             ),
-            onPressed: () {
-              Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Application started!")),
-              );
-            },
+             onPressed: () {
+               Navigator.pop(context);
+               final snackBar = SnackBar(
+                 elevation: 0,
+                 behavior: SnackBarBehavior.floating,
+                 backgroundColor: Colors.transparent,
+                 content: const AwesomeSnackbarContent(
+                   title: 'Success',
+                   message: 'Application started!',
+                   contentType: ContentType.success,
+                 ),
+               );
+               ScaffoldMessenger.of(context).showSnackBar(snackBar);
+             },
             child: const Text("Apply Now"),
           ),
         ],

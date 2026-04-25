@@ -150,6 +150,7 @@
 
 //new version with dynamic data and apply button state
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class StudentOpportunitiesDetailsModal {
   static void show(
@@ -244,45 +245,60 @@ class StudentOpportunitiesDetailsModal {
               const SizedBox(height: 8),
               Text(program['requirements'] ?? 'No specific requirements'),
               const SizedBox(height: 20),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                        side: const BorderSide(color: Color(0xFF284B8C)),
-                      ),
-                      child: const Text('Close'),
-                    ),
-                  ),
-                  const SizedBox(width: 15),
-                  Expanded(
-                    child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: program['applied'] == true
-                            ? Colors.grey.shade200
-                            : const Color(0xFF284B8C),
-                        padding: const EdgeInsets.symmetric(vertical: 15),
-                      ),
-                      onPressed: program['applied'] == true
-                          ? null
-                          : () {
-                        Navigator.pop(context);
-                        onApply();
-                      },
-                      child: Text(
-                        program['applied'] == true ? 'Already Applied' : 'Apply Now',
-                        style: TextStyle(
-                          color: program['applied'] == true
-                              ? Colors.black54
-                              : Colors.white,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
+               Row(
+                 children: [
+                   Expanded(
+                     child: OutlinedButton(
+                       onPressed: () => Navigator.pop(context),
+                       style: OutlinedButton.styleFrom(
+                         padding: const EdgeInsets.symmetric(vertical: 15),
+                         side: const BorderSide(color: Color(0xFF284B8C)),
+                       ),
+                       child: const Text('Close'),
+                     ),
+                   ),
+                   const SizedBox(width: 15),
+                   Expanded(
+                     child: ElevatedButton(
+                       style: ElevatedButton.styleFrom(
+                         backgroundColor: program['applied'] == true
+                             ? Colors.grey.shade200
+                             : const Color(0xFF637E99),
+                         padding: const EdgeInsets.symmetric(vertical: 15),
+                       ),
+                       onPressed: program['applied'] == true
+                           ? null
+                           : () async {
+                             if (program['applicationMethod'] == 'EXTERNAL' &&
+                                 program['externalApplyUrl'] != null) {
+                               // Redirect to external link
+                               final url = Uri.parse(program['externalApplyUrl']);
+                               if (await canLaunchUrl(url)) {
+                                 await launchUrl(url, mode: LaunchMode.externalApplication);
+                               }
+                               Navigator.pop(context);
+                             } else {
+                               // Internal application
+                               Navigator.pop(context);
+                               onApply();
+                             }
+                           },
+                       child: Text(
+                         program['applied'] == true 
+                             ? 'Already Applied'
+                             : (program['applicationMethod'] == 'EXTERNAL'
+                                 ? 'Apply on Company Website'
+                                 : 'Apply Now'),
+                         style: TextStyle(
+                           color: program['applied'] == true
+                               ? Colors.black54
+                               : Colors.white,
+                         ),
+                       ),
+                     ),
+                   ),
+                 ],
+               ),
               const SizedBox(height: 20),
             ],
           ),

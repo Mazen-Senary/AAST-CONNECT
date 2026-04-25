@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'dart:async';
 
 class StudentProfileSkillsModal {
   static void show(BuildContext context, int studentId) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      useSafeArea: true,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
@@ -37,6 +40,11 @@ class _SkillsModalContentState extends State<_SkillsModalContent> {
 
   // interest name controller for autocomplete
   String _interestInputValue = '';
+
+  // Banner state for in-modal feedback
+  String? _bannerMessage;
+  bool _isBannerError = false;
+  Timer? _bannerTimer;
 
   final List<String> _commonSkills = [
     // Programming Languages
@@ -75,6 +83,26 @@ class _SkillsModalContentState extends State<_SkillsModalContent> {
   void initState() {
     super.initState();
     _fetchSkills();
+  }
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
+
+  void _showBanner(String message, {bool isError = false}) {
+    _bannerTimer?.cancel();
+    setState(() {
+      _bannerMessage = message;
+      _isBannerError = isError;
+    });
+    // Auto-hide banner after 3 seconds
+    _bannerTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() => _bannerMessage = null);
+      }
+    });
   }
 
   List<Map<String, String>> _parseSkills(String? skillsStr) {
@@ -122,38 +150,32 @@ class _SkillsModalContentState extends State<_SkillsModalContent> {
     }
   }
 
-  Future<void> _saveToDatabase() async {
-    try {
-      setState(() => _isSaving = true);
-      final supabase = Supabase.instance.client;
-      await supabase.from('student').update({
-        'skills': _serializeSkills(_skills),
-        'interests': _serializeInterests(_interests),
-      }).eq('studentid', widget.studentId);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error saving: $e")),
-      );
-    } finally {
-      setState(() => _isSaving = false);
-    }
-  }
+   Future<void> _saveToDatabase() async {
+     try {
+       setState(() => _isSaving = true);
+       final supabase = Supabase.instance.client;
+       await supabase.from('student').update({
+         'skills': _serializeSkills(_skills),
+         'interests': _serializeInterests(_interests),
+       }).eq('studentid', widget.studentId);
+      } catch (e) {
+        _showBanner('Error saving: $e', isError: true);
+     } finally {
+       setState(() => _isSaving = false);
+     }
+   }
 
-  void _addSkill() {
-    final name = _skillInputValue.trim();
-    if (name.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Please enter a skill name")),
-      );
-      return;
-    }
-    // check if skill already exists
-    if (_skills.any((s) => s['name']?.toLowerCase() == name.toLowerCase())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Skill already added!")),
-      );
-      return;
-    }
+   void _addSkill() {
+     final name = _skillInputValue.trim();
+     if (name.isEmpty) {
+       _showBanner('Please enter a skill name', isError: true);
+       return;
+     }
+     // check if skill already exists
+     if (_skills.any((s) => s['name']?.toLowerCase() == name.toLowerCase())) {
+       _showBanner('Skill already added!', isError: true);
+       return;
+     }
     setState(() {
       _skills.add({
         'name': name,
@@ -162,6 +184,7 @@ class _SkillsModalContentState extends State<_SkillsModalContent> {
       });
       _skillInputValue = '';
     });
+    _showBanner('Skill added successfully!');
     _saveToDatabase();
   }
 
@@ -170,19 +193,18 @@ class _SkillsModalContentState extends State<_SkillsModalContent> {
     _saveToDatabase();
   }
 
-  void _addInterest() {
-    final interest = _interestInputValue.trim();
-    if (interest.isEmpty) return;
-    if (_interests.any((i) => i.toLowerCase() == interest.toLowerCase())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Interest already added!")),
-      );
-      return;
-    }
+   void _addInterest() {
+     final interest = _interestInputValue.trim();
+     if (interest.isEmpty) return;
+     if (_interests.any((i) => i.toLowerCase() == interest.toLowerCase())) {
+       _showBanner('Interest already added!', isError: true);
+       return;
+     }
     setState(() {
       _interests.add(interest);
       _interestInputValue = '';
     });
+    _showBanner('Interest added successfully!');
     _saveToDatabase();
   }
 
@@ -225,6 +247,17 @@ class _SkillsModalContentState extends State<_SkillsModalContent> {
               ],
             ),
           ),
+
+          // Feedback banner for in-modal messages using AwesomeSnackbar styling
+          if (_bannerMessage != null)
+            Container(
+              margin: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              child: AwesomeSnackbarContent(
+                title: _isBannerError ? 'Error' : 'Success',
+                message: _bannerMessage!,
+                contentType: _isBannerError ? ContentType.failure : ContentType.success,
+              ),
+            ),
 
           Expanded(
             child: _isLoading

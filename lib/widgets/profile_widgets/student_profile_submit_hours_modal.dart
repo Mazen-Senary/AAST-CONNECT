@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class StudentProfileSubmitHoursModal {
   static void show(BuildContext context) {
@@ -130,15 +131,30 @@ class StudentProfileSubmitHoursModal {
                     });
 
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Training hours submitted successfully!"),
+                    final snackBar = SnackBar(
+                      elevation: 0,
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.transparent,
+                      content: const AwesomeSnackbarContent(
+                        title: 'Success',
+                        message: 'Training hours submitted successfully!',
+                        contentType: ContentType.success,
                       ),
                     );
+                    ScaffoldMessenger.of(context).showSnackBar(snackBar);
                   } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Error: $e")),
+                    Navigator.pop(context);
+                    final snackBar = SnackBar(
+                      elevation: 0,
+                      behavior: SnackBarBehavior.floating,
+                      backgroundColor: Colors.transparent,
+                      content: AwesomeSnackbarContent(
+                        title: 'Error',
+                        message: 'Error: $e',
+                        contentType: ContentType.failure,
+                      ),
                     );
+                    ScaffoldMessenger.of(context).showSnackBar(snackBar);
                   }
                 },
                 child: const Text(

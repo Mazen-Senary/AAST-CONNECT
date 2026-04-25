@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart'; // NEW: for opening documents
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 class StudentProfileDocumentsModal {
   static void show(BuildContext context, int? profileId, {VoidCallback? onUpdate}) {
@@ -98,16 +100,34 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
         'filepath': fileUrl,
       });
 
-      await _fetchDocuments();
-      widget.onUpdate?.call();
+       await _fetchDocuments();
+       widget.onUpdate?.call();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Document uploaded successfully!")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error uploading: $e")),
-      );
+       Navigator.pop(context);
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: const AwesomeSnackbarContent(
+           title: 'Success',
+           message: 'Document uploaded successfully!',
+           contentType: ContentType.success,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
+     } catch (e) {
+       Navigator.pop(context);
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: AwesomeSnackbarContent(
+           title: 'Error',
+           message: 'Error uploading: $e',
+           contentType: ContentType.failure,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     } finally {
       setState(() => _isUploading = false);
     }
@@ -130,16 +150,33 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
           .delete()
           .eq('documentid', documentId);
 
-      await _fetchDocuments();
-      widget.onUpdate?.call();
+       await _fetchDocuments();
+       widget.onUpdate?.call();
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Document deleted!")),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error deleting: $e")),
-      );
+       Navigator.pop(context);
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: const AwesomeSnackbarContent(
+           title: 'Success',
+           message: 'Document deleted!',
+           contentType: ContentType.success,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
+     } catch (e) {
+       final snackBar = SnackBar(
+         elevation: 0,
+         behavior: SnackBarBehavior.floating,
+         backgroundColor: Colors.transparent,
+         content: AwesomeSnackbarContent(
+           title: 'Error',
+           message: 'Error deleting: $e',
+           contentType: ContentType.failure,
+         ),
+       );
+       ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
   }
 
@@ -150,14 +187,30 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
       } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cannot open this file")),
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: const AwesomeSnackbarContent(
+            title: 'Error',
+            message: 'Cannot open this file',
+            contentType: ContentType.failure,
+          ),
         );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Error opening file: $e")),
+      final snackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: AwesomeSnackbarContent(
+          title: 'Error',
+          message: 'Error opening file: $e',
+          contentType: ContentType.failure,
+        ),
       );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
   }
 
