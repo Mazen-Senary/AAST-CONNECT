@@ -464,8 +464,11 @@ class _StudentProfileState extends State<StudentProfile> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton.icon(
-                onPressed: () =>
-                    StudentProfileSubmitHoursModal.show(context),
+                onPressed: () => StudentProfileSubmitHoursModal.show(
+                  context,
+                  studentId: _student!.studentID,
+                  onSubmitted: _fetchStudentData,
+                ),
                 icon: const Icon(Icons.anchor),
                 label: const Text("Submit Training Hours"),
                 style: ElevatedButton.styleFrom(

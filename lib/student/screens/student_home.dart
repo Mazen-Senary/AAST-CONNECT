@@ -14,6 +14,8 @@ import '../../widgets/home_widgets/student_home_stat_card.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_apply_modal.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.dart';
 import '../../services/vacancy_service.dart';
+import 'student_tracking.dart';
+
  class StudentHome extends StatefulWidget {
   final VoidCallback onSeeAll;
    const StudentHome({super.key,required this.onSeeAll});
@@ -411,11 +413,31 @@ import '../../services/vacancy_service.dart';
     );
   }
 //
+  void _openTracking({int initialTabIndex = 1, String initialStatusFilter = 'All'}) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => StudentTrackingScreen(
+          initialTabIndex: initialTabIndex,
+          initialStatusFilter: initialStatusFilter,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: const AppBarWithLogout(title: "AAST Connect"),
+      appBar: AppBarWithLogout(
+        title: "AAST Connect",
+        additionalActions: [
+          IconButton(
+            tooltip: 'Open tracking',
+            onPressed: () => _openTracking(initialTabIndex: 0),
+            icon: const Icon(Icons.timeline),
+          ),
+        ],
+      ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
@@ -440,28 +462,46 @@ import '../../services/vacancy_service.dart';
                       ?.copyWith(fontSize: 16),
                 ),
                 const SizedBox(height: 25),
-                StudentHomeProgressCard(
-                  completedHours: _completedHours,
-                  totalHours: _totalHours == 0 ? 1 : _totalHours,
+                InkWell(
+                  borderRadius: BorderRadius.circular(18),
+                  onTap: () => _openTracking(initialTabIndex: 1),
+                  child: StudentHomeProgressCard(
+                    completedHours: _completedHours,
+                    totalHours: _totalHours == 0 ? 1 : _totalHours,
+                  ),
                 ),
                 const SizedBox(height: 25),
                 Row(
                   children: [
                     Expanded(
-                      child: StudentHomeStatCard(
-                        backgroundColor: const Color(0xffF2C6C6),
-                        number: _pendingCount.toString(),
-                        label: "Pending",
-                        icon: Icons.access_time,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => _openTracking(
+                          initialTabIndex: 1,
+                          initialStatusFilter: 'Pending',
+                        ),
+                        child: StudentHomeStatCard(
+                          backgroundColor: const Color(0xffF2C6C6),
+                          number: _pendingCount.toString(),
+                          label: "Pending",
+                          icon: Icons.access_time,
+                        ),
                       ),
                     ),
                     const SizedBox(width: 15),
                     Expanded(
-                      child: StudentHomeStatCard(
-                        backgroundColor: const Color(0xffCFE3CF),
-                        number: _approvedCount.toString(),
-                        label: "Completed",
-                        icon: Icons.verified,
+                      child: InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => _openTracking(
+                          initialTabIndex: 1,
+                          initialStatusFilter: 'Approved',
+                        ),
+                        child: StudentHomeStatCard(
+                          backgroundColor: const Color(0xffCFE3CF),
+                          number: _approvedCount.toString(),
+                          label: "Completed",
+                          icon: Icons.verified,
+                        ),
                       ),
                     ),
                   ],
