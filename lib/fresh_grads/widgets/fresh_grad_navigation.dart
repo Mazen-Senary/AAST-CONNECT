@@ -6,6 +6,8 @@ import '../screens/support_screen.dart';
 import '../widgets/aast_app_bar.dart';
 import '../theme/app_theme.dart';
 
+
+
 class _NavItem {
   final IconData icon;
   final IconData activeIcon;
@@ -63,32 +65,10 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
         return Theme(
   data: AppTheme.light(),
   child: Scaffold(
-            appBar: AastAppBar(
-              isDark: false,
-              onThemeToggle: () {},
-              onLogout: () {
-                showDialog(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Logout'),
-                    content: const Text('Are you sure you want to logout?'),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text('Cancel'),
-                      ),
-                      TextButton(
-                        onPressed: () => Navigator.pop(ctx),
-                        child: const Text(
-                          'Logout',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              },
-            ),
+    appBar: AastAppBar(
+  isDark: false,
+  onThemeToggle: () {},
+),
             body: IndexedStack(
               index: _currentIndex,
               children: _screens,
