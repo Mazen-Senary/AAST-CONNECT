@@ -16,62 +16,57 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _registrationController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   String _loginMessage = '';
 
   final supabase = Supabase.instance.client;
 
   Future<void> _signIn() async {
-final collegeId = _registrationController.text.trim();
+    final collegeId = _registrationController.text.trim();
+    final password = _passwordController.text.trim();
 
-  if (collegeId.isEmpty) {
-  setState(() {
-    _loginMessage = 'Enter a valid Admin ID';
-  });
-  return;
-}
+    if (collegeId.isEmpty || password.isEmpty) {
+      setState(() {
+        _loginMessage = 'Invalid Admin ID or password';
+      });
+      return;
+    }
+    setState(() {
+      _loginMessage = 'Checking admin ID...';
+    });
 
+    try {
+      final response = await supabase.rpc(
+        'signin_admin',
+        params: {'input_college_id': collegeId, 'input_password': password},
+      );
 
-  setState(() {
-    _loginMessage = 'Checking admin ID...';
-  });
+      if (response == null || response.isEmpty) {
+        setState(() {
+          _loginMessage = 'Invalid Admin ID or password';
+        });
+        return;
+      }
 
-  try {
-    final response = await supabase.rpc(
-  'signin_admin',
-  params: {
-    'input_college_id': collegeId,
-  },
-);
+      final adminId = response[0]['adminid'];
 
-    if (response == null || response.isEmpty) {
-  setState(() {
-    _loginMessage = 'Admin not found';
-  });
-  return;
-}
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ChangeNotifierProvider(
+            create: (_) => ThemeProvider(),
+            child: AdminNavigation(adminId: adminId),
+          ),
+        ),
+      );
+    } catch (e) {
+      debugPrint('SIGN IN ERROR: $e');
 
-final adminId = response[0]['adminid'];
-
-Navigator.pushReplacement(
-  context,
-  MaterialPageRoute(
-    builder: (_) => ChangeNotifierProvider(
-      create: (_) => ThemeProvider(),
-      child: AdminNavigation(adminId: adminId),
-    ),
-  ),
-);
-
-  } catch (e) {
-  debugPrint('SIGN IN ERROR: $e');
-
-  setState(() {
-    _loginMessage = e.toString();
-  });
-}
-
-}
-
+      setState(() {
+        _loginMessage = e.toString();
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -91,14 +86,11 @@ Navigator.pushReplacement(
                     Container(
                       width: 80,
                       height: 80,
-                      
+
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(20),
                         gradient: const LinearGradient(
-                          colors: [
-                            Color(0xFF5B7C99),
-                            Color(0xFF7A9BB8),
-                          ],
+                          colors: [Color(0xFF5B7C99), Color(0xFF7A9BB8)],
                         ),
                       ),
                       child: const Icon(
@@ -135,91 +127,92 @@ Navigator.pushReplacement(
 
               /// Login Card
               Card(
-                  color: const Color(0xFFFFFFFF),
-                  elevation: 8,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: Padding(
-                
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Welcome Back',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF2D2D2D),
+                color: const Color(0xFFFFFFFF),
+                elevation: 8,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Welcome Back',
+                        style: TextStyle(
+                          fontFamily: 'Inter',
+                          fontSize: 22,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF2D2D2D),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      const SizedBox(height: 8),
+
+                      TextField(
+                        controller: _registrationController,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFFAF9F6),
+                          hintText: 'Registration number',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
                           ),
                         ),
-                        const SizedBox(height: 20),
+                      ),
+                      SizedBox(height: 20),
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: InputDecoration(
+                          filled: true,
+                          fillColor: const Color(0xFFFAF9F6),
+                          hintText: 'Password',
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                            borderSide: BorderSide.none,
+                          ),
+                        ),
+                      ),
 
-                        const Text(
-                          'Registration Number',
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14,
+                      if (_loginMessage.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        Text(
+                          _loginMessage,
+                          style: const TextStyle(
+                            color: Color(0xFF5B7C99),
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        const SizedBox(height: 8),
-
-                        TextField(
-                          controller: _registrationController,
-                          decoration: InputDecoration(
-                            filled: true,
-                            fillColor: const Color(0xFFFAF9F6),
-                            hintText: 'Enter your registration number',
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
-
-                        if (_loginMessage.isNotEmpty) ...[
-                          const SizedBox(height: 16),
-                          Text(
-                            _loginMessage,
-                            style: const TextStyle(
-                              color: Color(0xFF5B7C99),
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ],
-                        SizedBox(
-                          height: 20,
-                        ),
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _signIn,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF5B7C99),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                            ),
-                            child: const Text(
-                              'Sign In',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 15,
-                                fontWeight: FontWeight.w500,
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        ),
                       ],
-                    ),
+                      SizedBox(height: 20),
+                      SizedBox(
+                        width: double.infinity,
+                        height: 50,
+                        child: ElevatedButton(
+                          onPressed: _signIn,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFF5B7C99),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                          ),
+                          child: const Text(
+                            'Sign In',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-            
+              ),
             ],
           ),
         ),

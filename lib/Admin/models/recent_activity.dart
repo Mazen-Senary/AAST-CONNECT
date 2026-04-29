@@ -21,15 +21,15 @@ class RecentActivity {
     );
   }
   static ActivityStatus mapStatus(String status) {
-  switch (status.toLowerCase()) {
-    case 'approved':
-      return ActivityStatus.approved;
-    case 'rejected':
-      return ActivityStatus.rejected;
-    case 'pending':
-      return ActivityStatus.pending;
-    default:
-      return ActivityStatus.pending;
+    switch (status.toLowerCase()) {
+      case 'approved':
+        return ActivityStatus.approved;
+      case 'rejected':
+        return ActivityStatus.rejected;
+      case 'pending':
+        return ActivityStatus.pending;
+      default:
+        return ActivityStatus.pending;
+    }
   }
-}
 }

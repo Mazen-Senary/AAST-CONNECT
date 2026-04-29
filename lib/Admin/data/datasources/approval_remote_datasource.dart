@@ -19,10 +19,10 @@ class ApprovalRemoteDataSource {
   }
 
   Future<void> rejectApplication(int id, String? reason) async {
-    await supabase.from('application').update({
-      'status': 'REJECTED',
-      'rejectionreason': reason,
-    }).eq('applicationid', id);
+    await supabase
+        .from('application')
+        .update({'status': 'REJECTED', 'rejectionreason': reason})
+        .eq('applicationid', id);
   }
 
   Future<void> approveTraining(int id) async {
@@ -33,9 +33,9 @@ class ApprovalRemoteDataSource {
   }
 
   Future<void> rejectTraining(int id, String? reason) async {
-    await supabase.from('trainingrecord').update({
-      'status': 'REJECTED',
-      'rejectionreason': reason,
-    }).eq('recordid', id);
+    await supabase
+        .from('trainingrecord')
+        .update({'status': 'REJECTED', 'rejectionreason': reason})
+        .eq('recordid', id);
   }
 }

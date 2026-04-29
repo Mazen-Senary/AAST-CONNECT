@@ -357,10 +357,9 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
               children: [
                 Text(
                   'Opportunities Management',
-                  style: AppTextStyles.h1.copyWith(
-                    color: isDark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.textPrimary,
+                  style: AppTextStyles.h3.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                   ),
                 ),
                 ElevatedButton.icon(

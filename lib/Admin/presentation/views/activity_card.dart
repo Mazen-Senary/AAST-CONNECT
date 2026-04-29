@@ -84,11 +84,14 @@ class ActivityCard extends StatelessWidget {
     switch (status) {
       case ActivityStatus.rejected:
         return {
-          'bg': const Color.fromARGB(255, 64, 34, 34),
+          'bg': AppColors.accentAlert,
           'text': AppColors.accentAlertText,
         };
       case ActivityStatus.pending:
-        return {'bg': AppColors.accentInfo, 'text': AppColors.accentInfoText};
+        return {
+          'bg': AppColors.accentInfo,
+          'text': AppColors.accentInfoText,
+        };
       case ActivityStatus.approved:
         return {
           'bg': AppColors.accentSuccess,

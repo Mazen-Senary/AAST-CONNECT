@@ -8,6 +8,7 @@ import 'package:grad_project/Admin/domain/usecases/get_applications.dart';
 import 'package:grad_project/Admin/domain/usecases/get_training.dart';
 import 'package:grad_project/Admin/domain/usecases/reject_application.dart';
 import 'package:grad_project/Admin/domain/usecases/reject_training.dart';
+
 class ApprovalsState {
   final String selectedSection;
   final String applicationsFilter;
@@ -119,8 +120,6 @@ class ApprovalsNotifier extends StateNotifier<ApprovalsState> {
 
     state = state.copyWith(applications: updated);
   }
-
-
   Future<void> approveApplication(Application record) async {
     await approveApp(record.applicationId);
 

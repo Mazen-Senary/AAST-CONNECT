@@ -12,6 +12,7 @@ class Training {
   final DateTime createdAt;
   final String? proofImageUrl;
   final bool expanded;
+   final String? certificateUrl;
 
   Training({
     required this.recordId,
@@ -27,12 +28,14 @@ class Training {
     this.proofImageUrl,
     this.rejectionReason,
     this.expanded = false,
+    this.certificateUrl,
   });
 
   Training copyWith({
     String? status,
     String? rejectionReason,
     bool? expanded,
+    String? certificateUrl,
   }) {
     return Training(
       recordId: recordId,
@@ -48,6 +51,7 @@ class Training {
       proofImageUrl: proofImageUrl ?? this.proofImageUrl,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       expanded: expanded ?? this.expanded,
+      certificateUrl: certificateUrl ?? this.certificateUrl,
     );
   }
 }

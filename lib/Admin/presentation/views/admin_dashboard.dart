@@ -45,7 +45,7 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     final themeProvider = provider.Provider.of<ThemeProvider>(context);
     final isDark = themeProvider.isDarkMode;
     final state = ref.watch(dashboardProvider);
-    
+
     if (state.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -55,19 +55,18 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     }
     final dashboard = state.data;
 
-
-if (dashboard == null) {
-  return const Center(child: CircularProgressIndicator());
-}
-
+    if (dashboard == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
         elevation: 0,
         title: Text(
-          'AAST Connect Staff',
+          'Dashboard',
           style: AppTextStyles.h3.copyWith(
             fontWeight: FontWeight.w600,
             color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
@@ -76,16 +75,14 @@ if (dashboard == null) {
         actions: [
           // Dark Mode Toggle
           IconButton(
-            onPressed: () {
-              themeProvider.toggleTheme();
-            },
             icon: Icon(
-              isDark ? Icons.light_mode : Icons.dark_mode,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+              isDark ? Icons.light_mode : Icons.dark_mode_outlined,
+              color: isDark
+                  ? AppColors.darkTextPrimary
+                  : AppColors.textSecondary,
             ),
-            tooltip: isDark ? 'Switch to light mode' : 'Switch to dark mode',
+            onPressed: themeProvider.toggleTheme,
           ),
-
           // Logout Button
           IconButton(
             onPressed: _logout,
@@ -102,16 +99,6 @@ if (dashboard == null) {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Dashboard',
-              style: AppTextStyles.h1.copyWith(
-                fontWeight: FontWeight.w600,
-                color: isDark
-                    ? AppColors.darkTextPrimary
-                    : AppColors.textPrimary,
-              ),
-            ),
-            const SizedBox(height: 4),
             Text(
               'Overview of all activities',
               style: AppTextStyles.body.copyWith(

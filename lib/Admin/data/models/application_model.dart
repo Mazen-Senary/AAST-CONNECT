@@ -8,6 +8,7 @@ class ApplicationModel extends Application {
     required super.collegeId,
     required super.submissionDate,
     super.coverLetter,
+    super.documentId,
     super.rejectionReason,
     super.expanded,
   });
@@ -22,6 +23,7 @@ class ApplicationModel extends Application {
           ? DateTime.parse(map['submissiondate'])
           : DateTime.now(),
       coverLetter: map['coverletter'],
+      documentId: map['document_id'],
       rejectionReason: map['rejectionreason'],
     );
   }

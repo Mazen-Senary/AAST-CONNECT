@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:grad_project/Admin/presentation/widgets/student_card.dart';
 import 'package:provider/provider.dart' as provider;
 import '../../theme/app_colors.dart';
+import '../../theme/app_text_styles.dart';
 import 'theme_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/di/student_providers.dart';
@@ -28,6 +29,14 @@ class _StudentProfilesScreenState extends ConsumerState<StudentProfilesScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            Text(
+                  'Student Profiles',
+                  style: AppTextStyles.h3.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 16),
             /// SEARCH
             TextField(
               onChanged:notifier.updateSearch,

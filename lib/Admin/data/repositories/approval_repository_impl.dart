@@ -21,16 +21,15 @@ class ApprovalRepositoryImpl implements ApprovalRepository {
   }
 
   @override
-  Future<List<Training>> getTraining() async {
-    final response = await remote.fetchTraining();
-
-    return response
-        .map((e) => TrainingModel.fromMap({
-              ...e,
-              'studentname': e['name'],
-            }))
-        .toList();
-  }
+Future<List<Training>> getTraining() async {
+  final response = await remote.fetchTraining();
+  return response
+      .map((e) => TrainingModel.fromMap({
+            ...e,
+            'studentname': e['name'], 
+          }))
+      .toList();
+}
 
   @override
   Future<void> approveApplication(int id) =>

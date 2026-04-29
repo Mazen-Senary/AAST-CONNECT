@@ -1,5 +1,6 @@
 class Application {
   final int applicationId;
+  final String? documentId;
   final String status;
   final String studentName;
   final String collegeId;
@@ -15,6 +16,7 @@ class Application {
     required this.collegeId,
     required this.submissionDate,
     this.coverLetter,
+    this.documentId,
     this.rejectionReason,
     this.expanded = false,
   });
@@ -31,6 +33,7 @@ class Application {
       collegeId: collegeId,
       submissionDate: submissionDate,
       coverLetter: coverLetter,
+      documentId: documentId,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       expanded: expanded ?? this.expanded,
     );
