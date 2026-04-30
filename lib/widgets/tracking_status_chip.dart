@@ -1,17 +1,10 @@
 import 'package:flutter/material.dart';
-
-const Color approvedColor = Color(0xFF4CAF50);
-const Color pendingColor = Color(0xFFFFC107);
-const Color rejectedColor = Color(0xFFF44336);
-const Color canceledColor = Color(0xFF757575);
+import '../constants/app_colors.dart';
 
 class TrackingStatusChip extends StatelessWidget {
   final String status;
 
-  const TrackingStatusChip({
-    super.key,
-    required this.status,
-  });
+  const TrackingStatusChip({super.key, required this.status});
 
   @override
   Widget build(BuildContext context) {
@@ -24,7 +17,9 @@ class TrackingStatusChip extends StatelessWidget {
         style.label,
         style: TextStyle(color: style.color, fontWeight: FontWeight.w600),
       ),
-      shape: StadiumBorder(side: BorderSide(color: style.color.withValues(alpha: 0.25))),
+      shape: StadiumBorder(
+        side: BorderSide(color: style.color.withValues(alpha: 0.25)),
+      ),
       backgroundColor: style.color.withValues(alpha: 0.12),
       visualDensity: VisualDensity.compact,
       materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -34,14 +29,18 @@ class TrackingStatusChip extends StatelessWidget {
   _StatusStyle _styleForStatus(String status) {
     switch (status) {
       case 'APPROVED':
-        return const _StatusStyle('Accepted', approvedColor, Icons.check_circle);
+        return _StatusStyle('Accepted', AppColors.approved, Icons.check_circle);
       case 'REJECTED':
-        return const _StatusStyle('Rejected', rejectedColor, Icons.cancel);
+        return _StatusStyle('Rejected', AppColors.rejected, Icons.cancel);
       case 'CANCELED':
-        return const _StatusStyle('Canceled', canceledColor, Icons.do_not_disturb_alt);
+        return _StatusStyle(
+          'Canceled',
+          AppColors.canceled,
+          Icons.do_not_disturb_alt,
+        );
       case 'PENDING':
       default:
-        return const _StatusStyle('Pending', pendingColor, Icons.hourglass_top);
+        return _StatusStyle('Pending', AppColors.pending, Icons.hourglass_top);
     }
   }
 }
@@ -53,4 +52,3 @@ class _StatusStyle {
 
   const _StatusStyle(this.label, this.color, this.icon);
 }
-

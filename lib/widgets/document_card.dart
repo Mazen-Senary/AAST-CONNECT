@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'rounded_container.dart';
+import '../constants/app_colors.dart';
 
 class DocumentCard extends StatelessWidget {
   final String name;
@@ -32,12 +33,12 @@ class DocumentCard extends StatelessWidget {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFD6E2F2),
+              color: AppColors.documentBackground,
               borderRadius: BorderRadius.circular(10),
             ),
             child: const Icon(
               Icons.file_present,
-              color: Color(0xFF284B8C),
+              color: AppColors.documentIcon,
             ),
           ),
           const SizedBox(width: 15),
@@ -45,10 +46,7 @@ class DocumentCard extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  name,
-                  style: const TextStyle(fontWeight: FontWeight.bold),
-                ),
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   date,
                   style: const TextStyle(color: Colors.grey, fontSize: 12),

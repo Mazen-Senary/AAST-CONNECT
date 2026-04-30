@@ -1,7 +1,7 @@
-
 //new program card with save bookmark button and applied state
 import 'package:flutter/material.dart';
 import '../rounded_container.dart';
+import '../../constants/app_colors.dart';
 
 class StudentOpportunitiesProgramCard extends StatelessWidget {
   final Map<String, dynamic> program;
@@ -20,28 +20,27 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
   });
 
   Color _getColorForCategory(String category) {
-    switch (category.toLowerCase()) {
-      case 'development': return Colors.green.shade100;
-      case 'it': return Colors.blue.shade100;
-      case 'security': return Colors.red.shade100;
-      case 'design': return Colors.orange.shade100;
-      case 'data': return Colors.teal.shade100;
-      case 'cloud': return Colors.lightBlue.shade100;
-      case 'ai': return Colors.indigo.shade100;
-      default: return Colors.grey.shade100;
-    }
+    return AppColors.getCategoryColor(category).withOpacity(0.3);
   }
 
   IconData _getIconForCategory(String category) {
     switch (category.toLowerCase()) {
-      case 'development': return Icons.computer;
-      case 'it': return Icons.storage;
-      case 'security': return Icons.security;
-      case 'design': return Icons.design_services;
-      case 'data': return Icons.analytics;
-      case 'cloud': return Icons.cloud;
-      case 'ai': return Icons.psychology;
-      default: return Icons.work_outline;
+      case 'development':
+        return Icons.computer;
+      case 'it':
+        return Icons.storage;
+      case 'security':
+        return Icons.security;
+      case 'design':
+        return Icons.design_services;
+      case 'data':
+        return Icons.analytics;
+      case 'cloud':
+        return Icons.cloud;
+      case 'ai':
+        return Icons.psychology;
+      default:
+        return Icons.work_outline;
     }
   }
 
@@ -86,7 +85,7 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
               IconButton(
                 icon: Icon(
                   isSaved ? Icons.bookmark : Icons.bookmark_border,
-                  color: isSaved ? const Color(0xFF284B8C) : Colors.grey,
+                  color: isSaved ? AppColors.lightPrimary : Colors.grey,
                 ),
                 onPressed: onSave,
               ),
@@ -96,15 +95,18 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFD6E2F2),
+                  color: AppColors.documentBackground,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
                   program['type'],
                   style: const TextStyle(
-                    color: Color(0xFF284B8C),
+                    color: AppColors.lightPrimary,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
@@ -128,11 +130,11 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
                   onPressed: onViewDetails,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: Color(0xFF284B8C)),
+                    side: BorderSide(color: AppColors.lightPrimary),
                   ),
                   child: const Text(
                     'View Details',
-                    style: TextStyle(color: Color(0xFF284B8C)),
+                    style: TextStyle(color: AppColors.lightPrimary),
                   ),
                 ),
               ),
@@ -142,21 +144,19 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
                   style: ElevatedButton.styleFrom(
                     backgroundColor: program['applied']
                         ? Colors.grey.shade200
-                        : const Color(0xFF637E99),
+                        : AppColors.lightSecondary,
                     foregroundColor: program['applied']
                         ? Colors.black87
                         : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  onPressed: program['applied'] 
-                      ? null
-                      : onApply,
+                  onPressed: program['applied'] ? null : onApply,
                   child: Text(
-                    program['applied'] 
+                    program['applied']
                         ? 'Applied'
                         : (program['applicationMethod'] == 'EXTERNAL'
-                            ? 'Apply on Website'
-                            : 'Apply Now'),
+                              ? 'Apply on Website'
+                              : 'Apply Now'),
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
                 ),

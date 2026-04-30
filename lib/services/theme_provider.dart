@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../constants/app_colors.dart';
 
 class ThemeProvider extends ChangeNotifier {
   static const String _themeKey = 'is_dark_mode';
@@ -29,15 +30,15 @@ class ThemeProvider extends ChangeNotifier {
     fontFamily: 'Inter',
     useMaterial3: true,
     brightness: Brightness.light,
-    scaffoldBackgroundColor: const Color(0xffF9F9F9),
+    scaffoldBackgroundColor: AppColors.lightBackground,
     colorScheme: const ColorScheme.light(
-      primary: Color(0xFF284B8C),
-      secondary: Color(0xFF637E99),
-      surface: Colors.white,
+      primary: AppColors.lightPrimary,
+      secondary: AppColors.lightSecondary,
+      surface: AppColors.lightSurface,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Colors.black87,
-      error: Colors.red,
+      error: AppColors.lightError,
       onError: Colors.white,
     ),
     appBarTheme: const AppBarTheme(
@@ -48,11 +49,11 @@ class ThemeProvider extends ChangeNotifier {
         fontSize: 22,
         fontWeight: FontWeight.bold,
       ),
-      iconTheme: IconThemeData(color: Color(0xFF284B8C)),
+      iconTheme: IconThemeData(color: AppColors.lightPrimary),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
       backgroundColor: Colors.white,
-      selectedItemColor: Color(0xFF284B8C),
+      selectedItemColor: AppColors.lightPrimary,
       unselectedItemColor: Colors.grey,
     ),
     cardTheme: const CardThemeData(
@@ -64,15 +65,15 @@ class ThemeProvider extends ChangeNotifier {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF284B8C),
+        backgroundColor: AppColors.lightPrimary,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF284B8C),
-        side: const BorderSide(color: Color(0xFF284B8C)),
+        foregroundColor: AppColors.lightPrimary,
+        side: const BorderSide(color: AppColors.lightPrimary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
@@ -96,36 +97,34 @@ class ThemeProvider extends ChangeNotifier {
     useMaterial3: true,
     brightness: Brightness.dark,
     fontFamily: 'Inter',
-    scaffoldBackgroundColor: const Color(
-      0xFF1A1A1A,
-    ), // Much lighter dark background
+    scaffoldBackgroundColor: AppColors.darkBackground,
     colorScheme: const ColorScheme.dark(
-      primary: Color(0xFF4A90E2), // Softer, more visible blue
-      secondary: Color(0xFF637E99),
-      surface: Color(0xFF2A2A2A), // Lighter background
+      primary: AppColors.darkPrimary, // Softer, more visible blue
+      secondary: AppColors.darkSecondary,
+      surface: AppColors.darkSurface, // Lighter background
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Colors.white,
-      error: Colors.redAccent,
+      error: AppColors.darkError,
       onError: Colors.black,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: Color(0xFF2A2A2A), // Lighter app bar
+      backgroundColor: AppColors.darkSurface, // Lighter app bar
       elevation: 0,
       titleTextStyle: TextStyle(
         color: Colors.white,
         fontSize: 22,
         fontWeight: FontWeight.bold,
       ),
-      iconTheme: IconThemeData(color: Color(0xFF4A90E2)),
+      iconTheme: IconThemeData(color: AppColors.darkPrimary),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: Color(0xFF2A2A2A), // Lighter bottom nav
-      selectedItemColor: Color(0xFF4A90E2),
+      backgroundColor: AppColors.darkSurface, // Lighter bottom nav
+      selectedItemColor: AppColors.darkPrimary,
       unselectedItemColor: Colors.grey,
     ),
     cardTheme: const CardThemeData(
-      color: Color(0xFF333333), // Much lighter card color
+      color: AppColors.darkContainer, // Much lighter card color
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(15)),
@@ -133,15 +132,15 @@ class ThemeProvider extends ChangeNotifier {
     ),
     elevatedButtonTheme: ElevatedButtonThemeData(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF4A90E2),
+        backgroundColor: AppColors.darkPrimary,
         foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        foregroundColor: const Color(0xFF4A90E2),
-        side: const BorderSide(color: Color(0xFF4A90E2)),
+        foregroundColor: AppColors.darkPrimary,
+        side: BorderSide(color: AppColors.darkPrimary),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),

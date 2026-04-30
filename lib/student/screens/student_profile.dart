@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
+import '../../constants/app_colors.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import '../../services/theme_provider.dart';
 import '../../widgets/profile_widgets/student_profile_edit_modal.dart';
@@ -97,105 +100,109 @@ class _StudentProfileState extends State<StudentProfile> {
     }
   }
 
-   Future<void> _unsaveProgram(String vacancyId) async {
-     try {
-       final supabase = Supabase.instance.client;
-       await supabase
-           .from('saved_programs')
-           .delete()
-           .eq('studentid', _student!.studentID)
-           .eq('vacancyid', vacancyId);
+  Future<void> _unsaveProgram(String vacancyId) async {
+    try {
+      final supabase = Supabase.instance.client;
+      await supabase
+          .from('saved_programs')
+          .delete()
+          .eq('studentid', _student!.studentID)
+          .eq('vacancyid', vacancyId);
 
-       setState(() {
-         _savedPrograms.removeWhere(
-               (saved) => saved['vacancyid'].toString() == vacancyId,
-         );
-       });
+      setState(() {
+        _savedPrograms.removeWhere(
+          (saved) => saved['vacancyid'].toString() == vacancyId,
+        );
+      });
 
-       final snackBar = SnackBar(
-         elevation: 0,
-         behavior: SnackBarBehavior.floating,
-         backgroundColor: Colors.transparent,
-         content: const AwesomeSnackbarContent(
-           title: 'Success',
-           message: 'Removed from saved programs',
-           contentType: ContentType.success,
-         ),
-       );
-       ScaffoldMessenger.of(context).showSnackBar(snackBar);
-     } catch (e) {
-       final snackBar = SnackBar(
-         elevation: 0,
-         behavior: SnackBarBehavior.floating,
-         backgroundColor: Colors.transparent,
-         content: AwesomeSnackbarContent(
-           title: 'Error',
-           message: 'Error: $e',
-           contentType: ContentType.failure,
-         ),
-       );
-       ScaffoldMessenger.of(context).showSnackBar(snackBar);
-     }
-   }
+      final snackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: const AwesomeSnackbarContent(
+          title: 'Success',
+          message: 'Removed from saved programs',
+          contentType: ContentType.success,
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    } catch (e) {
+      final snackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: AwesomeSnackbarContent(
+          title: 'Error',
+          message: 'Error: $e',
+          contentType: ContentType.failure,
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
+    }
+  }
 
   void _showEditProfileModal(BuildContext context) {
-    StudentProfileEditModal.show(context, {
-      'name': _student?.studentName ?? '',
-      'phone': _student?.phoneNumber ?? '',
-      'bio': _student?.bio ?? '',
-      'address': _student?.address ?? '',
-      'linkedin_url': _student?.linkedinURL ?? '',
-      'college_id': _student?.collegeID ?? '',
-      'major': _student?.major ?? '',
-      'academicYear': _student?.academicYear ?? '',
-      'gpa': _student?.gpa?.toString() ?? '',
-    }, (updatedData) async {
-      try {
-        final supabase = Supabase.instance.client;
-        await supabase
-            .from('student')
-            .update({
-          'name': updatedData['name'],
-          'phone': updatedData['phone'],
-          'bio': updatedData['bio'],
-          'address': updatedData['address'],
-          'linkedin_url': updatedData['linkedin_url'],
-        })
-            .eq('studentid', _student!.studentID);
+    StudentProfileEditModal.show(
+      context,
+      {
+        'name': _student?.studentName ?? '',
+        'phone': _student?.phoneNumber ?? '',
+        'bio': _student?.bio ?? '',
+        'address': _student?.address ?? '',
+        'linkedin_url': _student?.linkedinURL ?? '',
+        'college_id': _student?.collegeID ?? '',
+        'major': _student?.major ?? '',
+        'academicYear': _student?.academicYear ?? '',
+        'gpa': _student?.gpa?.toString() ?? '',
+      },
+      (updatedData) async {
+        try {
+          final supabase = Supabase.instance.client;
+          await supabase
+              .from('student')
+              .update({
+                'name': updatedData['name'],
+                'phone': updatedData['phone'],
+                'bio': updatedData['bio'],
+                'address': updatedData['address'],
+                'linkedin_url': updatedData['linkedin_url'],
+              })
+              .eq('studentid', _student!.studentID);
 
-         await _fetchStudentData();
-         final snackBar = SnackBar(
-           elevation: 0,
-           behavior: SnackBarBehavior.floating,
-           backgroundColor: Colors.transparent,
-           content: const AwesomeSnackbarContent(
-             title: 'Success',
-             message: 'Profile updated successfully!',
-             contentType: ContentType.success,
-           ),
-         );
-         ScaffoldMessenger.of(context).showSnackBar(snackBar);
-       } catch (e) {
-         final snackBar = SnackBar(
-           elevation: 0,
-           behavior: SnackBarBehavior.floating,
-           backgroundColor: Colors.transparent,
-           content: AwesomeSnackbarContent(
-             title: 'Error',
-             message: 'Error: $e',
-             contentType: ContentType.failure,
-           ),
-         );
-         ScaffoldMessenger.of(context).showSnackBar(snackBar);
-      }
-    });
+          await _fetchStudentData();
+          final snackBar = SnackBar(
+            elevation: 0,
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            content: const AwesomeSnackbarContent(
+              title: 'Success',
+              message: 'Profile updated successfully!',
+              contentType: ContentType.success,
+            ),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        } catch (e) {
+          final snackBar = SnackBar(
+            elevation: 0,
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            content: AwesomeSnackbarContent(
+              title: 'Error',
+              message: 'Error: $e',
+              contentType: ContentType.failure,
+            ),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+      },
+    );
   }
 
   void _showSavedProgramDetails(
-      BuildContext context,
-      String title,
-      String company,
-      ) {
+    BuildContext context,
+    String title,
+    String company,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -224,22 +231,22 @@ class _StudentProfileState extends State<StudentProfile> {
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF284B8C),
+              backgroundColor: AppColors.lightPrimary,
             ),
-             onPressed: () {
-               Navigator.pop(context);
-               final snackBar = SnackBar(
-                 elevation: 0,
-                 behavior: SnackBarBehavior.floating,
-                 backgroundColor: Colors.transparent,
-                 content: const AwesomeSnackbarContent(
-                   title: 'Success',
-                   message: 'Application started!',
-                   contentType: ContentType.success,
-                 ),
-               );
-               ScaffoldMessenger.of(context).showSnackBar(snackBar);
-             },
+            onPressed: () {
+              Navigator.pop(context);
+              final snackBar = SnackBar(
+                elevation: 0,
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.transparent,
+                content: const AwesomeSnackbarContent(
+                  title: 'Success',
+                  message: 'Application started!',
+                  contentType: ContentType.success,
+                ),
+              );
+              ScaffoldMessenger.of(context).showSnackBar(snackBar);
+            },
             child: const Text("Apply Now"),
           ),
         ],
@@ -283,208 +290,210 @@ class _StudentProfileState extends State<StudentProfile> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              "My Profile",
-              style: Theme.of(context)
-                  .textTheme
-                  .headlineLarge
-                  ?.copyWith(fontSize: 28),
-            ),
-            Text(
-              "Manage your information and documents",
-              style: Theme.of(context)
-                  .textTheme
-                  .bodyMedium
-                  ?.copyWith(fontSize: 16),
-            ),
-            const SizedBox(height: 25),
+              physics: const BouncingScrollPhysics(),
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "My Profile",
+                    style: Theme.of(
+                      context,
+                    ).textTheme.headlineLarge?.copyWith(fontSize: 28),
+                  ),
+                  Text(
+                    "Manage your information and documents",
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(fontSize: 16),
+                  ),
+                  const SizedBox(height: 25),
 
-            // Quick Actions
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => _showEditProfileModal(context),
-                    child: _buildQuickAction(
-                      Icons.email_outlined,
-                      "Edit Profile",
-                      const Color(0xFFD6E2F2),
-                    ),
+                  // Quick Actions
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => _showEditProfileModal(context),
+                          child: _buildQuickAction(
+                            Icons.email_outlined,
+                            "Edit Profile",
+                            const Color(0xFFD6E2F2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => StudentProfileSkillsModal.show(
+                            context,
+                            _student!.studentID,
+                          ),
+                          child: _buildQuickAction(
+                            Icons.eco_outlined,
+                            "Skills & Interests",
+                            const Color(0xFFCFE3CF),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => StudentProfileSkillsModal.show(
-                        context, _student!.studentID),
-                    child: _buildQuickAction(
-                      Icons.eco_outlined,
-                      "Skills & Interests",
-                      const Color(0xFFCFE3CF),
-                    ),
+                  const SizedBox(height: 10),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => StudentProfileDocumentsModal.show(
+                            context,
+                            _profileId,
+                            onUpdate: () => _fetchStudentData(),
+                          ),
+                          child: _buildQuickAction(
+                            Icons.description_outlined,
+                            "Documents",
+                            const Color(0xFFF9EAD2),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => StudentProfilePortfolioModal.show(
+                            context,
+                            _student!.studentID,
+                          ),
+                          child: _buildQuickAction(
+                            Icons.bookmark_border,
+                            "Portfolio Links",
+                            const Color(0xFFF2C6C6),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 10),
-            Row(
-              children: [
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => StudentProfileDocumentsModal.show(
+
+                  const SizedBox(height: 30),
+
+                  // User Info Card
+                  _buildUserInfoCard(context),
+
+                  const SizedBox(height: 30),
+
+                  // Documents Section
+                  StudentHomeSectionHeader(
+                    title: "Documents",
+                    actionText: "Manage",
+                    onActionTap: () => StudentProfileDocumentsModal.show(
                       context,
                       _profileId,
                       onUpdate: () => _fetchStudentData(),
                     ),
-                    child: _buildQuickAction(
-                      Icons.description_outlined,
-                      "Documents",
-                      const Color(0xFFF9EAD2),
+                  ),
+                  const SizedBox(height: 15),
+                  _documents.isEmpty
+                      ? GestureDetector(
+                          onTap: () => StudentProfileDocumentsModal.show(
+                            context,
+                            _profileId,
+                            onUpdate: () => _fetchStudentData(),
+                          ),
+                          child: _buildDocItem(
+                            "No documents yet — tap to upload",
+                            "Upload your CV, certificates",
+                            true,
+                          ),
+                        )
+                      : Column(
+                          children: _documents.take(2).map((doc) {
+                            final uploadDate = doc['uploaddate'] != null
+                                ? DateTime.parse(doc['uploaddate'])
+                                : DateTime.now();
+                            final dateStr =
+                                "${doc['documenttype']} • ${uploadDate.day}/${uploadDate.month}/${uploadDate.year}";
+                            final filepath = doc['filepath'] ?? '';
+                            final uri = Uri.parse(filepath);
+                            final fullName = uri.pathSegments.isNotEmpty
+                                ? uri.pathSegments.last
+                                : '';
+                            final parts = fullName.split('_');
+                            final realName = parts.length > 2
+                                ? parts.sublist(2).join('_')
+                                : doc['documenttype'] ?? '';
+                            return GestureDetector(
+                              onTap: () => StudentProfileDocumentsModal.show(
+                                context,
+                                _profileId,
+                                onUpdate: () => _fetchStudentData(),
+                              ),
+                              child: _buildDocItem(realName, dateStr, true),
+                            );
+                          }).toList(),
+                        ),
+
+                  const SizedBox(height: 30),
+
+                  // Saved Programs Section
+                  StudentHomeSectionHeader(
+                    title: "Saved Programs",
+                    actionText: "View All",
+                    onActionTap: () {},
+                  ),
+                  const SizedBox(height: 15),
+                  _savedPrograms.isEmpty
+                      ? const Padding(
+                          padding: EdgeInsets.only(bottom: 10),
+                          child: Text(
+                            "No saved programs yet — browse opportunities to save some!",
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : Column(
+                          children: _savedPrograms.map((saved) {
+                            final vacancy = saved['vacancies'];
+                            return GestureDetector(
+                              onTap: () => _showSavedProgramDetails(
+                                context,
+                                vacancy['title'] ?? '',
+                                vacancy['company_name'] ?? '',
+                              ),
+                              child: _buildSavedItem(
+                                vacancy['title'] ?? '',
+                                vacancy['company_name'] ?? '',
+                                onUnsave: () => _unsaveProgram(
+                                  saved['vacancyid'].toString(),
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                  const SizedBox(height: 30),
+
+                  // Submit Training Hours
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () => StudentProfileSubmitHoursModal.show(
+                        context,
+                        studentId: _student!.studentID,
+                        onSubmitted: _fetchStudentData,
+                      ),
+                      icon: const Icon(Icons.anchor),
+                      label: const Text("Submit Training Hours"),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: AppColors.quickActionSkills,
+                        foregroundColor: AppColors.lightPrimary,
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
                   ),
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: GestureDetector(
-                    onTap: () => StudentProfilePortfolioModal.show(
-                        context, _student!.studentID),
-                    child: _buildQuickAction(
-                      Icons.bookmark_border,
-                      "Portfolio Links",
-                      const Color(0xFFF2C6C6),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 30),
-
-            // User Info Card
-            _buildUserInfoCard(context),
-
-            const SizedBox(height: 30),
-
-            // Documents Section
-            StudentHomeSectionHeader(
-              title: "Documents",
-              actionText: "Manage",
-              onActionTap: () => StudentProfileDocumentsModal.show(
-                context,
-                _profileId,
-                onUpdate: () => _fetchStudentData(),
+                  const SizedBox(height: 40),
+                ],
               ),
             ),
-            const SizedBox(height: 15),
-            _documents.isEmpty
-                ? GestureDetector(
-              onTap: () => StudentProfileDocumentsModal.show(
-                context,
-                _profileId,
-                onUpdate: () => _fetchStudentData(),
-              ),
-              child: _buildDocItem(
-                "No documents yet — tap to upload",
-                "Upload your CV, certificates",
-                true,
-              ),
-            )
-                : Column(
-              children: _documents.take(2).map((doc) {
-                final uploadDate = doc['uploaddate'] != null
-                    ? DateTime.parse(doc['uploaddate'])
-                    : DateTime.now();
-                final dateStr =
-                    "${doc['documenttype']} • ${uploadDate.day}/${uploadDate.month}/${uploadDate.year}";
-                final filepath = doc['filepath'] ?? '';
-                final uri = Uri.parse(filepath);
-                final fullName = uri.pathSegments.isNotEmpty
-                    ? uri.pathSegments.last
-                    : '';
-                final parts = fullName.split('_');
-                final realName = parts.length > 2
-                    ? parts.sublist(2).join('_')
-                    : doc['documenttype'] ?? '';
-                return GestureDetector(
-                  onTap: () => StudentProfileDocumentsModal.show(
-                    context,
-                    _profileId,
-                    onUpdate: () => _fetchStudentData(),
-                  ),
-                  child: _buildDocItem(realName, dateStr, true),
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 30),
-
-            // Saved Programs Section
-            StudentHomeSectionHeader(
-              title: "Saved Programs",
-              actionText: "View All",
-              onActionTap: () {},
-            ),
-            const SizedBox(height: 15),
-            _savedPrograms.isEmpty
-                ? const Padding(
-              padding: EdgeInsets.only(bottom: 10),
-              child: Text(
-                "No saved programs yet — browse opportunities to save some!",
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
-                : Column(
-              children: _savedPrograms.map((saved) {
-                final vacancy = saved['vacancies'];
-                return GestureDetector(
-                  onTap: () => _showSavedProgramDetails(
-                    context,
-                    vacancy['title'] ?? '',
-                    vacancy['company_name'] ?? '',
-                  ),
-                  child: _buildSavedItem(
-                    vacancy['title'] ?? '',
-                    vacancy['company_name'] ?? '',
-                    onUnsave: () => _unsaveProgram(
-                      saved['vacancyid'].toString(),
-                    ),
-                  ),
-                );
-              }).toList(),
-            ),
-
-            const SizedBox(height: 30),
-
-            // Submit Training Hours
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: () => StudentProfileSubmitHoursModal.show(
-                  context,
-                  studentId: _student!.studentID,
-                  onSubmitted: _fetchStudentData,
-                ),
-                icon: const Icon(Icons.anchor),
-                label: const Text("Submit Training Hours"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFD6E2F2),
-                  foregroundColor: const Color(0xFF284B8C),
-                  padding: const EdgeInsets.symmetric(vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-            const SizedBox(height: 40),
-          ],
-        ),
-      ),
     );
   }
 
@@ -523,7 +532,7 @@ class _StudentProfileState extends State<StudentProfile> {
                 height: 60,
                 width: 60,
                 decoration: BoxDecoration(
-                  color: const Color(0xFF637E99),
+                  color: AppColors.lightSecondary,
                   borderRadius: BorderRadius.circular(15),
                 ),
                 child: Center(
@@ -546,7 +555,9 @@ class _StudentProfileState extends State<StudentProfile> {
                   Text(
                     _student?.studentName ?? '',
                     style: const TextStyle(
-                        fontSize: 20, fontWeight: FontWeight.bold),
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   Text(
                     "${_student?.major ?? ''} • ${_student?.academicYear ?? ''}",
@@ -598,18 +609,20 @@ class _StudentProfileState extends State<StudentProfile> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFFD6E2F2),
+              color: AppColors.documentBackground,
               borderRadius: BorderRadius.circular(10),
             ),
-            child: const Icon(Icons.file_present, color: Color(0xFF284B8C)),
+            child: const Icon(
+              Icons.file_present,
+              color: AppColors.lightPrimary,
+            ),
           ),
           const SizedBox(width: 15),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   date,
                   style: const TextStyle(color: Colors.grey, fontSize: 12),
@@ -617,18 +630,17 @@ class _StudentProfileState extends State<StudentProfile> {
               ],
             ),
           ),
-          if (isClickable)
-            const Icon(Icons.chevron_right, color: Colors.grey),
+          if (isClickable) const Icon(Icons.chevron_right, color: Colors.grey),
         ],
       ),
     );
   }
 
   Widget _buildSavedItem(
-      String title,
-      String company, {
-        VoidCallback? onUnsave,
-      }) {
+    String title,
+    String company, {
+    VoidCallback? onUnsave,
+  }) {
     return RoundedContainer(
       backgroundColor: Colors.white,
       borderColor: Colors.grey.shade100,
@@ -660,7 +672,7 @@ class _StudentProfileState extends State<StudentProfile> {
                   onTap: onUnsave,
                   child: const Icon(
                     Icons.bookmark_remove,
-                    color: Color(0xFF284B8C),
+                    color: AppColors.lightPrimary,
                   ),
                 ),
               const SizedBox(width: 8),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../constants/app_colors.dart';
 
 class SkillChip extends StatelessWidget {
   final String skill;
@@ -13,27 +14,11 @@ class SkillChip extends StatelessWidget {
   });
 
   Color _getLevelColor(String level) {
-    switch (level.toLowerCase()) {
-      case 'advanced':
-        return Colors.green.shade100;
-      case 'intermediate':
-        return Colors.orange.shade100;
-      case 'beginner':
-      default:
-        return Colors.blue.shade100;
-    }
+    return AppColors.getSkillLevelColor(level).withOpacity(0.3);
   }
 
   Color _getLevelTextColor(String level) {
-    switch (level.toLowerCase()) {
-      case 'advanced':
-        return Colors.green.shade800;
-      case 'intermediate':
-        return Colors.orange.shade800;
-      case 'beginner':
-      default:
-        return Colors.blue.shade800;
-    }
+    return AppColors.getSkillLevelColor(level);
   }
 
   @override
@@ -66,10 +51,7 @@ class SkillChip extends StatelessWidget {
             ),
             child: Text(
               level,
-              style: TextStyle(
-                fontSize: 11,
-                color: _getLevelTextColor(level),
-              ),
+              style: TextStyle(fontSize: 11, color: _getLevelTextColor(level)),
             ),
           ),
         ],
@@ -82,11 +64,7 @@ class InterestChip extends StatelessWidget {
   final String interest;
   final bool isDark;
 
-  const InterestChip({
-    super.key,
-    required this.interest,
-    required this.isDark,
-  });
+  const InterestChip({super.key, required this.interest, required this.isDark});
 
   @override
   Widget build(BuildContext context) {
@@ -94,15 +72,15 @@ class InterestChip extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
       decoration: BoxDecoration(
         color: isDark
-            ? const Color(0xFF284B8C).withOpacity(0.2)
-            : const Color(0xFF284B8C).withOpacity(0.1),
+            ? AppColors.primaryWithOpacity(0.2)
+            : AppColors.primaryWithOpacity(0.1),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF284B8C).withOpacity(0.3)),
+        border: Border.all(color: AppColors.primaryWithOpacity(0.3)),
       ),
       child: Text(
         interest,
         style: TextStyle(
-          color: isDark ? Colors.white : const Color(0xFF284B8C),
+          color: isDark ? Colors.white : AppColors.lightPrimary,
           fontWeight: FontWeight.w500,
         ),
       ),

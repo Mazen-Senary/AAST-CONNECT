@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import '../../constants/app_colors.dart';
 import '../../services/theme_provider.dart';
 
 class StudentSupport extends StatelessWidget {
@@ -124,7 +126,7 @@ class StudentSupport extends StatelessWidget {
               decoration: InputDecoration(
                 hintText: "Ask a question...",
                 suffixIcon: IconButton(
-                  icon: const Icon(Icons.send, color: Color(0xFF284B8C)),
+                  icon: const Icon(Icons.send, color: AppColors.lightPrimary),
                   onPressed: () {},
                 ),
                 filled: true,
@@ -498,7 +500,7 @@ class StudentSupport extends StatelessWidget {
                 info,
                 style: const TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF284B8C),
+                  color: AppColors.lightPrimary,
                 ),
               ),
             ],

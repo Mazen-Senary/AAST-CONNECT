@@ -5,6 +5,7 @@ import '../../widgets/app_bar_with_logout.dart';
 import '../../widgets/rounded_container.dart';
 import '../../widgets/tracking_status_chip.dart';
 import '../../widgets/profile_widgets/student_profile_submit_hours_modal.dart';
+import '../../constants/app_colors.dart';
 
 class StudentTrackingScreen extends StatefulWidget {
   final int initialTabIndex;
@@ -21,7 +22,8 @@ class StudentTrackingScreen extends StatefulWidget {
 }
 
 class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
-  static const int _fallbackStudentId = 5; // this is just for tetsing, replace with actual student ID from auth/session
+  static const int _fallbackStudentId =
+      5; // this is just for tetsing, replace with actual student ID from auth/session
 
   int _selectedTab = 0; // 0 = Applications, 1 = Training Hours
   String _selectedStatus = 'All';
@@ -76,7 +78,8 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
       if (!mounted) return;
 
       setState(() {
-        _completedHours = (studentData['completedtraininghours'] ?? 0).toDouble();
+        _completedHours = (studentData['completedtraininghours'] ?? 0)
+            .toDouble();
         _requiredHours = (studentData['requiredtraininghours'] ?? 0).toDouble();
         _applications = List<Map<String, dynamic>>.from(applications);
         _trainingRecords = List<Map<String, dynamic>>.from(trainingRecords);
@@ -94,14 +97,20 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
   List<Map<String, dynamic>> get _filteredApplications {
     if (_selectedStatus == 'All') return _applications;
     return _applications
-        .where((item) => _normalizeStatus(item['status']) == _selectedStatus.toUpperCase())
+        .where(
+          (item) =>
+              _normalizeStatus(item['status']) == _selectedStatus.toUpperCase(),
+        )
         .toList();
   }
 
   List<Map<String, dynamic>> get _filteredTrainingRecords {
     if (_selectedStatus == 'All') return _trainingRecords;
     return _trainingRecords
-        .where((item) => _normalizeStatus(item['status']) == _selectedStatus.toUpperCase())
+        .where(
+          (item) =>
+              _normalizeStatus(item['status']) == _selectedStatus.toUpperCase(),
+        )
         .toList();
   }
 
@@ -110,7 +119,9 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
   }
 
   int _countByStatus(List<Map<String, dynamic>> source, String status) {
-    return source.where((item) => _normalizeStatus(item['status']) == status).length;
+    return source
+        .where((item) => _normalizeStatus(item['status']) == status)
+        .length;
   }
 
   @override
@@ -130,37 +141,39 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? _buildErrorState()
-              : RefreshIndicator(
-                  onRefresh: _fetchTrackingData,
-                  child: ListView(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.all(20),
-                    children: [
-                      Text(
-                        'My Tracking',
-                        style: Theme.of(context).textTheme.headlineLarge?.copyWith(fontSize: 28),
-                      ),
-                      Text(
-                        'Track applications and training hours in one place',
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(fontSize: 16),
-                      ),
-                      const SizedBox(height: 20),
-                      _buildToggle(),
-                      const SizedBox(height: 15),
-                      _buildSummaryCard(),
-                      const SizedBox(height: 15),
-                      _buildStatusFilters(),
-                      const SizedBox(height: 10),
-                      ...(_selectedTab == 0
-                          ? _buildApplicationCards(_filteredApplications)
-                          : _buildTrainingCards(_filteredTrainingRecords)),
-                      if (_selectedTab == 1) ...[
-                        const SizedBox(height: 80),
-                      ],
-                    ],
+          ? _buildErrorState()
+          : RefreshIndicator(
+              onRefresh: _fetchTrackingData,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                children: [
+                  Text(
+                    'My Tracking',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.headlineLarge?.copyWith(fontSize: 28),
                   ),
-                ),
+                  Text(
+                    'Track applications and training hours in one place',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodyMedium?.copyWith(fontSize: 16),
+                  ),
+                  const SizedBox(height: 20),
+                  _buildToggle(),
+                  const SizedBox(height: 15),
+                  _buildSummaryCard(),
+                  const SizedBox(height: 15),
+                  _buildStatusFilters(),
+                  const SizedBox(height: 10),
+                  ...(_selectedTab == 0
+                      ? _buildApplicationCards(_filteredApplications)
+                      : _buildTrainingCards(_filteredTrainingRecords)),
+                  if (_selectedTab == 1) ...[const SizedBox(height: 80)],
+                ],
+              ),
+            ),
       floatingActionButton: _selectedTab == 1
           ? FloatingActionButton.extended(
               onPressed: () => StudentProfileSubmitHoursModal.show(
@@ -246,7 +259,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
         duration: const Duration(milliseconds: 160),
         padding: const EdgeInsets.symmetric(vertical: 12),
         decoration: BoxDecoration(
-          color: selected ? const Color(0xFFD6E2F2) : Colors.transparent,
+          color: selected ? AppColors.toggleSelected : Colors.transparent,
           borderRadius: BorderRadius.circular(10),
         ),
         child: Text(
@@ -254,7 +267,9 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
           textAlign: TextAlign.center,
           style: TextStyle(
             fontWeight: FontWeight.w600,
-            color: selected ? const Color(0xFF284B8C) : Theme.of(context).colorScheme.onSurface,
+            color: selected
+                ? AppColors.lightPrimary
+                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
       ),
@@ -265,12 +280,15 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
     if (_selectedTab == 0) {
       final total = _applications.length;
       return RoundedContainer(
-        backgroundColor: const Color(0xFFD6E2F2),
+        backgroundColor: AppColors.toggleSelected,
         borderRadius: 16,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Applications Overview', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            const Text(
+              'Applications Overview',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
             const SizedBox(height: 10),
             Text('Total: $total'),
             const SizedBox(height: 8),
@@ -278,10 +296,26 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
               spacing: 8,
               runSpacing: 8,
               children: [
-                _miniCounter('Approved', _countByStatus(_applications, 'APPROVED'), approvedColor),
-                _miniCounter('Pending', _countByStatus(_applications, 'PENDING'), pendingColor),
-                _miniCounter('Rejected', _countByStatus(_applications, 'REJECTED'), rejectedColor),
-                _miniCounter('Canceled', _countByStatus(_applications, 'CANCELED'), canceledColor),
+                _miniCounter(
+                  'Approved',
+                  _countByStatus(_applications, 'APPROVED'),
+                  AppColors.approved,
+                ),
+                _miniCounter(
+                  'Pending',
+                  _countByStatus(_applications, 'PENDING'),
+                  AppColors.pending,
+                ),
+                _miniCounter(
+                  'Rejected',
+                  _countByStatus(_applications, 'REJECTED'),
+                  AppColors.rejected,
+                ),
+                _miniCounter(
+                  'Canceled',
+                  _countByStatus(_applications, 'CANCELED'),
+                  AppColors.canceled,
+                ),
               ],
             ),
           ],
@@ -291,24 +325,32 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
 
     final safeRequired = _requiredHours <= 0 ? 1 : _requiredHours;
     final progress = (_completedHours / safeRequired).clamp(0.0, 1.0);
-    final remaining = (_requiredHours - _completedHours).clamp(0, double.infinity);
+    final remaining = (_requiredHours - _completedHours).clamp(
+      0,
+      double.infinity,
+    );
 
     return RoundedContainer(
-      backgroundColor: const Color(0xFFEAD2B7),
+      backgroundColor: AppColors.trainingProgress,
       borderRadius: 16,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Training Hours Progress', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+          const Text(
+            'Training Hours Progress',
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          ),
           const SizedBox(height: 8),
-          Text('${_completedHours.toStringAsFixed(0)} / ${_requiredHours.toStringAsFixed(0)} hrs'),
+          Text(
+            '${_completedHours.toStringAsFixed(0)} / ${_requiredHours.toStringAsFixed(0)} hrs',
+          ),
           const SizedBox(height: 10),
           LinearProgressIndicator(
             value: progress,
             minHeight: 10,
             borderRadius: BorderRadius.circular(999),
             backgroundColor: Colors.white,
-            color: const Color(0xFF206E54),
+            color: AppColors.progressGreen,
           ),
           const SizedBox(height: 8),
           Text('${remaining.toStringAsFixed(0)} hours remaining'),
@@ -380,12 +422,23 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(vacancy['title']?.toString() ?? 'Untitled Application',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        vacancy['title']?.toString() ?? 'Untitled Application',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(vacancy['company_name']?.toString() ?? 'Unknown Company',
-                          style: const TextStyle(color: Colors.grey)),
-                      Text('Applied: ${_formatDate(appliedDate)}', style: const TextStyle(color: Colors.grey)),
+                      Text(
+                        vacancy['company_name']?.toString() ??
+                            'Unknown Company',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                      Text(
+                        'Applied: ${_formatDate(appliedDate)}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
                     ],
                   ),
                 ),
@@ -398,7 +451,8 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
               child: TextButton.icon(
                 onPressed: () => _showTimelineSheet(
                   title: vacancy['title']?.toString() ?? 'Application Timeline',
-                  subtitle: vacancy['company_name']?.toString() ?? 'Application',
+                  subtitle:
+                      vacancy['company_name']?.toString() ?? 'Application',
                   status: status,
                   submittedAt: appliedDate,
                   rejectionReason: record['rejectionreason']?.toString(),
@@ -424,7 +478,9 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
 
     return records.map((record) {
       final status = _normalizeStatus(record['status']);
-      final submittedAt = _readDate(record['created_at']) ?? _readDate(record['submissiondate']);
+      final submittedAt =
+          _readDate(record['created_at']) ??
+          _readDate(record['submissiondate']);
       final startDate = _readDate(record['startdate']);
       final endDate = _readDate(record['enddate']);
 
@@ -444,10 +500,18 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(record['companyname']?.toString() ?? 'Unknown Company',
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                      Text(
+                        record['companyname']?.toString() ?? 'Unknown Company',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text('Hours: ${record['hourssubmitted'] ?? 0}', style: const TextStyle(color: Colors.grey)),
+                      Text(
+                        'Hours: ${record['hourssubmitted'] ?? 0}',
+                        style: const TextStyle(color: Colors.grey),
+                      ),
                       Text(
                         'Range: ${_formatDate(startDate)} - ${_formatDate(endDate)}',
                         style: const TextStyle(color: Colors.grey),
@@ -463,7 +527,8 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
               alignment: Alignment.centerRight,
               child: TextButton.icon(
                 onPressed: () => _showTimelineSheet(
-                  title: record['companyname']?.toString() ?? 'Training Timeline',
+                  title:
+                      record['companyname']?.toString() ?? 'Training Timeline',
                   subtitle: '${record['hourssubmitted'] ?? 0} hours submitted',
                   status: status,
                   submittedAt: submittedAt,
@@ -518,7 +583,10 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            Text(
+              title,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             Text(subtitle, style: const TextStyle(color: Colors.grey)),
             const SizedBox(height: 12),
             _buildTimelinePhases(phases),
@@ -582,7 +650,9 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
                     Text(
                       phase.subtitle,
                       style: TextStyle(
-                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
+                        color: Theme.of(
+                          context,
+                        ).colorScheme.onSurface.withValues(alpha: 0.7),
                       ),
                     ),
                   ],
@@ -602,12 +672,16 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
     required bool isTraining,
   }) {
     final normalized = status.toUpperCase();
-    final submittedLabel = isTraining ? 'Training Submitted' : 'Application Submitted';
+    final submittedLabel = isTraining
+        ? 'Training Submitted'
+        : 'Application Submitted';
 
     final submitted = _TimelinePhase(
       title: submittedLabel,
-      subtitle: submittedAt == null ? 'Submission date unavailable' : _formatDate(submittedAt),
-      color: pendingColor,
+      subtitle: submittedAt == null
+          ? 'Submission date unavailable'
+          : _formatDate(submittedAt),
+      color: AppColors.pending,
       icon: Icons.upload_file,
       isReached: true,
     );
@@ -618,7 +692,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
         const _TimelinePhase(
           title: 'Under Review',
           subtitle: 'Waiting for admin decision',
-          color: pendingColor,
+          color: AppColors.pending,
           icon: Icons.hourglass_top,
           isReached: true,
         ),
@@ -638,14 +712,16 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
         const _TimelinePhase(
           title: 'Under Review',
           subtitle: 'Checked by admin',
-          color: pendingColor,
+          color: AppColors.pending,
           icon: Icons.fact_check,
           isReached: true,
         ),
         _TimelinePhase(
           title: 'Rejected',
-          subtitle: rejectionReason?.isNotEmpty == true ? rejectionReason! : 'Submission was rejected',
-          color: rejectedColor,
+          subtitle: rejectionReason?.isNotEmpty == true
+              ? rejectionReason!
+              : 'Submission was rejected',
+          color: AppColors.rejected,
           icon: Icons.cancel,
           isReached: true,
         ),
@@ -658,7 +734,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
         const _TimelinePhase(
           title: 'Canceled',
           subtitle: 'You canceled this submission',
-          color: canceledColor,
+          color: AppColors.canceled,
           icon: Icons.do_not_disturb_alt,
           isReached: true,
         ),
@@ -670,21 +746,21 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
       const _TimelinePhase(
         title: 'Under Review',
         subtitle: 'Reviewed by admin',
-        color: pendingColor,
+        color: AppColors.pending,
         icon: Icons.fact_check,
         isReached: true,
       ),
       const _TimelinePhase(
         title: 'Approved',
         subtitle: 'Accepted by admin',
-        color: approvedColor,
+        color: AppColors.approved,
         icon: Icons.check_circle,
         isReached: true,
       ),
       const _TimelinePhase(
         title: 'Completed',
         subtitle: 'Tracking reached final phase',
-        color: approvedColor,
+        color: AppColors.approved,
         icon: Icons.flag,
         isReached: true,
       ),
@@ -707,4 +783,3 @@ class _TimelinePhase {
     required this.isReached,
   });
 }
-

@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import '../../constants/app_colors.dart';
 
 import '../../widgets/app_bar_with_logout.dart';
 import '../../widgets/home_widgets/student_home_deadline_card.dart';
@@ -16,32 +17,32 @@ import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.d
 import '../../services/vacancy_service.dart';
 import 'student_tracking.dart';
 
- class StudentHome extends StatefulWidget {
+class StudentHome extends StatefulWidget {
   final VoidCallback onSeeAll;
-   const StudentHome({super.key,required this.onSeeAll});
-   @override
-   State<StudentHome> createState() => _StudentHomeState();
- }
- 
-  class _StudentHomeState extends State<StudentHome> {
-   String _studentName = '';
-   double _completedHours = 0;
-   double _totalHours = 0;
-   int _pendingCount = 0;
-   int _approvedCount = 0;
-   // vacancies for "Available Programs"
-   List<Map<String, dynamic>> _vacancies = [];
-   // upcoming deadlines from vacancies closing soon
-   List<Map<String, dynamic>> _deadlines = [];
-   bool _isLoading = true;
-   int? _profileId;
-   List<Map<String, dynamic>> _applications = [];
+  const StudentHome({super.key, required this.onSeeAll});
+  @override
+  State<StudentHome> createState() => _StudentHomeState();
+}
 
-   final VacancyService _vacancyService = VacancyService();
-   
-   // Method channel for Android
-   static const platform = MethodChannel('com.aastconnect.app/url_launcher');
-//
+class _StudentHomeState extends State<StudentHome> {
+  String _studentName = '';
+  double _completedHours = 0;
+  double _totalHours = 0;
+  int _pendingCount = 0;
+  int _approvedCount = 0;
+  // vacancies for "Available Programs"
+  List<Map<String, dynamic>> _vacancies = [];
+  // upcoming deadlines from vacancies closing soon
+  List<Map<String, dynamic>> _deadlines = [];
+  bool _isLoading = true;
+  int? _profileId;
+  List<Map<String, dynamic>> _applications = [];
+
+  final VacancyService _vacancyService = VacancyService();
+
+  // Method channel for Android
+  static const platform = MethodChannel('com.aastconnect.app/url_launcher');
+  //
   @override
   void initState() {
     super.initState();
@@ -105,7 +106,8 @@ import 'student_tracking.dart';
 
       setState(() {
         _studentName = studentData['name'] ?? '';
-        _completedHours = (studentData['completedtraininghours'] ?? 0).toDouble();
+        _completedHours = (studentData['completedtraininghours'] ?? 0)
+            .toDouble();
         _totalHours = (studentData['requiredtraininghours'] ?? 0).toDouble();
         _pendingCount = pendingData.length;
         _approvedCount = approvedData.length;
@@ -120,7 +122,9 @@ import 'student_tracking.dart';
 
   bool _hasApplied(String? vacancyId) {
     if (vacancyId == null) return false;
-    return _applications.any((app) => app['vacancyid'].toString() == vacancyId.toString());
+    return _applications.any(
+      (app) => app['vacancyid'].toString() == vacancyId.toString(),
+    );
   }
 
   // void _showApplyModal(BuildContext context, String title) {
@@ -133,7 +137,8 @@ import 'student_tracking.dart';
 
   void _showApplyModal(BuildContext context, Map<String, dynamic> vacancy) {
     // Check if application is external
-    if (vacancy['application_method'] == 'EXTERNAL' && vacancy['external_apply_url'] != null) {
+    if (vacancy['application_method'] == 'EXTERNAL' &&
+        vacancy['external_apply_url'] != null) {
       final url = vacancy['external_apply_url'].toString().trim();
       print('Launching external URL: $url');
       if (url.isNotEmpty) {
@@ -141,7 +146,7 @@ import 'student_tracking.dart';
         return;
       }
     }
-    
+
     StudentOpportunitiesApplyModal.show(
       context,
       {
@@ -149,7 +154,7 @@ import 'student_tracking.dart';
         'company': vacancy['company_name'] ?? '',
         'vacancyId': vacancy['vacancyid'] ?? '',
       },
-          () => _fetchData(), // Refresh data after apply
+      () => _fetchData(), // Refresh data after apply
       profileId: _profileId,
       studentId: 5,
       collegeId: 'STD2023005',
@@ -161,24 +166,21 @@ import 'student_tracking.dart';
     try {
       print('=== DEBUG: _launchExternalUrl ===');
       print('Input URL: "$url"');
-      
+
       // Ensure URL has a scheme
       String urlToLaunch = url;
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         urlToLaunch = 'https://$url';
         print('Added https:// scheme -> "$urlToLaunch"');
       }
-      
+
       final uri = Uri.parse(urlToLaunch);
       print('Parsed URI: $uri');
-      
+
       // Try platform default first
       print('Trying LaunchMode.platformDefault...');
       try {
-        bool success = await launchUrl(
-          uri,
-          mode: LaunchMode.platformDefault,
-        );
+        bool success = await launchUrl(uri, mode: LaunchMode.platformDefault);
         if (success) {
           print('URL launched successfully with platformDefault!');
           return;
@@ -186,14 +188,11 @@ import 'student_tracking.dart';
       } catch (e1) {
         print('platformDefault failed: $e1');
       }
-      
+
       // Fallback 1: Try in-app browser
       print('Trying LaunchMode.inAppBrowserView...');
       try {
-        bool success = await launchUrl(
-          uri,
-          mode: LaunchMode.inAppBrowserView,
-        );
+        bool success = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
         if (success) {
           print('URL launched successfully with inAppBrowserView!');
           return;
@@ -201,7 +200,7 @@ import 'student_tracking.dart';
       } catch (e2) {
         print('inAppBrowserView failed: $e2');
       }
-      
+
       // Fallback 2: Try Android native
       print('Trying Android native method...');
       try {
@@ -211,7 +210,7 @@ import 'student_tracking.dart';
       } catch (e3) {
         print('Android native method failed: $e3');
       }
-      
+
       // All failed
       if (mounted) {
         final snackBar = SnackBar(
@@ -243,33 +242,30 @@ import 'student_tracking.dart';
       }
     }
   }
-//
+
+  //
   void _showDetailsModal(
-      BuildContext context,
-      String title,
-      String company,
-      String hours,
-      Map<String, dynamic> vacancy,
-      ) {
+    BuildContext context,
+    String title,
+    String company,
+    String hours,
+    Map<String, dynamic> vacancy,
+  ) {
     final vacancyId = vacancy['vacancyid']?.toString() ?? '';
     final isApplied = _hasApplied(vacancyId);
-    
-    StudentOpportunitiesDetailsModal.show(
-      context,
-      {
-        'title': title,
-        'company': company,
-        'type': hours,
-        'description': null,
-        'requirements': null,
-        'location': null,
-        'workMode': null,
-        'paidStatus': null,
-        'startDate': null,
-        'applied': isApplied,
-      },
-      () => _showApplyModal(context, vacancy),
-    );
+
+    StudentOpportunitiesDetailsModal.show(context, {
+      'title': title,
+      'company': company,
+      'type': hours,
+      'description': null,
+      'requirements': null,
+      'location': null,
+      'workMode': null,
+      'paidStatus': null,
+      'startDate': null,
+      'applied': isApplied,
+    }, () => _showApplyModal(context, vacancy));
   }
 
   // void _showDetailsModal(
@@ -338,12 +334,12 @@ import 'student_tracking.dart';
   }
 
   Widget _buildDeadlineCard(
-      BuildContext context,
-      String title,
-      String date,
-      String hours,
-      bool isUrgent,
-      ) {
+    BuildContext context,
+    String title,
+    String date,
+    String hours,
+    bool isUrgent,
+  ) {
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       padding: const EdgeInsets.all(18),
@@ -412,8 +408,12 @@ import 'student_tracking.dart';
       ),
     );
   }
-//
-  void _openTracking({int initialTabIndex = 1, String initialStatusFilter = 'All'}) {
+
+  //
+  void _openTracking({
+    int initialTabIndex = 1,
+    String initialStatusFilter = 'All',
+  }) {
     Navigator.of(context).push(
       MaterialPageRoute(
         builder: (_) => StudentTrackingScreen(
@@ -441,133 +441,132 @@ import 'student_tracking.dart';
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
-        builder: (context, constraints) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  "Hello, $_studentName 👋",
-                  style: Theme.of(context)
-                      .textTheme
-                      .headlineLarge
-                      ?.copyWith(fontSize: 28),
-                ),
-                Text(
-                  "Let's continue your learning journey",
-                  style: Theme.of(context)
-                      .textTheme
-                      .bodyMedium
-                      ?.copyWith(fontSize: 16),
-                ),
-                const SizedBox(height: 25),
-                InkWell(
-                  borderRadius: BorderRadius.circular(18),
-                  onTap: () => _openTracking(initialTabIndex: 1),
-                  child: StudentHomeProgressCard(
-                    completedHours: _completedHours,
-                    totalHours: _totalHours == 0 ? 1 : _totalHours,
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Hello, $_studentName 👋",
+                        style: Theme.of(
+                          context,
+                        ).textTheme.headlineLarge?.copyWith(fontSize: 28),
+                      ),
+                      Text(
+                        "Let's continue your learning journey",
+                        style: Theme.of(
+                          context,
+                        ).textTheme.bodyMedium?.copyWith(fontSize: 16),
+                      ),
+                      const SizedBox(height: 25),
+                      InkWell(
+                        borderRadius: BorderRadius.circular(18),
+                        onTap: () => _openTracking(initialTabIndex: 1),
+                        child: StudentHomeProgressCard(
+                          completedHours: _completedHours,
+                          totalHours: _totalHours == 0 ? 1 : _totalHours,
+                        ),
+                      ),
+                      const SizedBox(height: 25),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(18),
+                              onTap: () => _openTracking(
+                                initialTabIndex: 1,
+                                initialStatusFilter: 'Pending',
+                              ),
+                              child: StudentHomeStatCard(
+                                backgroundColor: AppColors.statPending,
+                                number: _pendingCount.toString(),
+                                label: "Pending",
+                                icon: Icons.access_time,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 15),
+                          Expanded(
+                            child: InkWell(
+                              borderRadius: BorderRadius.circular(18),
+                              onTap: () => _openTracking(
+                                initialTabIndex: 1,
+                                initialStatusFilter: 'Approved',
+                              ),
+                              child: StudentHomeStatCard(
+                                backgroundColor: AppColors.statApproved,
+                                number: _approvedCount.toString(),
+                                label: "Completed",
+                                icon: Icons.verified,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 30),
+                      StudentHomeSectionHeader(
+                        title: "Upcoming Deadlines",
+                        actionText: "View all",
+                        onActionTap: () => _showAllDeadlines(context),
+                      ),
+                      ..._deadlines.map((vacancy) {
+                        final deadline = vacancy['deadline'] != null
+                            ? DateTime.parse(vacancy['deadline'])
+                            : null;
+                        final daysLeft = deadline != null
+                            ? deadline.difference(DateTime.now()).inDays
+                            : 0;
+                        final isUrgent = daysLeft <= 7;
+                        final dateStr = deadline != null
+                            ? "${deadline.day}/${deadline.month}"
+                            : "N/A";
+                        return StudentHomeDeadlineCard(
+                          title: vacancy['title'] ?? '',
+                          date: dateStr,
+                          hours: vacancy['type'] ?? '',
+                          isUrgent: isUrgent,
+                        );
+                      }),
+                      const SizedBox(height: 30),
+                      StudentHomeSectionHeader(
+                        title: "Available Programs",
+                        actionText: "See all",
+                        onActionTap: widget.onSeeAll,
+                      ),
+                      ..._vacancies.map((vacancy) {
+                        final vacancyId =
+                            vacancy['vacancyid']?.toString() ?? '';
+                        final isApplied = _hasApplied(vacancyId);
+                        final isExternal =
+                            vacancy['application_method'] == 'EXTERNAL';
+
+                        return StudentHomeProgramCard(
+                          title: vacancy['title'] ?? '',
+                          subtitle: vacancy['company_name'] ?? '',
+                          hours: vacancy['deadline'] != null
+                              ? "Deadline: ${DateTime.parse(vacancy['deadline']).day}/${DateTime.parse(vacancy['deadline']).month}"
+                              : 'No deadline',
+                          onViewDetails: () => _showDetailsModal(
+                            context,
+                            vacancy['title'] ?? '',
+                            vacancy['company_name'] ?? '',
+                            vacancy['type'] ?? '',
+                            vacancy,
+                          ),
+                          onApply: isApplied
+                              ? null
+                              : () => _showApplyModal(context, vacancy),
+                          isApplied: isApplied,
+                          isExternal: isExternal,
+                        );
+                      }),
+                      const SizedBox(height: 40),
+                    ],
                   ),
-                ),
-                const SizedBox(height: 25),
-                Row(
-                  children: [
-                    Expanded(
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => _openTracking(
-                          initialTabIndex: 1,
-                          initialStatusFilter: 'Pending',
-                        ),
-                        child: StudentHomeStatCard(
-                          backgroundColor: const Color(0xffF2C6C6),
-                          number: _pendingCount.toString(),
-                          label: "Pending",
-                          icon: Icons.access_time,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 15),
-                    Expanded(
-                      child: InkWell(
-                        borderRadius: BorderRadius.circular(18),
-                        onTap: () => _openTracking(
-                          initialTabIndex: 1,
-                          initialStatusFilter: 'Approved',
-                        ),
-                        child: StudentHomeStatCard(
-                          backgroundColor: const Color(0xffCFE3CF),
-                          number: _approvedCount.toString(),
-                          label: "Completed",
-                          icon: Icons.verified,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
-                StudentHomeSectionHeader(
-                  title: "Upcoming Deadlines",
-                  actionText: "View all",
-                  onActionTap: () => _showAllDeadlines(context),
-                ),
-                ..._deadlines.map((vacancy) {
-                  final deadline = vacancy['deadline'] != null
-                      ? DateTime.parse(vacancy['deadline'])
-                      : null;
-                  final daysLeft = deadline != null
-                      ? deadline.difference(DateTime.now()).inDays
-                      : 0;
-                  final isUrgent = daysLeft <= 7;
-                  final dateStr = deadline != null
-                      ? "${deadline.day}/${deadline.month}"
-                      : "N/A";
-                  return StudentHomeDeadlineCard(
-                    title: vacancy['title'] ?? '',
-                    date: dateStr,
-                    hours: vacancy['type'] ?? '',
-                    isUrgent: isUrgent,
-                  );
-                }),
-                const SizedBox(height: 30),
-                StudentHomeSectionHeader(
-                  title: "Available Programs",
-                  actionText: "See all",
-                  onActionTap: widget.onSeeAll,
-                ),
-                ..._vacancies.map((vacancy) {
-                  final vacancyId = vacancy['vacancyid']?.toString() ?? '';
-                  final isApplied = _hasApplied(vacancyId);
-                  final isExternal = vacancy['application_method'] == 'EXTERNAL';
-                  
-                  return StudentHomeProgramCard(
-                    title: vacancy['title'] ?? '',
-                    subtitle: vacancy['company_name'] ?? '',
-                    hours: vacancy['deadline'] != null
-                        ? "Deadline: ${DateTime.parse(vacancy['deadline']).day}/${DateTime.parse(vacancy['deadline']).month}"
-                        : 'No deadline',
-                    onViewDetails: () => _showDetailsModal(
-                      context,
-                      vacancy['title'] ?? '',
-                      vacancy['company_name'] ?? '',
-                      vacancy['type'] ?? '',
-                      vacancy,
-                    ),
-                    onApply: isApplied ? null : () => _showApplyModal(
-                      context,
-                      vacancy,
-                    ),
-                    isApplied: isApplied,
-                    isExternal: isExternal,
-                  );
-                }),
-                const SizedBox(height: 40),
-              ],
+                );
+              },
             ),
-          );
-        },
-      ),
     );
   }
 
@@ -577,5 +576,4 @@ import 'student_tracking.dart';
       totalHours: _totalHours == 0 ? 1 : _totalHours,
     );
   }
- }
- 
+}
