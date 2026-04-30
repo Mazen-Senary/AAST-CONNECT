@@ -1,4 +1,3 @@
-
 //new opportunities screen with save program feature and better error handling
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -36,7 +35,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
   List<Map<String, dynamic>> _applications = [];
   List<String> _savedVacancyIds = [];
   int? _currentUserId;
-  
+
   // Method channel for Android
   static const platform = MethodChannel('com.aastconnect.app/url_launcher');
 
@@ -65,7 +64,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
 
       // load vacancies
       final vacancies = await _vacancyService.getStudentVacancies();
-      
+
       // Debug: Log external vacancies
       for (var v in vacancies) {
         if (v.applicationMethod == 'EXTERNAL') {
@@ -76,7 +75,9 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
       }
 
       // load user applications
-      _applications = await _vacancyService.getUserApplications(_currentUserId!);
+      _applications = await _vacancyService.getUserApplications(
+        _currentUserId!,
+      );
 
       // load saved programs
       await _loadSavedPrograms();
@@ -115,89 +116,97 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
       final supabase = Supabase.instance.client;
       final isSaved = _savedVacancyIds.contains(vacancyId);
 
-       if (isSaved) {
-         await supabase
-             .from('saved_programs')
-             .delete()
-             .eq('studentid', _currentUserId ?? 5)
-             .eq('vacancyid', vacancyId);
-         setState(() => _savedVacancyIds.remove(vacancyId));
-         final snackBar = SnackBar(
-           elevation: 0,
-           behavior: SnackBarBehavior.floating,
-           backgroundColor: Colors.transparent,
-           content: AwesomeSnackbarContent(
-             title: 'Success',
-             message: 'Removed from saved programs',
-             contentType: ContentType.success,
-           ),
-         );
-         ScaffoldMessenger.of(context).showSnackBar(snackBar);
-       } else {
-         await supabase.from('saved_programs').insert({
-           'studentid': _currentUserId ?? 5,
-           'vacancyid': vacancyId,
-         });
-         setState(() => _savedVacancyIds.add(vacancyId));
-         final snackBar = SnackBar(
-           elevation: 0,
-           behavior: SnackBarBehavior.floating,
-           backgroundColor: Colors.transparent,
-           content: AwesomeSnackbarContent(
-             title: 'Success',
-             message: 'Saved to your programs!',
-             contentType: ContentType.success,
-           ),
-         );
-         ScaffoldMessenger.of(context).showSnackBar(snackBar);
-       }
-     } catch (e) {
-       final snackBar = SnackBar(
-         elevation: 0,
-         behavior: SnackBarBehavior.floating,
-         backgroundColor: Colors.transparent,
-         content: AwesomeSnackbarContent(
-           title: 'Error',
-           message: 'Error: $e',
-           contentType: ContentType.failure,
-         ),
-       );
-       ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      if (isSaved) {
+        await supabase
+            .from('saved_programs')
+            .delete()
+            .eq('studentid', _currentUserId ?? 5)
+            .eq('vacancyid', vacancyId);
+        setState(() => _savedVacancyIds.remove(vacancyId));
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Success',
+            message: 'Removed from saved programs',
+            contentType: ContentType.success,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      } else {
+        await supabase.from('saved_programs').insert({
+          'studentid': _currentUserId ?? 5,
+          'vacancyid': vacancyId,
+        });
+        setState(() => _savedVacancyIds.add(vacancyId));
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: AwesomeSnackbarContent(
+            title: 'Success',
+            message: 'Saved to your programs!',
+            contentType: ContentType.success,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    } catch (e) {
+      final snackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: AwesomeSnackbarContent(
+          title: 'Error',
+          message: 'Error: $e',
+          contentType: ContentType.failure,
+        ),
+      );
+      ScaffoldMessenger.of(context).showSnackBar(snackBar);
     }
   }
 
   List<Map<String, dynamic>> get _filteredPrograms {
     return _vacancies
         .where((vacancy) {
-      final program = vacancy.toDisplayMap();
-      final matchesSearch =
-          _searchQuery.isEmpty ||
-              program['title'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              program['company'].toString().toLowerCase().contains(_searchQuery.toLowerCase()) ||
-              program['category'].toString().toLowerCase().contains(_searchQuery.toLowerCase());
+          final program = vacancy.toDisplayMap();
+          final matchesSearch =
+              _searchQuery.isEmpty ||
+              program['title'].toString().toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ) ||
+              program['company'].toString().toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              ) ||
+              program['category'].toString().toLowerCase().contains(
+                _searchQuery.toLowerCase(),
+              );
 
-      final matchesFilter =
-          _selectedFilter == 'All' ||
+          final matchesFilter =
+              _selectedFilter == 'All' ||
               program['category'] == _selectedFilter;
 
-      return matchesSearch && matchesFilter;
-    })
+          return matchesSearch && matchesFilter;
+        })
         .map((vacancy) {
-      final program = vacancy.toDisplayMap();
-      final hasApplied = _applications.any(
+          final program = vacancy.toDisplayMap();
+          final hasApplied = _applications.any(
             (app) => app['vacancyid'] == vacancy.vacancyId,
-      );
-      program['applied'] = hasApplied;
-      
-      // Debug logging
-      if (vacancy.applicationMethod == 'EXTERNAL') {
-        print('DEBUG: External vacancy "${vacancy.title}"');
-        print('  - externalApplyUrl: "${vacancy.externalApplyUrl}"');
-        print('  - program externalApplyUrl: "${program['externalApplyUrl']}"');
-      }
-      
-      return program;
-    })
+          );
+          program['applied'] = hasApplied;
+
+          // Debug logging
+          if (vacancy.applicationMethod == 'EXTERNAL') {
+            print('DEBUG: External vacancy "${vacancy.title}"');
+            print('  - externalApplyUrl: "${vacancy.externalApplyUrl}"');
+            print(
+              '  - program externalApplyUrl: "${program['externalApplyUrl']}"',
+            );
+          }
+
+          return program;
+        })
         .toList();
   }
 
@@ -218,183 +227,140 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
   //         () => _submitApplication(program),
   //   );
   // }
-    void _showApplyModal(BuildContext context, Map<String, dynamic> program) {
-      // Check if application is external
-      print('=== DEBUG: _showApplyModal ===');
-      print('applicationMethod: ${program['applicationMethod']}');
-      print('externalApplyUrl: ${program['externalApplyUrl']}');
-      print('Program keys: ${program.keys.toList()}');
-      
-      if (program['applicationMethod'] == 'EXTERNAL' && program['externalApplyUrl'] != null) {
-        final url = program['externalApplyUrl'].toString().trim();
-        print('URL to launch: "$url"');
-        print('URL is empty: ${url.isEmpty}');
-        if (url.isNotEmpty) {
-          _launchExternalUrl(url);
+  void _showApplyModal(BuildContext context, Map<String, dynamic> program) {
+    // Check if application is external
+    print('=== DEBUG: _showApplyModal ===');
+    print('applicationMethod: ${program['applicationMethod']}');
+    print('externalApplyUrl: ${program['externalApplyUrl']}');
+    print('Program keys: ${program.keys.toList()}');
+
+    if (program['applicationMethod'] == 'EXTERNAL' &&
+        program['externalApplyUrl'] != null) {
+      final url = program['externalApplyUrl'].toString().trim();
+      print('URL to launch: "$url"');
+      print('URL is empty: ${url.isEmpty}');
+      if (url.isNotEmpty) {
+        _launchExternalUrl(url);
+        return;
+      } else {
+        print('ERROR: URL is empty string');
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: const AwesomeSnackbarContent(
+            title: 'Empty URL',
+            message: 'External URL is empty in database',
+            contentType: ContentType.warning,
+          ),
+        );
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        }
+        return;
+      }
+    }
+
+    print('Not external or URL is null, showing internal apply modal');
+    StudentOpportunitiesApplyModal.show(
+      context,
+      program,
+      () => _loadData(),
+      profileId: _profileId, // need to add this variable
+      studentId: _currentUserId,
+      collegeId: 'STD2023005', // temp hardcode
+      studentName: 'Mohamed Tarek', // temp hardcode
+    );
+  }
+
+  Future<void> _launchExternalUrl(String url) async {
+    try {
+      print('=== DEBUG: _launchExternalUrl ===');
+      print('Input URL: "$url"');
+      print('Input URL length: ${url.length}');
+
+      // Ensure URL has a scheme
+      String urlToLaunch = url;
+      if (!url.startsWith('http://') && !url.startsWith('https://')) {
+        urlToLaunch = 'https://$url';
+        print('Added https:// scheme -> "$urlToLaunch"');
+      }
+
+      final uri = Uri.parse(urlToLaunch);
+      print('Parsed URI: $uri');
+      print('URI scheme: ${uri.scheme}');
+      print('URI host: ${uri.host}');
+
+      // Try platform default first (works on most devices)
+      print('Trying LaunchMode.platformDefault...');
+      try {
+        bool success = await launchUrl(uri, mode: LaunchMode.platformDefault);
+        if (success) {
+          print('URL launched successfully with platformDefault!');
           return;
         } else {
-          print('ERROR: URL is empty string');
-          final snackBar = SnackBar(
-            elevation: 0,
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.transparent,
-            content: const AwesomeSnackbarContent(
-              title: 'Empty URL',
-              message: 'External URL is empty in database',
-              contentType: ContentType.warning,
-            ),
-          );
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(snackBar);
-          }
-          return;
+          print('launchUrl returned false with platformDefault');
         }
+      } catch (e1) {
+        print('platformDefault failed: $e1');
       }
-      
-      print('Not external or URL is null, showing internal apply modal');
-      StudentOpportunitiesApplyModal.show(
-        context,
-        program,
-            () => _loadData(),
-        profileId: _profileId, // need to add this variable
-        studentId: _currentUserId,
-        collegeId: 'STD2023005', // temp hardcode
-        studentName: 'Mohamed Tarek', // temp hardcode
-      );
-    }
 
-    Future<void> _launchExternalUrl(String url) async {
+      // Fallback 1: Try in-app browser
+      print('Trying LaunchMode.inAppBrowserView...');
       try {
-        print('=== DEBUG: _launchExternalUrl ===');
-        print('Input URL: "$url"');
-        print('Input URL length: ${url.length}');
-        
-        // Ensure URL has a scheme
-        String urlToLaunch = url;
-        if (!url.startsWith('http://') && !url.startsWith('https://')) {
-          urlToLaunch = 'https://$url';
-          print('Added https:// scheme -> "$urlToLaunch"');
-        }
-        
-        final uri = Uri.parse(urlToLaunch);
-        print('Parsed URI: $uri');
-        print('URI scheme: ${uri.scheme}');
-        print('URI host: ${uri.host}');
-        
-        // Try platform default first (works on most devices)
-        print('Trying LaunchMode.platformDefault...');
-        try {
-          bool success = await launchUrl(
-            uri,
-            mode: LaunchMode.platformDefault,
-          );
-          if (success) {
-            print('URL launched successfully with platformDefault!');
-            return;
-          } else {
-            print('launchUrl returned false with platformDefault');
-          }
-        } catch (e1) {
-          print('platformDefault failed: $e1');
-        }
-        
-        // Fallback 1: Try in-app browser
-        print('Trying LaunchMode.inAppBrowserView...');
-        try {
-          bool success = await launchUrl(
-            uri,
-            mode: LaunchMode.inAppBrowserView,
-          );
-          if (success) {
-            print('URL launched successfully with inAppBrowserView!');
-            return;
-          }
-        } catch (e2) {
-          print('inAppBrowserView failed: $e2');
-        }
-        
-        // Fallback 2: Try Android native (for emulator)
-        print('Trying Android native method...');
-        try {
-          await platform.invokeMethod('launchURL', {'url': urlToLaunch});
-          print('URL launched successfully with Android native method!');
+        bool success = await launchUrl(uri, mode: LaunchMode.inAppBrowserView);
+        if (success) {
+          print('URL launched successfully with inAppBrowserView!');
           return;
-        } catch (e3) {
-          print('Android native method failed: $e3');
         }
-        
-        // All attempts failed
-        print('ERROR: All launch attempts failed');
-        final snackBar = SnackBar(
-          elevation: 0,
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.transparent,
-          duration: const Duration(seconds: 4),
-          content: AwesomeSnackbarContent(
-            title: 'Could not open URL',
-            message: urlToLaunch,
-            contentType: ContentType.failure,
-          ),
-        );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-        }
-      } catch (e) {
-        print('EXCEPTION in _launchExternalUrl: $e');
-        print('Exception type: ${e.runtimeType}');
-        final snackBar = SnackBar(
-          elevation: 0,
-          behavior: SnackBarBehavior.floating,
-          backgroundColor: Colors.transparent,
-          content: AwesomeSnackbarContent(
-            title: 'Error',
-            message: e.toString(),
-            contentType: ContentType.failure,
-          ),
-        );
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(snackBar);
-        }
+      } catch (e2) {
+        print('inAppBrowserView failed: $e2');
+      }
+
+      // Fallback 2: Try Android native (for emulator)
+      print('Trying Android native method...');
+      try {
+        await platform.invokeMethod('launchURL', {'url': urlToLaunch});
+        print('URL launched successfully with Android native method!');
+        return;
+      } catch (e3) {
+        print('Android native method failed: $e3');
+      }
+
+      // All attempts failed
+      print('ERROR: All launch attempts failed');
+      final snackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        duration: const Duration(seconds: 4),
+        content: AwesomeSnackbarContent(
+          title: 'Could not open URL',
+          message: urlToLaunch,
+          contentType: ContentType.failure,
+        ),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+      }
+    } catch (e) {
+      print('EXCEPTION in _launchExternalUrl: $e');
+      print('Exception type: ${e.runtimeType}');
+      final snackBar = SnackBar(
+        elevation: 0,
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: Colors.transparent,
+        content: AwesomeSnackbarContent(
+          title: 'Error',
+          message: e.toString(),
+          contentType: ContentType.failure,
+        ),
+      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
       }
     }
-
-
-   Future<void> _submitApplication(Map<String, dynamic> program) async {
-     try {
-       await _vacancyService.submitApplication(
-         vacancyId: program['vacancyId'],
-         applicantId: _currentUserId ?? 5,
-         applicantName: 'Current User',
-         collegeId: 'STD2023005',
-       );
-
-       final snackBar = SnackBar(
-         elevation: 0,
-         behavior: SnackBarBehavior.floating,
-         backgroundColor: Colors.transparent,
-         content: const AwesomeSnackbarContent(
-           title: 'Success',
-           message: 'Application Submitted Successfully!',
-           contentType: ContentType.success,
-         ),
-       );
-       ScaffoldMessenger.of(context).showSnackBar(snackBar);
-
-       _loadData();
-     } catch (e) {
-       final snackBar = SnackBar(
-         elevation: 0,
-         behavior: SnackBarBehavior.floating,
-         backgroundColor: Colors.transparent,
-         content: AwesomeSnackbarContent(
-           title: 'Error',
-           message: 'Failed to submit application: $e',
-           contentType: ContentType.failure,
-         ),
-       );
-       ScaffoldMessenger.of(context).showSnackBar(snackBar);
-     }
-   }
+  }
 
   void _showDetailsModal(BuildContext context, Map<String, dynamic> program) {
     StudentOpportunitiesDetailsModal.show(
@@ -504,25 +470,37 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
           Expanded(
             child: _filteredPrograms.isEmpty
                 ? const Center(
-              child: Text(
-                "No programs found",
-                style: TextStyle(color: Colors.grey),
-              ),
-            )
+                    child: Text(
+                      "No programs found",
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  )
                 : ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              itemCount: _filteredPrograms.length,
-              itemBuilder: (context, index) {
-                final program = _filteredPrograms[index];
-                return StudentOpportunitiesProgramCard(
-                  program: program,
-                  onViewDetails: () => _showDetailsModal(context, program),
-                  onApply: () => _showApplyModal(context, program),
-                  isSaved: _savedVacancyIds.contains(program['vacancyId']),
-                  onSave: () => _toggleSave(program['vacancyId']),
-                );
-              },
-            ),
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    itemCount: _filteredPrograms.length,
+                    itemBuilder: (context, index) {
+                      final program = _filteredPrograms[index];
+                      return FutureBuilder<bool>(
+                        future: _vacancyService.hasUserApplied(
+                          program['vacancyId'].toString(),
+                          _currentUserId ?? 5,
+                        ),
+                        builder: (context, snapshot) {
+                          final hasApplied = snapshot.data ?? false;
+                          return StudentOpportunitiesProgramCard(
+                            program: {...program, 'applied': hasApplied},
+                            onViewDetails: () =>
+                                _showDetailsModal(context, program),
+                            onApply: () => _showApplyModal(context, program),
+                            isSaved: _savedVacancyIds.contains(
+                              program['vacancyId'],
+                            ),
+                            onSave: () => _toggleSave(program['vacancyId']),
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
         ],
       ),

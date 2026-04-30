@@ -51,4 +51,5 @@ lib/supabase_config.dart
 *.md
 !README.md
 !DESIGN_SYSTEM.md
+!CANCELLATION_FEATURE_CHANGES.md
 

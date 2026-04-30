@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 import '../../widgets/app_bar_with_logout.dart';
 import '../../widgets/rounded_container.dart';
 import '../../widgets/tracking_status_chip.dart';
 import '../../widgets/profile_widgets/student_profile_submit_hours_modal.dart';
+import '../../widgets/cancellation_confirmation_dialog.dart';
+import '../../services/vacancy_service.dart';
 import '../../constants/app_colors.dart';
 
 class StudentTrackingScreen extends StatefulWidget {
@@ -29,6 +32,8 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
   String _selectedStatus = 'All';
   bool _isLoading = true;
   String? _error;
+
+  final VacancyService _vacancyService = VacancyService();
 
   double _completedHours = 0;
   double _requiredHours = 0;
@@ -446,21 +451,34 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _showTimelineSheet(
-                  title: vacancy['title']?.toString() ?? 'Application Timeline',
-                  subtitle:
-                      vacancy['company_name']?.toString() ?? 'Application',
-                  status: status,
-                  submittedAt: appliedDate,
-                  rejectionReason: record['rejectionreason']?.toString(),
-                  isTraining: false,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (_canCancelApplication(record))
+                  TextButton.icon(
+                    onPressed: () => _cancelApplication(record),
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('Cancel'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.rejected,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () => _showTimelineSheet(
+                    title:
+                        vacancy['title']?.toString() ?? 'Application Timeline',
+                    subtitle:
+                        vacancy['company_name']?.toString() ?? 'Application',
+                    status: status,
+                    submittedAt: appliedDate,
+                    rejectionReason: record['rejectionreason']?.toString(),
+                    isTraining: false,
+                  ),
+                  icon: const Icon(Icons.timeline),
+                  label: const Text('View Timeline'),
                 ),
-                icon: const Icon(Icons.timeline),
-                label: const Text('View Timeline'),
-              ),
+              ],
             ),
           ],
         ),
@@ -523,21 +541,35 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            Align(
-              alignment: Alignment.centerRight,
-              child: TextButton.icon(
-                onPressed: () => _showTimelineSheet(
-                  title:
-                      record['companyname']?.toString() ?? 'Training Timeline',
-                  subtitle: '${record['hourssubmitted'] ?? 0} hours submitted',
-                  status: status,
-                  submittedAt: submittedAt,
-                  rejectionReason: record['rejectionreason']?.toString(),
-                  isTraining: true,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (_canCancelTrainingRecord(record))
+                  TextButton.icon(
+                    onPressed: () => _cancelTrainingRecord(record),
+                    icon: const Icon(Icons.cancel_outlined),
+                    label: const Text('Cancel'),
+                    style: TextButton.styleFrom(
+                      foregroundColor: AppColors.rejected,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                TextButton.icon(
+                  onPressed: () => _showTimelineSheet(
+                    title:
+                        record['companyname']?.toString() ??
+                        'Training Timeline',
+                    subtitle:
+                        '${record['hourssubmitted'] ?? 0} hours submitted',
+                    status: status,
+                    submittedAt: submittedAt,
+                    rejectionReason: record['rejectionreason']?.toString(),
+                    isTraining: true,
+                  ),
+                  icon: const Icon(Icons.timeline),
+                  label: const Text('View Timeline'),
                 ),
-                icon: const Icon(Icons.timeline),
-                label: const Text('View Timeline'),
-              ),
+              ],
             ),
           ],
         ),
@@ -554,6 +586,123 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
   String _formatDate(DateTime? date) {
     if (date == null) return 'N/A';
     return '${date.day}/${date.month}/${date.year}';
+  }
+
+  // Check if application can be canceled (within 24 hours and pending)
+  bool _canCancelApplication(Map<String, dynamic> application) {
+    final status = _normalizeStatus(application['status']);
+    if (status != 'PENDING') return false;
+
+    final submissionDate = _readDate(application['submissiondate']);
+    if (submissionDate == null) return false;
+
+    final hoursSinceSubmission = DateTime.now()
+        .difference(submissionDate)
+        .inHours;
+    return hoursSinceSubmission <= 24;
+  }
+
+  // Check if training record can be canceled (pending status only)
+  bool _canCancelTrainingRecord(Map<String, dynamic> trainingRecord) {
+    final status = _normalizeStatus(trainingRecord['status']);
+    return status == 'PENDING';
+  }
+
+  // Cancel application with confirmation
+  Future<void> _cancelApplication(Map<String, dynamic> application) async {
+    final vacancy = application['vacancy'] as Map<String, dynamic>? ?? {};
+
+    CancellationConfirmationDialog.showApplicationCancellation(
+      context,
+      jobTitle: vacancy['title']?.toString() ?? 'Untitled Application',
+      companyName: vacancy['company_name']?.toString() ?? 'Unknown Company',
+      onConfirm: () async {
+        try {
+          await _vacancyService.cancelApplication(application['applicationid']);
+          await _fetchTrackingData();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                elevation: 0,
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.transparent,
+                content: AwesomeSnackbarContent(
+                  title: 'Success',
+                  message: 'Application canceled successfully',
+                  contentType: ContentType.success,
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                elevation: 0,
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.transparent,
+                content: AwesomeSnackbarContent(
+                  title: 'Error',
+                  message: 'Failed to cancel application: $e',
+                  contentType: ContentType.failure,
+                ),
+              ),
+            );
+          }
+        }
+      },
+    );
+  }
+
+  // Cancel training record with confirmation
+  Future<void> _cancelTrainingRecord(
+    Map<String, dynamic> trainingRecord,
+  ) async {
+    CancellationConfirmationDialog.showTrainingCancellation(
+      context,
+      companyName:
+          trainingRecord['companyname']?.toString() ?? 'Unknown Company',
+      hours: trainingRecord['hourssubmitted'] ?? 0,
+      onConfirm: () async {
+        try {
+          await _vacancyService.cancelTrainingRecord(
+            trainingRecord['recordid'],
+          );
+          await _fetchTrackingData();
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                elevation: 0,
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.transparent,
+                content: AwesomeSnackbarContent(
+                  title: 'Success',
+                  message: 'Training submission canceled successfully',
+                  contentType: ContentType.success,
+                ),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                elevation: 0,
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.transparent,
+                content: AwesomeSnackbarContent(
+                  title: 'Error',
+                  message: 'Failed to cancel training submission: $e',
+                  contentType: ContentType.failure,
+                ),
+              ),
+            );
+          }
+        }
+      },
+    );
   }
 
   void _showTimelineSheet({

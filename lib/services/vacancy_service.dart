@@ -75,13 +75,13 @@ class VacancyService {
         'coverletter': coverLetter,
         'status': 'PENDING',
         'submissiondate': DateTime.now().toIso8601String(),
-        'document_id': documentId, // Optional UUID; null is allowed if no document
+        'document_id':
+            documentId, // Optional UUID; null is allowed if no document
       });
     } catch (e) {
       throw Exception('Failed to submit application: $e');
     }
   }
-
 
   // Future<void> submitApplication({
   //   required String vacancyId,
@@ -105,22 +105,6 @@ class VacancyService {
   //   }
   // }
 
-  // Check if user has already applied to a vacancy
-  Future<bool> hasUserApplied(String vacancyId, int userId) async {
-    try {
-      final response = await _supabase
-          .from('application')
-          .select()
-          .eq('vacancyid', vacancyId)
-          .eq('applicantid', userId)
-          .maybeSingle();
-
-      return response != null;
-    } catch (e) {
-      throw Exception('Failed to check application status: $e');
-    }
-  }
-
   // Get applications for a specific user
   Future<List<Map<String, dynamic>>> getUserApplications(int userId) async {
     try {
@@ -136,6 +120,47 @@ class VacancyService {
       return List<Map<String, dynamic>>.from(response);
     } catch (e) {
       throw Exception('Failed to fetch user applications: $e');
+    }
+  }
+
+  // Cancel an application
+  Future<void> cancelApplication(int applicationId) async {
+    try {
+      await _supabase
+          .from('application')
+          .update({'status': 'CANCELED'})
+          .eq('applicationid', applicationId);
+    } catch (e) {
+      throw Exception('Failed to cancel application: $e');
+    }
+  }
+
+  // Cancel a training record
+  Future<void> cancelTrainingRecord(int trainingRecordId) async {
+    try {
+      await _supabase
+          .from('trainingrecord')
+          .update({'status': 'CANCELED'})
+          .eq('recordid', trainingRecordId);
+    } catch (e) {
+      throw Exception('Failed to cancel training record: $e');
+    }
+  }
+
+  // Check if user has applied (excluding canceled applications)
+  Future<bool> hasUserApplied(String vacancyId, int userId) async {
+    try {
+      final response = await _supabase
+          .from('application')
+          .select()
+          .eq('vacancyid', vacancyId)
+          .eq('applicantid', userId)
+          .not('status', 'eq', 'CANCELED')
+          .maybeSingle();
+
+      return response != null;
+    } catch (e) {
+      throw Exception('Failed to check application status: $e');
     }
   }
 
