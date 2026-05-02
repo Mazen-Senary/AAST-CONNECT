@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../services/theme_provider.dart';
+import '../../widgets/app_bar_with_logout.dart';
+
+import 'student_tracking.dart';
 
 class StudentSupport extends StatelessWidget {
   const StudentSupport({super.key});
@@ -196,40 +198,18 @@ class StudentSupport extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        title: Text(
-          "AAST Connect",
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-            fontSize: 22,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Provider.of<ThemeProvider>(context).isDark
-                  ? Icons.light_mode_outlined
-                  : Icons.dark_mode_outlined,
-              color: Theme.of(context).colorScheme.primary,
+      appBar: AppBarWithLogout(
+        title: "AAST Connect",
+        unreadNotificationCount: 0,
+        onTimelinePressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const StudentTrackingScreen(),
             ),
-            onPressed: () {
-              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-            },
-          ),
-          TextButton.icon(
-            onPressed: () {},
-            icon: const Icon(Icons.logout, color: Colors.grey, size: 18),
-            label: Text(
-              "Logout",
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-            ),
-          ),
-        ],
+          );
+        },
+        onLogout: () {},
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20),

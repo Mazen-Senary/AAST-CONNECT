@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:file_picker/file_picker.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
@@ -14,7 +13,8 @@ import '../../widgets/profile_widgets/student_profile_documents_modal.dart';
 import '../../widgets/profile_widgets/student_profile_portfolio_modal.dart';
 import '../../widgets/profile_widgets/student_profile_submit_hours_modal.dart';
 import '../../models/student.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../widgets/app_bar_with_logout.dart';
+import 'student_tracking.dart';
 
 class StudentProfile extends StatefulWidget {
   final bool shouldRefresh; // NEW — triggered from main.dart on tab switch
@@ -254,38 +254,51 @@ class _StudentProfileState extends State<StudentProfile> {
     );
   }
 
+  void _handleLogout() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text('Logout'),
+        content: const Text('Are you sure you want to logout?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.rejected,
+            ),
+            onPressed: () async {
+              Navigator.pop(context);
+              // TODO: Implement logout logic with Supabase auth
+              // await Supabase.instance.client.auth.signOut();
+              // Navigate to login screen
+            },
+            child: const Text('Logout'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBar(
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        elevation: 0,
-        title: Text(
-          "AAST Connect",
-          style: TextStyle(
-            color: Theme.of(context).colorScheme.onSurface,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: Icon(
-              Provider.of<ThemeProvider>(context).isDark
-                  ? Icons.light_mode_outlined
-                  : Icons.dark_mode_outlined,
-              color: Theme.of(context).colorScheme.primary,
+      appBar: AppBarWithLogout(
+        title: "AAST Connect",
+        unreadNotificationCount: 0,
+        onTimelinePressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const StudentTrackingScreen(),
             ),
-            onPressed: () {
-              Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
-            },
-          ),
-          Icon(
-            Icons.logout,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-          ),
-          const SizedBox(width: 15),
-        ],
+          );
+        },
+        onLogout: _handleLogout,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

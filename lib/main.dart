@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
 import 'student/screens/student_home.dart';
 import 'student/screens/student_opportunities.dart';
 import 'student/screens/student_profile.dart';
 import 'student/screens/student_support.dart';
+import 'student/screens/student_notifications.dart';
 import 'supabase_config.dart';
 import 'services/theme_provider.dart';
+import 'services/notification_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -51,6 +54,60 @@ class MainNavigation extends StatefulWidget {
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
   int _previousIndex = 0; // track previous tab
+  int _unreadCount = 0;
+  late final RealtimeChannel _notifChannel;
+  final NotificationService _notificationService = NotificationService();
+  final int _studentId = 5; // Replace with actual userId when auth is implemented
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUnreadCount();
+    _listenForNotifications();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    try {
+      final count = await _notificationService.getUnreadCount(_studentId);
+      setState(() => _unreadCount = count);
+    } catch (e) {
+      print('Error loading unread count: $e');
+    }
+  }
+
+  void _listenForNotifications() {
+    _notifChannel =
+        _notificationService.listenToNotifications(_studentId, (payload) {
+      setState(() => _unreadCount++);
+
+      // Show snackbar with notification
+      if (mounted) {
+        final message = payload['message'] ?? 'New notification';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            margin: const EdgeInsets.all(16),
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            content: AwesomeSnackbarContent(
+              title: 'New Notification',
+              message: message,
+              contentType: ContentType.success,
+            ),
+            action: SnackBarAction(
+              label: 'View',
+              onPressed: () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const StudentNotificationsScreen(),
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+    });
+  }
 
   void _goToTraining() {
     setState(() {
@@ -59,12 +116,21 @@ class _MainNavigationState extends State<MainNavigation> {
   }
 
   @override
+  void dispose() {
+    _notifChannel.unsubscribe();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
         children: [
-          StudentHome(onSeeAll: _goToTraining),
+          StudentHome(
+            onSeeAll: _goToTraining,
+            unreadNotificationCount: _unreadCount,
+          ),
           const StudentOpportunities(),
           // pass shouldRefresh=true when switching TO profile tab
           StudentProfile(shouldRefresh: _currentIndex == 2 && _previousIndex != 2),

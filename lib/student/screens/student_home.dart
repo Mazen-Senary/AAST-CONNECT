@@ -16,10 +16,16 @@ import '../../widgets/opportunities_wigdet/student_opportunities_apply_modal.dar
 import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.dart';
 import '../../services/vacancy_service.dart';
 import 'student_tracking.dart';
+import 'student_notifications.dart';
 
 class StudentHome extends StatefulWidget {
   final VoidCallback onSeeAll;
-  const StudentHome({super.key, required this.onSeeAll});
+  final int unreadNotificationCount;
+  const StudentHome({
+    super.key, 
+    required this.onSeeAll,
+    this.unreadNotificationCount = 0,
+  });
   @override
   State<StudentHome> createState() => _StudentHomeState();
 }
@@ -430,13 +436,8 @@ class _StudentHomeState extends State<StudentHome> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBarWithLogout(
         title: "AAST Connect",
-        additionalActions: [
-          IconButton(
-            tooltip: 'Open tracking',
-            onPressed: () => _openTracking(initialTabIndex: 0),
-            icon: const Icon(Icons.timeline),
-          ),
-        ],
+        unreadNotificationCount: widget.unreadNotificationCount,
+        onTimelinePressed: () => _openTracking(initialTabIndex: 0),
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

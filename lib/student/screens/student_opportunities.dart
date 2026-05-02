@@ -13,6 +13,7 @@ import '../../widgets/opportunities_wigdet/student_opportunities_filter_chips.da
 import '../../widgets/opportunities_wigdet/student_opportunities_program_card.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_apply_modal.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.dart';
+import 'student_tracking.dart';
 
 class StudentOpportunities extends StatefulWidget {
   const StudentOpportunities({super.key});
@@ -423,7 +424,19 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
 
     return Scaffold(
       backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: const AppBarWithLogout(title: "AAST Connect"),
+      appBar: AppBarWithLogout(
+        title: "AAST Connect",
+        unreadNotificationCount: 0,
+        onTimelinePressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const StudentTrackingScreen(),
+            ),
+          );
+        },
+        onLogout: () {},
+      ),
       body: Column(
         children: [
           StudentOpportunitiesSearchBar(
