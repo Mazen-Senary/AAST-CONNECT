@@ -8,71 +8,82 @@ class DashboardRemoteDataSource {
   DashboardRemoteDataSource(this.client);
 
   Future<DashboardModel> getDashboard() async {
-  // 1️⃣ dashboard stats
-  final statsResponse = await client
-      .from('student_application_counts')
-      .select();
-  
-  // 2️⃣ recent activities
-  final applications = await client
-    .from('application')
-    .select()
-    .order('created_at', ascending: false)
-    .limit(5);
+    // 1️⃣ dashboard stats
+    final statsResponse = await client
+        .from('student_application_counts')
+        .select();
 
-final training = await client
-    .from('trainingrecord')
-    .select()
-    .order('created_at', ascending: false)
-    .limit(5);
+    // 2️⃣ recent activities
+    final applications = await client
+        .from('application')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(5);
+
+    final training = await client
+        .from('trainingrecord')
+        .select()
+        .order('created_at', ascending: false)
+        .limit(5);
     // Applications → activities
 
-  final totalApplications = (statsResponse as List)
-    .fold<int>(0, (sum, row) => sum + (row['total_applications'] as int));
-  final pendingApplications =
-    (applications as List)
-        .where((a) => a['status'] == 'pending')
+    final totalApplications = (statsResponse as List).fold<int>(
+      0,
+      (sum, row) => sum + (row['total_applications'] as int),
+    );
+    final pendingApplications = (applications as List)
+        .where((a) => a['status'] == 'PENDING')
         .length;
-  final trainingUploads = (training as List).length;
-// ⏱ time formatter
-String _formatTimeAgo(String dateTimeString) {
-  final dateTime = DateTime.parse(dateTimeString);
-  final diff = DateTime.now().difference(dateTime);
+    final trainingUploads = (training as List).length;
+    // ⏱ time formatter
+    String _formatTimeAgo(String dateTimeString) {
+      final dateTime = DateTime.parse(dateTimeString);
+      final diff = DateTime.now().difference(dateTime);
 
-  if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-  if (diff.inHours < 24) return '${diff.inHours} hr ago';
-  return '${diff.inDays} days ago';
-}
-final appActivities = (applications as List<dynamic>).map((row) {
-  return RecentActivity(
-    studentName: row['applicant_name'] ?? 'Unknown',
-    action: 'Applied for opportunity',
-    timeAgo: _formatTimeAgo(row['created_at']),
-    status: RecentActivity.mapStatus(row['status']),
-  );
-}).toList();
+      if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+      if (diff.inHours < 24) return '${diff.inHours} hr ago';
+      return '${diff.inDays} days ago';
+    }
 
-// Training → activities
-final trainingActivities = (training as List<dynamic>).map((row) {
-  return RecentActivity(
-    studentName: row['name'] ?? 'Unknown',
+    final appActivities = (applications as List<dynamic>).map((row) {
+      return RecentActivity(
+        studentName: row['applicant_name'] ?? 'Unknown',
+        action: 'Applied for opportunity',
+        timeAgo: _formatTimeAgo(row['created_at']),
+        status: RecentActivity.mapStatus(row['status']),
+      );
+    }).toList();
+
+    final trainingActivities = <RecentActivity>[];
+for (final row in training as List<dynamic>) {
+  String studentName = 'Unknown';
+  final studentId = row['studentid'];
+  if (studentId != null) {
+    try {
+      final student = await client
+          .from('student')
+          .select('name')
+          .eq('studentid', studentId)
+          .single();
+      studentName = student['name'] ?? 'Unknown';
+    } catch (_) {}
+  }
+  trainingActivities.add(RecentActivity(
+    studentName: studentName,
     action: 'Submitted training',
     timeAgo: _formatTimeAgo(row['created_at']),
     status: RecentActivity.mapStatus(row['status']),
-  );
-}).toList();
-final allActivities = [
-  ...appActivities,
-  ...trainingActivities,
-];
-  return DashboardModel(
-    totalApplications: totalApplications,
-    pendingApplications: pendingApplications,
-    trainingUploads: trainingUploads,
-    totalAppsChange: 0,
-    pendingChange: 0,
-    uploadsChange: 0,
-    recentActivities: allActivities,
-  );
+  ));
 }
+    final allActivities = [...appActivities, ...trainingActivities];
+    return DashboardModel(
+      totalApplications: totalApplications,
+      pendingApplications: pendingApplications,
+      trainingUploads: trainingUploads,
+      totalAppsChange: 0,
+      pendingChange: 0,
+      uploadsChange: 0,
+      recentActivities: allActivities,
+    );
+  }
 }

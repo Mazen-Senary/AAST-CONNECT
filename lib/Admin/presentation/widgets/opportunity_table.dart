@@ -145,7 +145,9 @@ class _OpportunityTableState extends State<OpportunityTable> {
     return Row(
       children: [
         _cell(title, flex: 3, style: textStyle, isDark: isDark),
-        _cell(company, flex: 2, style: textStyle, isDark: isDark),
+        isHeader
+            ? _cell(company, flex: 2, style: textStyle, isDark: isDark)
+            : _companyCell(company, opportunity?.companyLogoUrl, isDark),
         _typeBadge(type, isDark),
         _statusBadge(status, isDark),
 
@@ -258,5 +260,56 @@ class _OpportunityTableState extends State<OpportunityTable> {
     );
   }
 
-  
+  Widget _companyCell(String company, String? logoUrl, bool isDark) {
+  return SizedBox(
+    width: 2 * 140.0, // matches flex: 2
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      child: Row(
+        children: [
+          // Logo or fallback icon
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(6),
+              color: isDark ? Colors.white10 : Colors.grey.shade100,
+              border: Border.all(
+                color: isDark ? Colors.white12 : Colors.grey.shade200,
+              ),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: logoUrl != null && logoUrl.isNotEmpty
+                ? Image.network(
+                    logoUrl,
+                    fit: BoxFit.contain,
+                    errorBuilder: (_, __, ___) => Icon(
+                      Icons.business,
+                      size: 18,
+                      color: isDark ? Colors.white38 : Colors.grey.shade400,
+                    ),
+                  )
+                : Icon(
+                    Icons.business,
+                    size: 18,
+                    color: isDark ? Colors.white38 : Colors.grey.shade400,
+                  ),
+          ),
+          const SizedBox(width: 8),
+          // Company name
+          Expanded(
+            child: Text(
+              company,
+              overflow: TextOverflow.ellipsis,
+              softWrap: false,
+              style: AppTextStyles.body.copyWith(
+                color: isDark ? AppColors.darkTextPrimary : null,
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 }

@@ -11,6 +11,7 @@ class ApplicationModel extends Application {
     super.documentId,
     super.rejectionReason,
     super.expanded,
+    super.gpa,
   });
 
   factory ApplicationModel.fromMap(Map<String, dynamic> map) {
@@ -25,6 +26,7 @@ class ApplicationModel extends Application {
       coverLetter: map['coverletter'],
       documentId: map['document_id'],
       rejectionReason: map['rejectionreason'],
-    );
+      gpa: (map['gpa'] as num?)?.toDouble(),
+      );
   }
 }

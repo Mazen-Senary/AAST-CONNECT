@@ -12,7 +12,10 @@ class Training {
   final DateTime createdAt;
   final String? proofImageUrl;
   final bool expanded;
-   final String? certificateUrl;
+  final String? certificateUrl;
+   // In training.dart entity, add these two fields:
+  final String? collegeId;
+  final int completedTrainingHours;
 
   Training({
     required this.recordId,
@@ -29,6 +32,8 @@ class Training {
     this.rejectionReason,
     this.expanded = false,
     this.certificateUrl,
+    required this.collegeId,
+    this.completedTrainingHours = 0,
   });
 
   Training copyWith({
@@ -36,6 +41,8 @@ class Training {
     String? rejectionReason,
     bool? expanded,
     String? certificateUrl,
+    String? collegeId,
+    int? completedTrainingHours,
   }) {
     return Training(
       recordId: recordId,
@@ -52,6 +59,8 @@ class Training {
       rejectionReason: rejectionReason ?? this.rejectionReason,
       expanded: expanded ?? this.expanded,
       certificateUrl: certificateUrl ?? this.certificateUrl,
+      collegeId: collegeId ?? this.collegeId,
+      completedTrainingHours: completedTrainingHours ?? this.completedTrainingHours,
     );
   }
 }

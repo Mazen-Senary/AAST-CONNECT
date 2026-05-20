@@ -24,10 +24,7 @@ class ApprovalRepositoryImpl implements ApprovalRepository {
 Future<List<Training>> getTraining() async {
   final response = await remote.fetchTraining();
   return response
-      .map((e) => TrainingModel.fromMap({
-            ...e,
-            'studentname': e['name'], 
-          }))
+      .map((e) => TrainingModel.fromMap(e))
       .toList();
 }
 

@@ -8,6 +8,7 @@ class Application {
   final String? coverLetter;
   final String? rejectionReason;
   final bool expanded;
+  final double? gpa;
 
   Application({
     required this.applicationId,
@@ -19,12 +20,14 @@ class Application {
     this.documentId,
     this.rejectionReason,
     this.expanded = false,
+    this.gpa,
   });
 
   Application copyWith({
     String? status,
     String? rejectionReason,
     bool? expanded,
+    double? gpa,
   }) {
     return Application(
       applicationId: applicationId,
@@ -36,6 +39,7 @@ class Application {
       documentId: documentId,
       rejectionReason: rejectionReason ?? this.rejectionReason,
       expanded: expanded ?? this.expanded,
+      gpa: gpa ?? this.gpa,
     );
   }
 }

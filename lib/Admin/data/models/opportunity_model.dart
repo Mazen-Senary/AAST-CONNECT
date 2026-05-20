@@ -16,6 +16,7 @@ class OpportunityModel extends Opportunity {
     super.externalApplyUrl,
     super.description,
     super.requiredSkills,
+    super.companyLogoUrl,
   });
 
   factory OpportunityModel.fromJson(
@@ -38,6 +39,7 @@ class OpportunityModel extends Opportunity {
       externalApplyUrl: row['external_apply_url'],
       description: row['description'],
       requiredSkills: row['requiredskills'],
+      companyLogoUrl: row['company_logo_url'],
     );
   }
 }

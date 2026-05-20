@@ -4,6 +4,7 @@ class TrainingModel extends Training {
   TrainingModel({
     required super.recordId,
     required super.studentId,
+    
     required super.studentName,
     required super.companyName,
     required super.supervisorName,
@@ -16,14 +17,18 @@ class TrainingModel extends Training {
     super.rejectionReason,
     super.expanded,
     super.certificateUrl,
+    super.collegeId,
+    super.completedTrainingHours,
   });
 
   factory TrainingModel.fromMap(Map<String, dynamic> map) {
+    final student = map['student'] as Map<String, dynamic>?;
   return TrainingModel(
     recordId: map['recordid'],
     studentId: map['studentid'] as int? ?? 0, 
-    studentName: map['studentname'] ?? map['name'] ?? 'Unknown',
-    companyName: map['companyname'] ?? '',
+   studentName: map['student_name'] ?? 'Unknown',       // NEW KEY
+    collegeId: map['student_college_id'],  
+    completedTrainingHours: (map['student_completed_hours'] as int?) ?? 0,    companyName: map['companyname'] ?? '',
     supervisorName: map['supervisorname'] ?? '',
     hoursSubmitted: (map['hourssubmitted'] as int?) ?? 0,
     startDate: map['startdate'] != null

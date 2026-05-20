@@ -10,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/di/opportunity_providers.dart';
 import '../../domain/entities/opportunity.dart';
 import '../widgets/opportunity_table.dart';
+
 class OpportunitiesScreen extends ConsumerStatefulWidget {
   final int adminId;
   const OpportunitiesScreen({super.key, required this.adminId});
@@ -25,6 +26,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
   final descriptionController = TextEditingController();
   final locationController = TextEditingController();
   final skillsController = TextEditingController();
+  final companyLogoUrlController = TextEditingController();
   String selectedWorkMode = 'ONSITE';
   bool paidStatus = false;
   DateTime? selectedDeadline;
@@ -39,109 +41,65 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
   final ScrollController _formScrollController = ScrollController();
   final supabase = Supabase.instance.client;
 
-  // Form state variables
   String? _formError;
   bool _isSubmitting = false;
+
   @override
   void initState() {
     super.initState();
   }
 
+  // ─────────────────────────────────────────────
+  // VALIDATION
+  // ─────────────────────────────────────────────
   String? _validateOpportunityForm() {
-    // Title validation
-    if (titleController.text.trim().isEmpty) {
-      return 'Title is required';
-    }
+    if (titleController.text.trim().isEmpty) return 'Title is required';
     if (titleController.text.trim().length < 3) {
       return 'Title must be at least 3 characters';
     }
-
-    // Company validation
     if (companyController.text.trim().isEmpty) {
       return 'Company name is required';
     }
     if (companyController.text.trim().length < 2) {
       return 'Company name must be at least 2 characters';
     }
-
-    // Location validation
-    if (locationController.text.trim().isEmpty) {
-      return 'Location is required';
-    }
+    if (locationController.text.trim().isEmpty) return 'Location is required';
     if (locationController.text.trim().length < 2) {
       return 'Location must be at least 2 characters';
     }
-
-    // Description is optional - only validate if provided
-    if (descriptionController.text.trim().isNotEmpty) {
-      if (descriptionController.text.trim().length < 10) {
-        return 'Description must be at least 10 characters if provided';
-      }
+    if (descriptionController.text.trim().isNotEmpty &&
+        descriptionController.text.trim().length < 10) {
+      return 'Description must be at least 10 characters if provided';
     }
-
-    // Skills is optional - only validate if provided
-    if (skillsController.text.trim().isNotEmpty) {
-      if (skillsController.text.trim().length < 3) {
-        return 'Required skills must be at least 3 characters if provided';
-      }
+    if (skillsController.text.trim().isNotEmpty &&
+        skillsController.text.trim().length < 3) {
+      return 'Required skills must be at least 3 characters if provided';
     }
-
-    // Deadline validation
-    if (selectedDeadline == null) {
-      return 'Deadline is required';
+    if (selectedDeadline == null) return 'Deadline is required';
+    if (selectedDeadline != null &&
+        selectedDeadline!.isBefore(DateTime.now())) {
+      return 'Deadline must be in the future';
     }
-
-    // External URL validation (if external application method)
     if (applicationMethod == 'EXTERNAL') {
       if (externalUrlController.text.trim().isEmpty) {
         return 'External application URL is required';
       }
-
-      // Basic URL validation
       final url = externalUrlController.text.trim();
       if (!url.startsWith('http://') && !url.startsWith('https://')) {
         return 'Please enter a valid URL (e.g., https://example.com)';
       }
     }
-
-    // Deadline must be in the future
-    if (selectedDeadline != null &&
-        selectedDeadline!.isBefore(DateTime.now())) {
-      return 'Deadline must be in the future';
-    }
-
-    return null; // No validation errors
+    return null;
   }
 
-  void _showValidationError(String error) {
-    setState(() {
-      _formError = error;
-    });
-
-    // Auto-scroll to absolute top of the form dialog
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_formScrollController.hasClients) {
-        _formScrollController.animateTo(
-          0.0, // Absolute top position
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
-  void _clearFormError() {
-    setState(() {
-      _formError = null;
-    });
-  }
-
+  // ─────────────────────────────────────────────
+  // DELETE DIALOG
+  // ─────────────────────────────────────────────
   Future<void> _showDeleteConfirmationDialog(Opportunity opportunity) async {
-    final themeProvider = provider.Provider.of<ThemeProvider>(
+    final isDark = provider.Provider.of<ThemeProvider>(
       context,
       listen: false,
-    );
-    final isDark = themeProvider.isDarkMode;
+    ).isDarkMode;
 
     await showDialog(
       context: context,
@@ -152,7 +110,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
             color: isDark ? AppColors.darkCard : AppColors.card,
-            borderRadius: BorderRadius.circular(20),
+            borderRadius: BorderRadius.circular(AppColors.radius),
             boxShadow: [
               BoxShadow(
                 color: Colors.black.withOpacity(0.1),
@@ -165,27 +123,26 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // HEADER
+              // Header
               Row(
                 children: [
                   Container(
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: AppColors.accentAlert.withOpacity(0.15),
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(10),
                     ),
                     child: const Icon(
                       Icons.delete_rounded,
                       color: AppColors.accentAlertText,
-                      size: 24,
+                      size: 22,
                     ),
                   ),
-                  const SizedBox(width: 16),
+                  const SizedBox(width: 14),
                   Expanded(
                     child: Text(
                       'Delete Opportunity',
                       style: AppTextStyles.h3.copyWith(
-                        fontWeight: FontWeight.w600,
                         color: isDark
                             ? AppColors.darkTextPrimary
                             : AppColors.textPrimary,
@@ -197,57 +154,62 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                     child: MouseRegion(
                       cursor: SystemMouseCursors.click,
                       child: Container(
-                        padding: const EdgeInsets.all(8),
+                        padding: const EdgeInsets.all(6),
                         decoration: BoxDecoration(
                           color: isDark
                               ? AppColors.darkBackground
                               : AppColors.background,
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(8),
                         ),
                         child: Icon(
-                          Icons.close,
+                          Icons.close_rounded,
+                          size: 18,
                           color: isDark
                               ? AppColors.darkTextSecondary
                               : AppColors.textSecondary,
                         ),
+                      ),
                     ),
-                  ),),
+                  ),
                 ],
               ),
 
               const SizedBox(height: 20),
 
-              // OPPORTUNITY INFO
+              // Opportunity info card
               Container(
-                padding: const EdgeInsets.all(16),
+                width: double.infinity,
+                padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
                   color: isDark
                       ? AppColors.darkBackground
                       : AppColors.background,
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(
+                    color: isDark ? AppColors.darkBorder : AppColors.border,
+                  ),
                 ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Opportunity to Delete',
-                      style: AppTextStyles.label.copyWith(
+                      'Opportunity to delete',
+                      style: AppTextStyles.caption.copyWith(
                         color: isDark
-                            ? AppColors.darkTextSecondary
-                            : AppColors.textSecondary,
+                            ? AppColors.darkTextMuted
+                            : AppColors.textMuted,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    const SizedBox(height: 6),
                     Text(
                       opportunity.title,
-                      style: AppTextStyles.body.copyWith(
-                        fontWeight: FontWeight.w600,
+                      style: AppTextStyles.label.copyWith(
                         color: isDark
                             ? AppColors.darkTextPrimary
                             : AppColors.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 8),
+                    const SizedBox(height: 4),
                     Text(
                       opportunity.company,
                       style: AppTextStyles.body.copyWith(
@@ -260,9 +222,8 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                 ),
               ),
 
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
 
-              // WARNING MESSAGE
               Text(
                 'Are you sure you want to delete this opportunity? This action cannot be undone.',
                 style: AppTextStyles.body.copyWith(
@@ -274,7 +235,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
 
               const SizedBox(height: 24),
 
-              // ACTIONS
+              // Action buttons
               Row(
                 children: [
                   Expanded(
@@ -284,22 +245,18 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                         foregroundColor: isDark
                             ? AppColors.darkTextSecondary
                             : AppColors.textSecondary,
+                        textStyle: AppTextStyles.button,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         side: BorderSide(
                           color: isDark
-                              ? AppColors.darkDivider
+                              ? AppColors.darkBorder
                               : AppColors.border,
                         ),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppColors.radius),
                         ),
                       ),
-                      child: Text(
-                        'Cancel',
-                        style: AppTextStyles.label.copyWith(
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
+                      child: const Text('Cancel'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -314,18 +271,14 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentAlert,
                         foregroundColor: AppColors.accentAlertText,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        textStyle: AppTextStyles.button,
+                        elevation: 0,
+                        padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
+                          borderRadius: BorderRadius.circular(AppColors.radius),
                         ),
                       ),
-                      child: Text(
-                        'Delete',
-                        style: AppTextStyles.label.copyWith(
-                          fontWeight: FontWeight.w600,
-                          color: AppColors.accentAlertText,
-                        ),
-                      ),
+                      child: const Text('Delete'),
                     ),
                   ),
                 ],
@@ -337,46 +290,45 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
     );
   }
 
+  // ─────────────────────────────────────────────
+  // BUILD
+  // ─────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    final themeProvider = provider.Provider.of<ThemeProvider>(context);
-    final isDark = themeProvider.isDarkMode;
+    final isDark = provider.Provider.of<ThemeProvider>(context).isDarkMode;
     final opportunitiesAsync = ref.watch(opportunitiesProvider);
 
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
-
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            /// HEADER WITH TITLE AND ADD BUTTON
+            // Header
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   'Opportunities Management',
                   style: AppTextStyles.h3.copyWith(
-                    fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                    color: isDark
+                        ? AppColors.darkTextPrimary
+                        : AppColors.textPrimary,
                   ),
                 ),
                 ElevatedButton.icon(
-                  onPressed: () {
-                    _showOpportunityForm(context);
-                  },
-                  icon: const Icon(Icons.add, size: 18),
+                  onPressed: () => _showOpportunityForm(context),
+                  icon: const Icon(Icons.add_rounded, size: 18),
                   label: const Text('Add Opportunity'),
                   style: ElevatedButton.styleFrom(
+                    fixedSize: const Size(180, 46),
                     backgroundColor: AppColors.interactive,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 14,
-                    ),
+                    textStyle: AppTextStyles.button,
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(AppColors.radius),
                     ),
                   ),
                 ),
@@ -385,88 +337,85 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
 
             const SizedBox(height: 24),
 
-            /// SEARCH + FILTER
+            // Search + filter row
             Row(
               children: [
                 Expanded(
                   child: TextField(
                     onChanged: (v) => setState(() => _searchTerm = v),
+                    style: AppTextStyles.body.copyWith(
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
                     decoration: InputDecoration(
                       hintText: 'Search opportunities by title or company...',
-                      hintStyle: TextStyle(
+                      hintStyle: AppTextStyles.body.copyWith(
                         color: isDark
-                            ? AppColors.darkTextSecondary
+                            ? AppColors.darkTextMuted
                             : AppColors.inputHint,
-                        fontSize: 14,
                       ),
                       prefixIcon: Icon(
-                        Icons.search,
+                        Icons.search_rounded,
+                        size: 20,
                         color: isDark
-                            ? AppColors.darkTextSecondary
+                            ? AppColors.darkTextMuted
                             : AppColors.inputHint,
                       ),
                       filled: true,
                       fillColor: isDark
                           ? AppColors.darkCard
                           : AppColors.inputBackground,
-
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(AppColors.radius),
-                        borderSide: BorderSide(
-                          color: isDark
-                              ? AppColors.darkDivider
-                              : AppColors.inputBorder,
-                        ),
-                      ),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 13),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppColors.radius),
                         borderSide: BorderSide(
                           color: isDark
-                              ? AppColors.darkDivider
+                              ? AppColors.darkBorder
                               : AppColors.inputBorder,
                         ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppColors.radius),
-                        borderSide: BorderSide(
+                        borderSide: const BorderSide(
                           color: AppColors.interactive,
                           width: 1.5,
                         ),
                       ),
-                      focusedErrorBorder: OutlineInputBorder(
+                      border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(AppColors.radius),
-                        borderSide: BorderSide(
-                          color: AppColors.interactive,
-                          width: 1.5,
-                        ),
                       ),
                     ),
                   ),
                 ),
-
                 const SizedBox(width: 16),
-                SizedBox(
-                  width: 180, // 👈 REQUIRED
-                  child: _typeSorter(isDark),
-                ),
+                SizedBox(width: 180, child: _buildTypeSorter(isDark)),
               ],
             ),
 
             const SizedBox(height: 24),
 
-            /// TABLE
+            // Table
             Expanded(
               child: opportunitiesAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) => Center(child: Text('Error: $e')),
+                error: (e, _) =>
+                    Center(child: Text('Error: $e', style: AppTextStyles.body)),
                 data: (opportunities) {
                   if (opportunities.isEmpty) {
-                    return const Center(child: Text('No opportunities found'));
+                    return Center(
+                      child: Text(
+                        'No opportunities found',
+                        style: AppTextStyles.body.copyWith(
+                          color: isDark
+                              ? AppColors.darkTextMuted
+                              : AppColors.textMuted,
+                        ),
+                      ),
+                    );
                   }
-
                   final filtered = opportunities.where((opp) {
+                    final notExpired = opp.deadline.isAfter(DateTime.now());
                     final matchesSearch =
                         opp.title.toLowerCase().contains(
                           _searchTerm.toLowerCase(),
@@ -474,22 +423,21 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                         opp.company.toLowerCase().contains(
                           _searchTerm.toLowerCase(),
                         );
-
                     final matchesFilter =
                         _filterType == 'all' ||
                         uiToDbType(_filterType) == opp.type;
-
-                    return matchesSearch && matchesFilter;
+                    return notExpired && matchesSearch && matchesFilter;
                   }).toList();
 
                   return OpportunityTable(
-  opportunities: filtered,
-  isDark: isDark,
-  onDelete: (id) => _showDeleteConfirmationDialog(
-    filtered.firstWhere((e) => e.id == id),
-  ),
-  onEdit: (opp) => _showOpportunityForm(context, opportunity: opp),
-);
+                    opportunities: filtered,
+                    isDark: isDark,
+                    onDelete: (id) => _showDeleteConfirmationDialog(
+                      filtered.firstWhere((e) => e.id == id),
+                    ),
+                    onEdit: (opp) =>
+                        _showOpportunityForm(context, opportunity: opp),
+                  );
                 },
               ),
             ),
@@ -499,40 +447,34 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
     );
   }
 
-
- // ---------------- SORTER ----------------
-
-  Widget _typeSorter(bool isDark) {
+  // ─────────────────────────────────────────────
+  // TYPE SORTER DROPDOWN
+  // ─────────────────────────────────────────────
+  Widget _buildTypeSorter(bool isDark) {
     return Container(
-      height: 44,
+      height: 46,
       padding: const EdgeInsets.symmetric(horizontal: 14),
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Colors.grey.shade300, Colors.grey.shade100],
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
+        color: isDark ? AppColors.darkCard : AppColors.inputBackground,
+        borderRadius: BorderRadius.circular(AppColors.radius),
+        border: Border.all(
+          color: isDark ? AppColors.darkBorder : AppColors.inputBorder,
         ),
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: Colors.grey.shade400),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.1),
-            blurRadius: 4,
-            offset: const Offset(0, 2),
-          ),
-        ],
       ),
       child: DropdownButtonHideUnderline(
         child: DropdownButton<String>(
           value: _filterType,
-          icon: const Icon(Icons.arrow_drop_down),
-          iconSize: 26,
           isExpanded: true,
-          dropdownColor: Colors.white, // 👈 menu background
-          style: const TextStyle(fontSize: 16, color: Colors.black),
-          onChanged: (value) {
-            setState(() => _filterType = value!);
-          },
+          dropdownColor: isDark ? AppColors.darkCard : AppColors.card,
+          icon: Icon(
+            Icons.keyboard_arrow_down_rounded,
+            size: 20,
+            color: isDark ? AppColors.darkTextMuted : AppColors.textMuted,
+          ),
+          style: AppTextStyles.body.copyWith(
+            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          ),
+          onChanged: (value) => setState(() => _filterType = value!),
           items: const [
             DropdownMenuItem(value: 'all', child: Text('All Types')),
             DropdownMenuItem(value: 'Internship', child: Text('Internship')),
@@ -545,14 +487,16 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
       ),
     );
   }
-  // ---------------- OPPORTUNITY FORM ----------------
+
+  // ─────────────────────────────────────────────
+  // OPPORTUNITY FORM DIALOG
+  // ─────────────────────────────────────────────
   void _showOpportunityForm(BuildContext context, {Opportunity? opportunity}) {
     final isDark = provider.Provider.of<ThemeProvider>(
       context,
       listen: false,
     ).isDarkMode;
     final bool isEditing = opportunity != null;
-
     String selectedType = isEditing
         ? dbToUiType(opportunity.type)
         : 'Internship';
@@ -563,10 +507,9 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
       locationController.text = opportunity.location ?? '';
       descriptionController.text = opportunity.description ?? '';
       skillsController.text = opportunity.requiredSkills ?? '';
-
+      companyLogoUrlController.text = opportunity.companyLogoUrl ?? '';
       selectedWorkMode = opportunity.workMode ?? 'ONSITE';
       paidStatus = opportunity.paidStatus;
-
       selectedDeadline = opportunity.deadline;
       selectedAudience = opportunity.targetAudience;
       applicationMethod = opportunity.applicationMethod;
@@ -577,20 +520,39 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
       descriptionController.clear();
       locationController.clear();
       skillsController.clear();
+      companyLogoUrlController.clear();
       externalUrlController.clear();
       selectedDeadline = null;
       paidStatus = false;
       selectedWorkMode = 'ONSITE';
+      selectedAudience = 'STUDENT';
+      applicationMethod = 'INTERNAL';
     }
+
+    // Reset form error when opening
+    _formError = null;
 
     showDialog(
       context: context,
       builder: (_) => StatefulBuilder(
         builder: (context, setState) {
+          final Color primaryText = isDark
+              ? AppColors.darkTextPrimary
+              : AppColors.textPrimary;
+          final Color mutedText = isDark
+              ? AppColors.darkTextMuted
+              : AppColors.textMuted;
+          final Color activeColor = isDark
+              ? AppColors.darkInteractive
+              : AppColors.interactive;
+          final Color surfaceColor = isDark
+              ? AppColors.darkCard
+              : AppColors.card;
+
           return Dialog(
-            backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
+            backgroundColor: surfaceColor,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(AppColors.radius),
             ),
             child: Container(
               width: MediaQuery.of(context).size.width * 0.8,
@@ -600,31 +562,36 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    /// TITLE
+                    // Dialog title
                     Text(
                       isEditing ? 'Edit Opportunity' : 'Add Opportunity',
-                      style: AppTextStyles.h2,
+                      style: AppTextStyles.h2.copyWith(color: primaryText),
                     ),
 
                     const SizedBox(height: 20),
 
-                    // ERROR DISPLAY
-                    if (_formError != null)
+                    // Error banner
+                    if (_formError != null) ...[
                       Container(
-                        padding: const EdgeInsets.all(12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 12,
+                        ),
                         decoration: BoxDecoration(
-                          color: AppColors.accentAlert.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: AppColors.accentAlert.withOpacity(0.3)),
+                          color: AppColors.accentAlert.withOpacity(0.12),
+                          borderRadius: BorderRadius.circular(AppColors.radius),
+                          border: Border.all(
+                            color: AppColors.accentAlert.withOpacity(0.35),
+                          ),
                         ),
                         child: Row(
                           children: [
                             const Icon(
-                              Icons.error_outline,
+                              Icons.error_outline_rounded,
                               color: AppColors.accentAlertText,
-                              size: 20,
+                              size: 18,
                             ),
-                            const SizedBox(width: 8),
+                            const SizedBox(width: 10),
                             Expanded(
                               child: Text(
                                 _formError!,
@@ -637,13 +604,21 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                           ],
                         ),
                       ),
-
-                    const SizedBox(height: 16),
+                      const SizedBox(height: 16),
+                    ],
 
                     _buildFormField('Title', titleController, '', isDark),
                     const SizedBox(height: 16),
 
                     _buildFormField('Company', companyController, '', isDark),
+                    const SizedBox(height: 16),
+
+                    _buildFormField(
+                      'Company Logo URL (optional)',
+                      companyLogoUrlController,
+                      'https://',
+                      isDark,
+                    ),
                     const SizedBox(height: 16),
 
                     _buildFormField('Location', locationController, '', isDark),
@@ -691,44 +666,128 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                     ),
                     const SizedBox(height: 16),
 
-                    /// PAID SWITCH
-                    SwitchListTile(
-                      value: paidStatus,
-                      title: const Text('Paid Opportunity'),
-                      onChanged: (v) => setState(() => paidStatus = v),
+                    // Paid toggle
+                    Container(
+                      decoration: BoxDecoration(
+                        color: isDark
+                            ? AppColors.darkBackground
+                            : AppColors.inputBackground,
+                        borderRadius: BorderRadius.circular(AppColors.radius),
+                        border: Border.all(
+                          color: isDark
+                              ? AppColors.darkBorder
+                              : AppColors.inputBorder,
+                        ),
+                      ),
+                      child: SwitchListTile(
+                        value: paidStatus,
+                        title: Text(
+                          'Paid Opportunity',
+                          style: AppTextStyles.label.copyWith(
+                            color: primaryText,
+                          ),
+                        ),
+                        subtitle: Text(
+                          'Toggle if this opportunity offers compensation',
+                          style: AppTextStyles.caption.copyWith(
+                            color: mutedText,
+                          ),
+                        ),
+                        activeColor: activeColor,
+                        dense: true,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 4,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(AppColors.radius),
+                        ),
+                        onChanged: (v) => setState(() => paidStatus = v),
+                      ),
                     ),
 
                     const SizedBox(height: 16),
 
-                    /// DEADLINE PICKER
-                    GestureDetector(
-                      onTap: () async {
-                        final picked = await showDatePicker(
-                          context: context,
-                          initialDate: DateTime.now(),
-                          firstDate: DateTime.now(),
-                          lastDate: DateTime.now().add(
-                            const Duration(days: 365),
-                          ),
-                        );
-                        if (picked != null) {
-                          setState(() => selectedDeadline = picked);
-                        }
-                      },
-                      child: AbsorbPointer(
-                        child: _buildFormField(
+                    // Deadline picker
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
                           'Deadline',
-                          TextEditingController(
-                            text: selectedDeadline == null
-                                ? ''
-                                : DateFormat(
-                                    'yyyy-MM-dd',
-                                  ).format(selectedDeadline!),
+                          style: AppTextStyles.label.copyWith(
+                            color: primaryText,
                           ),
-                          '',
-                          isDark,
                         ),
-                      ),
+                        const SizedBox(height: 8),
+                        GestureDetector(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: selectedDeadline ?? DateTime.now(),
+                              firstDate: DateTime.now(),
+                              lastDate: DateTime.now().add(
+                                const Duration(days: 365),
+                              ),
+                              builder: (context, child) => Theme(
+                                data: Theme.of(context).copyWith(
+                                  colorScheme: ColorScheme.light(
+                                    primary: activeColor,
+                                    onPrimary: Colors.white,
+                                    surface: surfaceColor,
+                                    onSurface: primaryText,
+                                  ),
+                                ),
+                                child: child!,
+                              ),
+                            );
+                            if (picked != null) {
+                              setState(() => selectedDeadline = picked);
+                            }
+                          },
+                          child: Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 13,
+                            ),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? AppColors.darkBackground
+                                  : AppColors.inputBackground,
+                              borderRadius: BorderRadius.circular(
+                                AppColors.radius,
+                              ),
+                              border: Border.all(
+                                color: isDark
+                                    ? AppColors.darkBorder
+                                    : AppColors.inputBorder,
+                              ),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  Icons.calendar_today_rounded,
+                                  size: 16,
+                                  color: mutedText,
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  selectedDeadline == null
+                                      ? 'Select a date'
+                                      : DateFormat(
+                                          'MMM d, yyyy',
+                                        ).format(selectedDeadline!),
+                                  style: AppTextStyles.body.copyWith(
+                                    color: selectedDeadline == null
+                                        ? mutedText
+                                        : primaryText,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
 
                     const SizedBox(height: 16),
@@ -740,7 +799,6 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                       (v) => setState(() => selectedAudience = v!),
                       isDark,
                     ),
-
                     const SizedBox(height: 16),
 
                     _buildDropdownField(
@@ -754,92 +812,182 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                     if (applicationMethod == 'EXTERNAL') ...[
                       const SizedBox(height: 16),
                       _buildFormField(
-                        'External URL',
+                        'External Apply URL',
                         externalUrlController,
-                        '',
+                        'https://',
                         isDark,
                       ),
                     ],
 
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 28),
 
+                    Divider(
+                      color: isDark ? AppColors.darkDivider : AppColors.divider,
+                      height: 1,
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    // Action buttons
                     Row(
                       mainAxisAlignment: MainAxisAlignment.end,
                       children: [
-                        TextButton(
+                        OutlinedButton(
                           onPressed: () => Navigator.pop(context),
+                          style: OutlinedButton.styleFrom(
+                            fixedSize: const Size(110, 46),
+                            foregroundColor: isDark
+                                ? AppColors.darkTextSecondary
+                                : AppColors.textSecondary,
+                            textStyle: AppTextStyles.button,
+                            side: BorderSide(
+                              color: isDark
+                                  ? AppColors.darkBorder
+                                  : AppColors.border,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppColors.radius,
+                              ),
+                            ),
+                          ),
                           child: const Text('Cancel'),
                         ),
-                        const SizedBox(width: 16),
+                        const SizedBox(width: 12),
                         ElevatedButton(
-                          onPressed: () async {
-                            // Clear previous error
-                            setState(() {
-                              _formError = null;
-                            });
-
-                            // Validate form
-                            final validationError = _validateOpportunityForm();
-                            if (validationError != null) {
-                              setState(() {
-                                _formError = validationError;
-                              });
-                              return;
-                            }
-
-                            if (isEditing) {
-                              await ref
-                                  .read(opportunitiesProvider.notifier)
-                                  .updateOpportunity(opportunity!.id, {
-                                    'title': titleController.text.trim(),
-                                    'company_name': companyController.text
-                                        .trim(),
-                                    'location': locationController.text.trim(),
-                                    'description': descriptionController.text
-                                        .trim(),
-                                    'requiredskills': skillsController.text
-                                        .trim(),
-                                    'work_mode': selectedWorkMode,
-                                    'paidstatus': paidStatus,
-                                    'type': uiToDbType(selectedType),
-                                    'deadline': selectedDeadline!
-                                        .toIso8601String(),
-                                    'target_audience': selectedAudience,
-                                    'application_method': applicationMethod,
-                                    'external_apply_url':
-                                        applicationMethod == 'EXTERNAL'
-                                        ? externalUrlController.text.trim()
-                                        : null,
+                          onPressed: _isSubmitting
+                              ? null
+                              : () async {
+                                  setState(() {
+                                    _formError = null;
+                                    _isSubmitting = true;
                                   });
-                            } else {
-                              await ref
-                                  .read(opportunitiesProvider.notifier)
-                                  .addOpportunity({
-                                    'type': uiToDbType(selectedType),
-                                    'title': titleController.text.trim(),
-                                    'description': descriptionController.text
-                                        .trim(),
-                                    'company_name': companyController.text
-                                        .trim(),
-                                    'location': locationController.text.trim(),
-                                    'work_mode': selectedWorkMode,
-                                    'requiredskills': skillsController.text
-                                        .trim(),
-                                    'paidstatus': paidStatus,
-                                    'deadline': selectedDeadline!
-                                        .toIso8601String(),
-                                    'postedbyadminid': widget.adminId,
-                                    'target_audience': selectedAudience,
-                                    'application_method': applicationMethod,
-                                    'external_apply_url':
-                                        applicationMethod == 'EXTERNAL'
-                                        ? externalUrlController.text.trim()
-                                        : null,
-                                  });
-                            }
-                            Navigator.pop(context);
-                          },
-                          child: Text(isEditing ? 'Update' : 'Add'),
+
+                                  final validationError =
+                                      _validateOpportunityForm();
+                                  if (validationError != null) {
+                                    setState(() {
+                                      _formError = validationError;
+                                      _isSubmitting = false;
+                                    });
+                                    _formScrollController.animateTo(
+                                      0,
+                                      duration: const Duration(
+                                        milliseconds: 300,
+                                      ),
+                                      curve: Curves.easeOut,
+                                    );
+                                    return;
+                                  }
+
+                                  try {
+                                    if (isEditing) {
+                                      await ref
+                                          .read(opportunitiesProvider.notifier)
+                                          .updateOpportunity(opportunity!.id, {
+                                            'title': titleController.text
+                                                .trim(),
+                                            'company_name': companyController
+                                                .text
+                                                .trim(),
+                                            'company_logo_url':
+                                                companyLogoUrlController.text
+                                                    .trim()
+                                                    .isEmpty
+                                                ? null
+                                                : companyLogoUrlController.text
+                                                      .trim(),
+                                            'location': locationController.text
+                                                .trim(),
+                                            'description': descriptionController
+                                                .text
+                                                .trim(),
+                                            'requiredskills': skillsController
+                                                .text
+                                                .trim(),
+                                            'work_mode': selectedWorkMode,
+                                            'paidstatus': paidStatus,
+                                            'type': uiToDbType(selectedType),
+                                            'deadline': selectedDeadline!
+                                                .toIso8601String(),
+                                            'target_audience': selectedAudience,
+                                            'application_method':
+                                                applicationMethod,
+                                            'external_apply_url':
+                                                applicationMethod == 'EXTERNAL'
+                                                ? externalUrlController.text
+                                                      .trim()
+                                                : null,
+                                          });
+                                    } else {
+                                      await ref
+                                          .read(opportunitiesProvider.notifier)
+                                          .addOpportunity({
+                                            'type': uiToDbType(selectedType),
+                                            'title': titleController.text
+                                                .trim(),
+                                            'description': descriptionController
+                                                .text
+                                                .trim(),
+                                            'company_name': companyController
+                                                .text
+                                                .trim(),
+                                            'company_logo_url':
+                                                companyLogoUrlController.text
+                                                    .trim()
+                                                    .isEmpty
+                                                ? null
+                                                : companyLogoUrlController.text
+                                                      .trim(),
+                                            'location': locationController.text
+                                                .trim(),
+                                            'work_mode': selectedWorkMode,
+                                            'requiredskills': skillsController
+                                                .text
+                                                .trim(),
+                                            'paidstatus': paidStatus,
+                                            'deadline': selectedDeadline!
+                                                .toIso8601String(),
+                                            'postedbyadminid': widget.adminId,
+                                            'target_audience': selectedAudience,
+                                            'application_method':
+                                                applicationMethod,
+                                            'external_apply_url':
+                                                applicationMethod == 'EXTERNAL'
+                                                ? externalUrlController.text
+                                                      .trim()
+                                                : null,
+                                          });
+                                    }
+                                    Navigator.pop(context);
+                                  } finally {
+                                    if (mounted) {
+                                      setState(() => _isSubmitting = false);
+                                    }
+                                  }
+                                },
+                          style: ElevatedButton.styleFrom(
+                            fixedSize: const Size(110, 46),
+                            backgroundColor: activeColor,
+                            foregroundColor: Colors.white,
+                            textStyle: AppTextStyles.button,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(
+                                AppColors.radius,
+                              ),
+                            ),
+                          ),
+                          child: _isSubmitting
+                              ? SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                    color: Colors.white,
+                                  ),
+                                )
+                              : Text(isEditing ? 'Update' : 'Add'),
                         ),
                       ],
                     ),
@@ -853,6 +1001,9 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
     );
   }
 
+  // ─────────────────────────────────────────────
+  // FORM FIELD HELPER
+  // ─────────────────────────────────────────────
   Widget _buildFormField(
     String label,
     TextEditingController controller,
@@ -875,40 +1026,49 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
           controller: controller,
           maxLines: maxLines,
           keyboardType: keyboardType,
+          style: AppTextStyles.body.copyWith(
+            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          ),
           decoration: InputDecoration(
-            hintText: hintText,
-            hintStyle: TextStyle(
-              color: isDark ? AppColors.darkTextSecondary : AppColors.inputHint,
+            hintText: hintText.isEmpty ? null : hintText,
+            hintStyle: AppTextStyles.body.copyWith(
+              color: isDark ? AppColors.darkTextMuted : AppColors.inputHint,
             ),
             filled: true,
             fillColor: isDark
-                ? AppColors.darkDivider
+                ? AppColors.darkBackground
                 : AppColors.inputBackground,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(
-                color: isDark ? AppColors.darkDivider : AppColors.inputBorder,
-              ),
+            contentPadding: const EdgeInsets.symmetric(
+              horizontal: 14,
+              vertical: 13,
             ),
             enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
+              borderRadius: BorderRadius.circular(AppColors.radius),
               borderSide: BorderSide(
-                color: isDark ? AppColors.darkDivider : AppColors.inputBorder,
+                color: isDark ? AppColors.darkBorder : AppColors.inputBorder,
               ),
             ),
             focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(8),
-              borderSide: BorderSide(color: AppColors.interactive, width: 1.5),
+              borderRadius: BorderRadius.circular(AppColors.radius),
+              borderSide: BorderSide(
+                color: isDark
+                    ? AppColors.darkInteractive
+                    : AppColors.interactive,
+                width: 1.5,
+              ),
             ),
-          ),
-          style: TextStyle(
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            border: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(AppColors.radius),
+            ),
           ),
         ),
       ],
     );
   }
 
+  // ─────────────────────────────────────────────
+  // DROPDOWN FIELD HELPER
+  // ─────────────────────────────────────────────
   Widget _buildDropdownField(
     String label,
     String value,
@@ -927,41 +1087,69 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
         ),
         const SizedBox(height: 8),
         Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12),
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           decoration: BoxDecoration(
-            color: isDark ? AppColors.darkDivider : AppColors.inputBackground,
-            borderRadius: BorderRadius.circular(8),
+            color: isDark
+                ? AppColors.darkBackground
+                : AppColors.inputBackground,
+            borderRadius: BorderRadius.circular(AppColors.radius),
             border: Border.all(
-              color: isDark ? AppColors.darkDivider : AppColors.inputBorder,
+              color: isDark ? AppColors.darkBorder : AppColors.inputBorder,
             ),
           ),
-          child: DropdownButton<String>(
-            value: value,
-            isExpanded: true,
-            dropdownColor: isDark ? AppColors.darkCard : AppColors.card,
-            style: TextStyle(
-              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+          child: DropdownButtonHideUnderline(
+            child: DropdownButton<String>(
+              value: value,
+              isExpanded: true,
+              dropdownColor: isDark ? AppColors.darkCard : AppColors.card,
+              icon: Icon(
+                Icons.keyboard_arrow_down_rounded,
+                size: 20,
+                color: isDark ? AppColors.darkTextMuted : AppColors.textMuted,
+              ),
+              style: AppTextStyles.body.copyWith(
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
+              onChanged: onChanged,
+              items: items
+                  .map(
+                    (item) => DropdownMenuItem<String>(
+                      value: item,
+                      child: Text(
+                        item,
+                        style: AppTextStyles.body.copyWith(
+                          color: isDark
+                              ? AppColors.darkTextPrimary
+                              : AppColors.textPrimary,
+                        ),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
-            items: items.map((String item) {
-              return DropdownMenuItem<String>(value: item, child: Text(item));
-            }).toList(),
-            onChanged: onChanged,
-            underline: SizedBox(), // Remove the underline
           ),
         ),
       ],
     );
   }
 
+  // ─────────────────────────────────────────────
+  // DISPOSE
+  // ─────────────────────────────────────────────
   @override
   void dispose() {
     titleController.dispose();
     companyController.dispose();
+    companyLogoUrlController.dispose();
     descriptionController.dispose();
     locationController.dispose();
     skillsController.dispose();
+    externalUrlController.dispose();
     _horizontalController.dispose();
     _verticalController.dispose();
+    _formScrollController.dispose();
     super.dispose();
   }
 }

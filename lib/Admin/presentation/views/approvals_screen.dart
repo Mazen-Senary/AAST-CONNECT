@@ -16,6 +16,7 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:html' as html;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:file_picker/file_picker.dart';
+
 class ApprovalsScreen extends ConsumerStatefulWidget {
   const ApprovalsScreen({super.key});
 
@@ -486,13 +487,64 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
             color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
         ),
-        actions: [const SizedBox(width: 8), const SizedBox(width: 12)],
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () => notifier.loadAll(),
+            tooltip: 'Refresh',
+          ),
+          const SizedBox(width: 8),
+        ],
       ),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (state.hasNewData)
+              GestureDetector(
+                onTap: () {
+                  notifier.dismissNewData();
+                  notifier.loadAll();
+                },
+                child: Container(
+                  width: double.infinity,
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.interactive.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.interactive),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(
+                        Icons.notifications_active,
+                        color: AppColors.interactive,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'New data available — tap to refresh',
+                          style: AppTextStyles.label.copyWith(
+                            color: AppColors.interactive,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      Icon(
+                        Icons.refresh,
+                        color: AppColors.interactive,
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             // Section Selector
             _buildSectionSelector(isDark, state, notifier),
             const SizedBox(height: 24),
@@ -501,31 +553,68 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
             _buildStatusTabs(isDark, state, notifier),
             const SizedBox(height: 20),
 
+            // Sort Bar (applications only)
+            if (state.selectedSection == 'applications') ...[
+              _buildApplicationSortBar(isDark, state, notifier),
+              const SizedBox(height: 12),
+            ],
+
             // Content
             Expanded(
               child: state.selectedSection == 'applications'
                   ? (state.filteredApplications.isEmpty
-                        ? _emptyState('applications', isDark)
-                        : ListView.separated(
-                            itemCount: state.filteredApplications.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 16),
-                            itemBuilder: (_, index) => _buildApplicationCard(
-                              state.filteredApplications[index],
-                              isDark,
-                              notifier,
+                        ? RefreshIndicator(
+                            onRefresh: () => notifier.loadAll(),
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: SizedBox(
+                                height: 400,
+                                child: _emptyState('applications', isDark),
+                              ),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () => notifier.loadAll(),
+                            child: ListView.separated(
+                              itemCount: state.filteredApplications.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 16),
+                              itemBuilder: (_, index) {
+                                final app = state.filteredApplications[index];
+
+                                return KeyedSubtree(
+                                  key: ValueKey(app.applicationId),
+                                  child: _buildApplicationCard(
+                                    app,
+                                    isDark,
+                                    notifier,
+                                  ),
+                                );
+                              },
                             ),
                           ))
                   : (state.filteredTrainingHours.isEmpty
-                        ? _emptyState('training', isDark)
-                        : ListView.separated(
-                            itemCount: state.filteredTrainingHours.length,
-                            separatorBuilder: (_, __) =>
-                                const SizedBox(height: 16),
-                            itemBuilder: (_, index) => _buildTrainingCard(
-                              state.filteredTrainingHours[index],
-                              isDark,
-                              notifier,
+                        ? RefreshIndicator(
+                            onRefresh: () => notifier.loadAll(),
+                            child: SingleChildScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(),
+                              child: SizedBox(
+                                height: 400,
+                                child: _emptyState('applications', isDark),
+                              ),
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: () => notifier.loadAll(),
+                            child: ListView.separated(
+                              itemCount: state.filteredTrainingHours.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 16),
+                              itemBuilder: (_, index) => _buildTrainingCard(
+                                state.filteredTrainingHours[index],
+                                isDark,
+                                notifier,
+                              ),
                             ),
                           )),
             ),
@@ -719,14 +808,21 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
 
           const SizedBox(height: 8),
 
-          _buildDetailItem(
+          _buildLabeledItem(
             Icons.badge,
-            'College ID: ${record.collegeId}',
+            'College ID',
+            record.collegeId,
             isDark,
           ),
-
-          _buildDetailItem(
+          _buildLabeledItem(
+            Icons.workspace_premium,
+            'GPA',
+            record.gpa?.toStringAsFixed(2) ?? 'N/A',
+            isDark,
+          ),
+          _buildLabeledItem(
             Icons.calendar_today,
+            'Date Applied',
             DateFormat('MMM dd, yyyy').format(record.submissionDate),
             isDark,
           ),
@@ -734,39 +830,24 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
           const SizedBox(height: 12),
 
           if (record.expanded) ...[
-  const Divider(),
-
-  _buildDetailItem(
-    Icons.description,
-    record.coverLetter ?? 'No cover letter',
-    isDark,
-  ),
-
-  const SizedBox(height: 8),
-
-  if (record.documentId != null)
-    GestureDetector(
-      onTap: () {
-        _openCV(record.documentId!);
-      },
-      child: Row(
-        children: [
-          Icon(Icons.picture_as_pdf, color: AppColors.interactive),
-          const SizedBox(width: 6),
-          Text(
-            'View CV',
-            style: TextStyle(
-              color: AppColors.interactive,
-              decoration: TextDecoration.underline,
-              fontWeight: FontWeight.w500,
+            const Divider(),
+            _buildLabeledItem(
+              Icons.description,
+              'Cover Letter',
+              record.coverLetter ?? 'No cover letter',
+              isDark,
             ),
-          ),
-        ],
-      ),
-    ),
-],
-
-
+            if (record.documentId != null) ...[
+              const SizedBox(height: 4),
+              _buildLabeledLink(
+                Icons.picture_as_pdf,
+                'CV',
+                'View CV',
+                () => _openCV(record.documentId!),
+                isDark,
+              ),
+            ],
+          ],
           TextButton(
             onPressed: () {
               notifier.toggleApplicationExpanded(record.applicationId);
@@ -828,76 +909,72 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
       ).showSnackBar(SnackBar(content: Text('Saved to:\n$filePath')));
     }
   }
-Future<void> _openCV(String documentId) async {
-  try {
-    final supabase = Supabase.instance.client;
 
-    final response = await supabase
-        .from('document')
-        .select('filepath')
-        .eq('documentid', documentId)
-        .single();
+  Future<void> _openCV(String documentId) async {
+    try {
+      final supabase = Supabase.instance.client;
 
-    final fileUrl = response['filepath']; // 👈 already FULL URL
+      final response = await supabase
+          .from('document')
+          .select('filepath')
+          .eq('documentid', documentId)
+          .single();
 
-    if (kIsWeb) {
-      html.window.open(fileUrl, '_blank'); // ✅ open directly
-    } else {
-      await downloadFile(fileUrl);
+      final fileUrl = response['filepath']; // 👈 already FULL URL
+
+      if (kIsWeb) {
+        html.window.open(fileUrl, '_blank'); // ✅ open directly
+      } else {
+        await downloadFile(fileUrl);
+      }
+    } catch (e) {
+      debugPrint('Error opening CV: $e');
     }
-  } catch (e) {
-    debugPrint('Error opening CV: $e');
   }
-}
-Future<void> _uploadCertificate(Training record) async {
-  final result = await FilePicker.platform.pickFiles(
-    type: FileType.custom,
-    allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-    withData: true,
-  );
 
-  if (result == null || result.files.single.bytes == null) return;
-
-  final file = result.files.single;
-  final supabase = Supabase.instance.client;
-  final path = 'certificates/${record.recordId}/${file.name}';
-
-  // Upload to storage
-  await supabase.storage
-      .from('certificates')
-      .uploadBinary(path, file.bytes!);
-
-  // Get public URL
-  final url = supabase.storage
-      .from('certificates')
-      .getPublicUrl(path);
-
-  // Save URL to DB
-  await supabase
-      .from('trainingrecord')
-      .update({'certificate_url': url})
-      .eq('recordid', record.recordId);
-
-  // Refresh UI
-  ref.read(approvalsProvider.notifier).loadAll();
-
-  if (mounted) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Certificate uploaded!')),
+  Future<void> _uploadCertificate(Training record) async {
+    final result = await FilePicker.platform.pickFiles(
+      type: FileType.custom,
+      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+      withData: true,
     );
+
+    if (result == null || result.files.single.bytes == null) return;
+
+    final file = result.files.single;
+    final supabase = Supabase.instance.client;
+    final path = 'certificates/${record.recordId}/${file.name}';
+
+    // Upload to storage
+    await supabase.storage.from('certificates').uploadBinary(path, file.bytes!);
+
+    // Get public URL
+    final url = supabase.storage.from('certificates').getPublicUrl(path);
+
+    // Save URL to DB
+    await supabase
+        .from('trainingrecord')
+        .update({'certificate_url': url})
+        .eq('recordid', record.recordId);
+
+    // Refresh UI
+    ref.read(approvalsProvider.notifier).loadAll();
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Certificate uploaded!')));
+    }
   }
-}
 
   Widget _buildTrainingCard(
     Training record,
     bool isDark,
     ApprovalsNotifier notifier,
   ) {
-    final statusColor = record.status == 'PENDING'
-        ? AppColors.accentInfo
-        : record.status == 'APPROVED'
-        ? AppColors.accentSuccess
-        : AppColors.accentAlert;
+    final completed = record.completedTrainingHours;
+    final submitted = record.hoursSubmitted;
+    const total = 80;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -920,95 +997,81 @@ Future<void> _uploadCertificate(Training record) async {
 
           const SizedBox(height: 16),
 
-          // SUMMARY (ALWAYS)
-          _buildDetailItem(
-            Icons.access_time,
-            '${record.hoursSubmitted} hours',
+          _buildLabeledItem(
+            Icons.badge,
+            'ID',
+            record.collegeId ?? 'N/A',
             isDark,
           ),
-
-          _buildDetailItem(
+          _buildLabeledItem(
+            Icons.access_time,
+            'Training Hours',
+            '${record.hoursSubmitted} hrs',
+            isDark,
+          ),
+          _buildLabeledItem(
             Icons.calendar_today,
+            'Date Applied',
             DateFormat('MMM dd, yyyy').format(record.createdAt),
             isDark,
           ),
-
           // EXPANDED CONTENT
           if (record.expanded) ...[
             const Divider(height: 32),
 
-            _buildDetailItem(Icons.business, record.companyName, isDark),
-
-            _buildDetailItem(
+            // AFTER divider in expanded
+            _buildLabeledItem(
+              Icons.business,
+              'Company Name',
+              record.companyName,
+              isDark,
+            ),
+            _buildLabeledItem(
               Icons.supervisor_account,
+              'Supervisor Name',
               record.supervisorName,
               isDark,
             ),
-
-            _buildDetailItem(
+            _buildLabeledItem(
               Icons.date_range,
-              '${DateFormat.yMMMd().format(record.startDate)} → '
-              '${DateFormat.yMMMd().format(record.endDate)}',
+              'Training Duration',
+              '${DateFormat.yMMMd().format(record.startDate)} → ${DateFormat.yMMMd().format(record.endDate)}',
               isDark,
             ),
 
-            if (record.proofImageUrl != null && record.proofImageUrl!.isNotEmpty) ...[
-  const SizedBox(height: 12),
-  GestureDetector(
-    onTap: () => html.window.open(record.proofImageUrl!, '_blank'),
-    child: Row(
-      children: [
-        Icon(Icons.image, color: AppColors.interactive),
-        const SizedBox(width: 6),
-        Text(
-          'View Proof Image',
-          style: TextStyle(
-            color: AppColors.interactive,
-            decoration: TextDecoration.underline,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    ),
-  ),
-],
-
-if (record.certificateUrl != null && record.certificateUrl!.isNotEmpty) ...[
-  const SizedBox(height: 8),
-  GestureDetector(
-    onTap: () => html.window.open(record.certificateUrl!, '_blank'),
-    child: Row(
-      children: [
-        Icon(Icons.workspace_premium, color: AppColors.interactive),
-        const SizedBox(width: 6),
-        Text(
-          'View Certificate',
-          style: TextStyle(
-            color: AppColors.interactive,
-            decoration: TextDecoration.underline,
-            fontWeight: FontWeight.w500,
-          ),
-        ),
-      ],
-    ),
-  ),
-],
+            if (record.proofImageUrl != null &&
+                record.proofImageUrl!.isNotEmpty) ...[
+              _buildLabeledLink(
+                Icons.image,
+                'Proof of Training',
+                'View (signature & stamp)',
+                () => html.window.open(record.proofImageUrl!, '_blank'),
+                isDark,
+              ),
+            ],
+            if (record.certificateUrl != null &&
+                record.certificateUrl!.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              _buildLabeledLink(
+                Icons.workspace_premium,
+                'Certificate',
+                'View Certificate',
+                () => html.window.open(record.certificateUrl!, '_blank'),
+                isDark,
+              ),
+            ],
           ],
 
           const SizedBox(height: 12),
 
-          // SHOW MORE / LESS - ALWAYS AT BOTTOM
           TextButton(
-            onPressed: () {
-              notifier.toggleTrainingExpanded(record.recordId);
-            },
+            onPressed: () => notifier.toggleTrainingExpanded(record.recordId),
             child: Text(
               record.expanded ? 'Show less' : 'Show more',
               style: TextStyle(color: AppColors.interactive),
             ),
           ),
 
-          // ✅ ACCEPT / REJECT (VISIBLE WHEN PENDING ONLY)
           if (record.status == 'PENDING') ...[
             const SizedBox(height: 16),
             Row(
@@ -1037,10 +1100,92 @@ if (record.certificateUrl != null && record.certificateUrl!.isNotEmpty) ...[
               ],
             ),
           ],
-
-
         ],
       ),
+    );
+  }
+
+  // Helper: labeled row with icon + bold label + value
+  Widget _buildLabeledItem(
+    IconData icon,
+    String label,
+    String value,
+    bool isDark,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(
+            icon,
+            size: 18,
+            color: isDark
+                ? AppColors.darkTextSecondary
+                : AppColors.textSecondary,
+          ),
+          const SizedBox(width: 12),
+          RichText(
+            text: TextSpan(
+              style: AppTextStyles.body.copyWith(
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.textSecondary,
+              ),
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: const TextStyle(fontWeight: FontWeight.w600),
+                ),
+                TextSpan(text: value),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // Helper: labeled clickable link row
+  Widget _buildLabeledLink(
+    IconData icon,
+    String label,
+    String linkText,
+    VoidCallback onTap,
+    bool isDark,
+  ) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: AppColors.interactive),
+        const SizedBox(width: 12),
+        RichText(
+          text: TextSpan(
+            style: AppTextStyles.body,
+            children: [
+              TextSpan(
+                text: '$label: ',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+        ),
+        GestureDetector(
+          onTap: onTap,
+          child: Text(
+            linkText,
+            style: TextStyle(
+              color: AppColors.interactive,
+              decoration: TextDecoration.underline,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -1064,6 +1209,112 @@ if (record.certificateUrl != null && record.certificateUrl!.isNotEmpty) ...[
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildApplicationSortBar(
+    bool isDark,
+    ApprovalsState state,
+    ApprovalsNotifier notifier,
+  ) {
+    return Row(
+      children: [
+        Icon(
+          Icons.sort,
+          size: 18,
+          color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'Sort by:',
+          style: AppTextStyles.label.copyWith(
+            color: isDark
+                ? AppColors.darkTextSecondary
+                : AppColors.textSecondary,
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _sortChip(
+                  'Date ↑',
+                  ApplicationSortOption.dateAsc,
+                  state,
+                  notifier,
+                  isDark,
+                ),
+                const SizedBox(width: 8),
+                _sortChip(
+                  'Date ↓',
+                  ApplicationSortOption.dateDesc,
+                  state,
+                  notifier,
+                  isDark,
+                ),
+                const SizedBox(width: 8),
+                _sortChip(
+                  'GPA ↑',
+                  ApplicationSortOption.gpaAsc,
+                  state,
+                  notifier,
+                  isDark,
+                ),
+                const SizedBox(width: 8),
+                _sortChip(
+                  'GPA ↓',
+                  ApplicationSortOption.gpaDesc,
+                  state,
+                  notifier,
+                  isDark,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _sortChip(
+    String label,
+    ApplicationSortOption option,
+    ApprovalsState state,
+    ApprovalsNotifier notifier,
+    bool isDark,
+  ) {
+    final selected = state.applicationSort == option;
+    return GestureDetector(
+      onTap: () => notifier.updateApplicationSort(
+        selected ? ApplicationSortOption.none : option,
+      ),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+        decoration: BoxDecoration(
+          color: selected
+              ? AppColors.interactive.withOpacity(0.15)
+              : (isDark ? AppColors.darkCard : AppColors.card),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: selected
+                ? AppColors.interactive
+                : (isDark ? AppColors.darkDivider : AppColors.border),
+          ),
+        ),
+        child: Text(
+          label,
+          style: AppTextStyles.label.copyWith(
+            color: selected
+                ? AppColors.interactive
+                : (isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary),
+            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+          ),
+        ),
+      ),
     );
   }
 

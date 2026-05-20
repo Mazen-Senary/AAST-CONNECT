@@ -15,11 +15,8 @@ class OpportunityCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 👉 paste your FULL card UI here
-    // replace direct calls with:
-    // onDelete()
-    // onEdit()
 
-    return Container(); // your actual UI
+
+    return Container(); 
   }
 }

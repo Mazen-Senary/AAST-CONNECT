@@ -14,6 +14,7 @@ class Opportunity {
   final String? externalApplyUrl;
   final String? description;
   final String? requiredSkills;
+  final String? companyLogoUrl;
 
   const Opportunity({
     required this.id,
@@ -31,5 +32,6 @@ class Opportunity {
     this.externalApplyUrl,
     this.description,
     this.requiredSkills,
+    this.companyLogoUrl,
   });
 }
