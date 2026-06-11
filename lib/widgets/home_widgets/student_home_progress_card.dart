@@ -15,8 +15,21 @@ class StudentHomeProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    double percentage = (completedHours / totalHours) * 100;
-    double remainingHours = totalHours - completedHours;
+    // ✅ FIX: Cap displayed completed hours at required hours
+    // Logic: If student completes more hours than required, display only the required amount
+    double displayedCompletedHours = completedHours > totalHours ? totalHours : completedHours;
+    
+    // ✅ FIX: Calculate percentage and cap at 100%
+    double percentage = (displayedCompletedHours / totalHours) * 100;
+    if (percentage > 100) {
+      percentage = 100.0;
+    }
+    
+    // ✅ FIX: Calculate remaining hours and show 0 when at 100%
+    double remainingHours = totalHours - displayedCompletedHours;
+    if (percentage >= 100) {
+      remainingHours = 0;
+    }
 
     return RoundedContainer(
       backgroundColor: backgroundColor ?? const Color(0xffEAD2B7),
@@ -41,7 +54,7 @@ class StudentHomeProgressCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                "$completedHours of $totalHours hours completed",
+                "$displayedCompletedHours of $totalHours hours completed",
                 style: TextStyle(
                   fontSize: 14,
                   color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
@@ -61,7 +74,8 @@ class StudentHomeProgressCard extends StatelessWidget {
           ClipRRect(
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
-              value: completedHours / totalHours,
+              // ✅ FIX: Clamp progress value to 0-1 range using displayed hours
+              value: (displayedCompletedHours / totalHours).clamp(0.0, 1.0),
               minHeight: 10,
               backgroundColor: Colors.white,
               color: const Color(0xFF206E54),

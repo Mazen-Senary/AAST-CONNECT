@@ -1,3 +1,4 @@
+import 'package:aast_connect/widgets/custom_navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
@@ -53,11 +54,12 @@ class MainNavigation extends StatefulWidget {
 
 class _MainNavigationState extends State<MainNavigation> {
   int _currentIndex = 0;
-  int _previousIndex = 0; // track previous tab
+  int _previousIndex = 0;
   int _unreadCount = 0;
-  late final RealtimeChannel _notifChannel;
+
+  RealtimeChannel? _notifChannel;
   final NotificationService _notificationService = NotificationService();
-  final int _studentId = 5; // Replace with actual userId when auth is implemented
+  final int _studentId = 5;
 
   @override
   void initState() {
@@ -69,43 +71,53 @@ class _MainNavigationState extends State<MainNavigation> {
   Future<void> _loadUnreadCount() async {
     try {
       final count = await _notificationService.getUnreadCount(_studentId);
+      if (!mounted) return;
       setState(() => _unreadCount = count);
     } catch (e) {
-      print('Error loading unread count: $e');
+      debugPrint('Error loading unread count: $e');
     }
   }
 
   void _listenForNotifications() {
     _notifChannel =
         _notificationService.listenToNotifications(_studentId, (payload) {
-      setState(() => _unreadCount++);
+          if (!mounted) return;
 
-      // Show snackbar with notification
-      if (mounted) {
-        final message = payload['message'] ?? 'New notification';
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            margin: const EdgeInsets.all(16),
-            behavior: SnackBarBehavior.floating,
-            backgroundColor: Colors.transparent,
-            elevation: 0,
-            content: AwesomeSnackbarContent(
-              title: 'New Notification',
-              message: message,
-              contentType: ContentType.success,
-            ),
-            action: SnackBarAction(
-              label: 'View',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const StudentNotificationsScreen(),
-                ),
+          setState(() => _unreadCount++);
+
+          final message = payload['message'] ?? 'New notification';
+
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              margin: const EdgeInsets.all(16),
+              behavior: SnackBarBehavior.floating,
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              content: AwesomeSnackbarContent(
+                title: 'New Notification',
+                message: message,
+                contentType: ContentType.success,
+              ),
+              action: SnackBarAction(
+                label: 'View',
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const StudentNotificationsScreen(),
+                    ),
+                  );
+                },
               ),
             ),
-          ),
-        );
-      }
+          );
+        });
+  }
+
+  void _changeTab(int index) {
+    setState(() {
+      _previousIndex = _currentIndex;
+      _currentIndex = index;
     });
   }
 
@@ -117,7 +129,7 @@ class _MainNavigationState extends State<MainNavigation> {
 
   @override
   void dispose() {
-    _notifChannel.unsubscribe();
+    _notifChannel?.unsubscribe();
     super.dispose();
   }
 
@@ -132,45 +144,44 @@ class _MainNavigationState extends State<MainNavigation> {
             unreadNotificationCount: _unreadCount,
           ),
           const StudentOpportunities(),
-          // pass shouldRefresh=true when switching TO profile tab
-          StudentProfile(shouldRefresh: _currentIndex == 2 && _previousIndex != 2),
+          StudentProfile(
+            shouldRefresh: _currentIndex == 2 && _previousIndex != 2,
+          ),
           const StudentSupport(),
         ],
       ),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        type: BottomNavigationBarType.fixed,
-        selectedItemColor: Theme.of(context).colorScheme.primary,
-        unselectedItemColor: Colors.grey,
-        backgroundColor: Theme.of(context).colorScheme.surface,
-        onTap: (index) {
-          setState(() {
-            _previousIndex = _currentIndex;
-            _currentIndex = index;
-          });
-        },
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: "Home",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.work_outline),
-            activeIcon: Icon(Icons.work),
-            label: "Training",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: "Profile",
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.help_outline),
-            activeIcon: Icon(Icons.help),
-            label: "Support",
-          ),
-        ],
+
+      bottomNavigationBar: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            CustomNavItem(
+              icon: Icons.home_outlined,
+              label: 'Home',
+              isSelected: _currentIndex == 0,
+              onTap: () => _changeTab(0),
+            ),
+            CustomNavItem(
+              icon: Icons.work_outline,
+              label: 'Training',
+              isSelected: _currentIndex == 1,
+              onTap: () => _changeTab(1),
+            ),
+            CustomNavItem(
+              icon: Icons.person_outline,
+              label: 'Profile',
+              isSelected: _currentIndex == 2,
+              onTap: () => _changeTab(2),
+            ),
+            CustomNavItem(
+              icon: Icons.help_outline,
+              label: 'Support',
+              isSelected: _currentIndex == 3,
+              onTap: () => _changeTab(3),
+            ),
+          ],
+        ),
       ),
     );
   }

@@ -66,15 +66,6 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
       // load vacancies
       final vacancies = await _vacancyService.getStudentVacancies();
 
-      // Debug: Log external vacancies
-      for (var v in vacancies) {
-        if (v.applicationMethod == 'EXTERNAL') {
-          print('DEBUG: Loaded external vacancy: "${v.title}"');
-          print('  - Application Method: ${v.applicationMethod}');
-          print('  - External URL: "${v.externalApplyUrl}"');
-        }
-      }
-
       // load user applications
       _applications = await _vacancyService.getUserApplications(
         _currentUserId!,
@@ -197,14 +188,6 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
           );
           program['applied'] = hasApplied;
 
-          // Debug logging
-          if (vacancy.applicationMethod == 'EXTERNAL') {
-            print('DEBUG: External vacancy "${vacancy.title}"');
-            print('  - externalApplyUrl: "${vacancy.externalApplyUrl}"');
-            print(
-              '  - program externalApplyUrl: "${program['externalApplyUrl']}"',
-            );
-          }
 
           return program;
         })
@@ -520,3 +503,206 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
     );
   }
 }
+
+
+// //new program card with save bookmark button and applied state
+// import 'package:flutter/material.dart';
+//
+// import '../../constants/app_colors.dart';
+// import '../../widgets/rounded_container.dart';
+//
+// class StudentOpportunitiesProgramCard extends StatelessWidget {
+//   final Map<String, dynamic> program;
+//   final VoidCallback onViewDetails;
+//   final VoidCallback onApply;
+//   final VoidCallback? onSave;
+//   final bool isSaved;
+//
+//   const StudentOpportunitiesProgramCard({
+//     super.key,
+//     required this.program,
+//     required this.onViewDetails,
+//     required this.onApply,
+//     this.onSave,
+//     this.isSaved = false,
+//   });
+//
+//   Color _getColorForCategory(String category) {
+//     return AppColors.getCategoryColor(category).withOpacity(0.3);
+//   }
+//
+//   IconData _getIconForCategory(String category) {
+//     switch (category.toLowerCase()) {
+//       case 'development':
+//         return Icons.computer;
+//       case 'it':
+//         return Icons.storage;
+//       case 'security':
+//         return Icons.security;
+//       case 'design':
+//         return Icons.design_services;
+//       case 'data':
+//         return Icons.analytics;
+//       case 'cloud':
+//         return Icons.cloud;
+//       case 'ai':
+//         return Icons.psychology;
+//       default:
+//         return Icons.work_outline;
+//     }
+//   }
+//
+//   // 👉 1. Extracted your existing icon design into this helper method
+//   Widget _buildFallbackIcon(String category) {
+//     return Container(
+//       padding: const EdgeInsets.all(10),
+//       decoration: BoxDecoration(
+//         color: _getColorForCategory(category),
+//         borderRadius: BorderRadius.circular(12),
+//       ),
+//       child: Icon(_getIconForCategory(category), size: 24),
+//     );
+//   }
+//
+//   // 👉 2. Added this logic to decide between the image and the fallback
+//   Widget _buildCompanyLogo() {
+//     final logoUrl = program['companyLogoUrl'] as String?;
+//
+//     if (logoUrl != null && logoUrl.isNotEmpty) {
+//       return Container(
+//         width: 44, // Matches the approximate size of your icon + padding
+//         height: 44,
+//         decoration: BoxDecoration(
+//           borderRadius: BorderRadius.circular(12),
+//         ),
+//         clipBehavior: Clip.hardEdge,
+//         child: Image.network(
+//           logoUrl,
+//           fit: BoxFit.cover,
+//           // If the image link is broken, fall back to the icon
+//           errorBuilder: (context, error, stackTrace) =>
+//               _buildFallbackIcon(program['category'] ?? ''),
+//         ),
+//       );
+//     }
+//     // If no URL exists, show your default icon
+//     return _buildFallbackIcon(program['category'] ?? '');
+//   }
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return RoundedContainer(
+//       margin: const EdgeInsets.only(bottom: 15),
+//       child: Column(
+//         crossAxisAlignment: CrossAxisAlignment.start,
+//         children: [
+//           Row(
+//             children: [
+//               _buildCompanyLogo(), // 👉 3. Replaced your static Container with the new logo method
+//               const SizedBox(width: 12),
+//               Expanded(
+//                 child: Column(
+//                   crossAxisAlignment: CrossAxisAlignment.start,
+//                   children: [
+//                     Text(
+//                       program['title'],
+//                       style: const TextStyle(
+//                         fontSize: 18,
+//                         fontWeight: FontWeight.bold,
+//                         color: Colors.black87,
+//                       ),
+//                     ),
+//                     Text(
+//                       program['company'],
+//                       style: const TextStyle(color: Colors.grey),
+//                     ),
+//                   ],
+//                 ),
+//               ),
+//               // save bookmark button
+//               IconButton(
+//                 icon: Icon(
+//                   isSaved ? Icons.bookmark : Icons.bookmark_border,
+//                   color: isSaved ? AppColors.lightPrimary : Colors.grey,
+//                 ),
+//                 onPressed: onSave,
+//               ),
+//             ],
+//           ),
+//           const SizedBox(height: 15),
+//           Row(
+//             children: [
+//               Container(
+//                 padding: const EdgeInsets.symmetric(
+//                   horizontal: 12,
+//                   vertical: 6,
+//                 ),
+//                 decoration: BoxDecoration(
+//                   color: AppColors.documentBackground,
+//                   borderRadius: BorderRadius.circular(8),
+//                 ),
+//                 child: Text(
+//                   program['type'],
+//                   style: const TextStyle(
+//                     color: AppColors.lightPrimary,
+//                     fontWeight: FontWeight.w600,
+//                   ),
+//                 ),
+//               ),
+//               const SizedBox(width: 10),
+//               Expanded(
+//                 child: Text(
+//                   "${program['hours']} • ${program['location']}",
+//                   style: const TextStyle(color: Colors.grey),
+//                   overflow: TextOverflow.ellipsis,
+//                   maxLines: 1,
+//                 ),
+//               ),
+//             ],
+//           ),
+//           const SizedBox(height: 20),
+//           Row(
+//             children: [
+//               Expanded(
+//                 child: OutlinedButton(
+//                   onPressed: onViewDetails,
+//                   style: OutlinedButton.styleFrom(
+//                     padding: const EdgeInsets.symmetric(vertical: 12),
+//                     side: BorderSide(color: AppColors.lightPrimary),
+//                   ),
+//                   child: const Text(
+//                     'View Details',
+//                     style: TextStyle(color: AppColors.lightPrimary),
+//                   ),
+//                 ),
+//               ),
+//               const SizedBox(width: 10),
+//               Expanded(
+//                 child: ElevatedButton(
+//                   style: ElevatedButton.styleFrom(
+//                     backgroundColor: program['applied']
+//                         ? Colors.grey.shade200
+//                         : AppColors.lightSecondary,
+//                     foregroundColor: program['applied']
+//                         ? Colors.black87
+//                         : Colors.white,
+//                     padding: const EdgeInsets.symmetric(vertical: 12),
+//                   ),
+//                   onPressed: program['applied'] ? null : onApply,
+//                   child: Text(
+//                     program['applied']
+//                         ? 'Applied'
+//                         : (program['applicationMethod'] == 'EXTERNAL'
+//                         ? 'Apply on Website'
+//                         : 'Apply Now'),
+//                     style: const TextStyle(fontWeight: FontWeight.bold),
+//                   ),
+//                 ),
+//               ),
+//             ],
+//           ),
+//         ],
+//       ),
+//     );
+//   }
+// }

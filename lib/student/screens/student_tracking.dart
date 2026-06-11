@@ -25,15 +25,13 @@ class StudentTrackingScreen extends StatefulWidget {
 }
 
 class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
-  static const int _fallbackStudentId =
-      5; // this is just for tetsing, replace with actual student ID from auth/session
-
   int _selectedTab = 0; // 0 = Applications, 1 = Training Hours
   String _selectedStatus = 'All';
   bool _isLoading = true;
   String? _error;
 
   final VacancyService _vacancyService = VacancyService();
+  final TrainingService _trainingService = TrainingService();
 
   double _completedHours = 0;
   double _requiredHours = 0;
@@ -57,13 +55,14 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
 
     try {
       final supabase = Supabase.instance.client;
-      final studentId = _fallbackStudentId;
+      
+      // ✅ Get user ID from Supabase auth (fallback to 5 for testing)
+      final studentId = supabase.auth.currentUser?.id != null
+          ? int.tryParse(supabase.auth.currentUser!.id) ?? 5
+          : 5;
 
-      final studentData = await supabase
-          .from('student')
-          .select('completedtraininghours, requiredtraininghours')
-          .eq('studentid', studentId)
-          .single();
+      // ✅ Calculate progress based on APPROVED trainings only
+      final trainingProgress = await _trainingService.calculateTrainingProgress(studentId);
 
       final applications = await supabase
           .from('application')
@@ -83,9 +82,9 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
       if (!mounted) return;
 
       setState(() {
-        _completedHours = (studentData['completedtraininghours'] ?? 0)
-            .toDouble();
-        _requiredHours = (studentData['requiredtraininghours'] ?? 0).toDouble();
+        // ✅ Use calculated approved hours (only APPROVED trainings)
+        _completedHours = (trainingProgress['approvedHours'] as int).toDouble();
+        _requiredHours = (trainingProgress['requiredHours'] as int).toDouble();
         _applications = List<Map<String, dynamic>>.from(applications);
         _trainingRecords = List<Map<String, dynamic>>.from(trainingRecords);
         _isLoading = false;
@@ -179,11 +178,11 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
                 ],
               ),
             ),
-      floatingActionButton: _selectedTab == 1
+      floatingActionButton: _selectedTab == 1 && !_isTrainingCompleted()
           ? FloatingActionButton.extended(
               onPressed: () => StudentProfileSubmitHoursModal.show(
                 context,
-                studentId: _fallbackStudentId,
+                studentId: 5,
                 onSubmitted: _fetchTrackingData,
               ),
               icon: const Icon(Icons.add),
@@ -328,12 +327,17 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
       );
     }
 
+    // ✅ FIX: Cap displayed completed hours at required hours
     final safeRequired = _requiredHours <= 0 ? 1 : _requiredHours;
-    final progress = (_completedHours / safeRequired).clamp(0.0, 1.0);
-    final remaining = (_requiredHours - _completedHours).clamp(
+    final displayedCompleted = _completedHours > _requiredHours ? _requiredHours : _completedHours;
+    
+    final progress = (displayedCompleted / safeRequired).clamp(0.0, 1.0);
+    final remaining = (_requiredHours - displayedCompleted).clamp(
       0,
       double.infinity,
     );
+    // Show 0 remaining when at 100%
+    final displayedRemaining = progress >= 1.0 ? 0.0 : remaining;
 
     return RoundedContainer(
       backgroundColor: AppColors.trainingProgress,
@@ -347,7 +351,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '${_completedHours.toStringAsFixed(0)} / ${_requiredHours.toStringAsFixed(0)} hrs',
+            '${displayedCompleted.toStringAsFixed(0)} / ${_requiredHours.toStringAsFixed(0)} hrs',
           ),
           const SizedBox(height: 10),
           LinearProgressIndicator(
@@ -358,7 +362,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
             color: AppColors.progressGreen,
           ),
           const SizedBox(height: 8),
-          Text('${remaining.toStringAsFixed(0)} hours remaining'),
+          Text('${displayedRemaining.toStringAsFixed(0)} hours remaining'),
         ],
       ),
     );
@@ -606,6 +610,13 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
   bool _canCancelTrainingRecord(Map<String, dynamic> trainingRecord) {
     final status = _normalizeStatus(trainingRecord['status']);
     return status == 'PENDING';
+  }
+
+  // Check if training is completed (100% or more)
+  bool _isTrainingCompleted() {
+    if (_requiredHours <= 0) return false;
+    final progress = (_completedHours / _requiredHours).clamp(0.0, 1.0);
+    return progress >= 1.0;
   }
 
   // Cancel application with confirmation

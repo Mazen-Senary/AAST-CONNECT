@@ -45,6 +45,7 @@ class _StudentHomeState extends State<StudentHome> {
   List<Map<String, dynamic>> _applications = [];
 
   final VacancyService _vacancyService = VacancyService();
+  final TrainingService _trainingService = TrainingService();
 
   // Method channel for Android
   static const platform = MethodChannel('com.aastconnect.app/url_launcher');
@@ -58,8 +59,11 @@ class _StudentHomeState extends State<StudentHome> {
   Future<void> _fetchData() async {
     try {
       final supabase = Supabase.instance.client;
-      //final userId = supabase.auth.currentUser?.id;//e3mlha uncomment  lama yb2a fi user login screen
-      final userId = 5;
+      
+      // ✅ Get user ID from Supabase auth (fallback to 5 for testing)
+      final userId = supabase.auth.currentUser?.id != null
+          ? int.tryParse(supabase.auth.currentUser!.id) ?? 5
+          : 5;
 
       // fetch student info
       final studentData = await supabase
@@ -76,24 +80,20 @@ class _StudentHomeState extends State<StudentHome> {
           .maybeSingle();
       _profileId = profile?['profileid'];
 
-      // fetch pending applications count
+      // fetch pending training records count
       final pendingData = await supabase
           .from('trainingrecord')
           .select()
           .eq('studentid', userId)
           .eq('status', 'PENDING');
 
-      // fetch approved applications count
-      final approvedData = await supabase
-          .from('trainingrecord')
-          .select()
-          .eq('studentid', userId)
-          .eq('status', 'APPROVED');
+      // ✅ Calculate progress based on APPROVED trainings only
+      final trainingProgress = await _trainingService.calculateTrainingProgress(userId);
 
       // fetch available vacancies for students
       final vacanciesData = await supabase
           .from('vacancies')
-          .select()
+          .select('vacancyid, title, description, type, location, requiredskills, paidstatus, deadline, companyid, postedbyadminid, created_at, work_mode, company_name, target_audience, application_method, external_apply_url, company_logo_url')
           .or('target_audience.eq.STUDENT,target_audience.eq.BOTH')
           .order('deadline', ascending: true)
           .limit(2);
@@ -101,7 +101,7 @@ class _StudentHomeState extends State<StudentHome> {
       // fetch upcoming deadlines (vacancies closing soon)
       final deadlinesData = await supabase
           .from('vacancies')
-          .select()
+          .select('vacancyid, title, description, type, location, requiredskills, paidstatus, deadline, companyid, postedbyadminid, created_at, work_mode, company_name, target_audience, application_method, external_apply_url, company_logo_url')
           .or('target_audience.eq.STUDENT,target_audience.eq.BOTH')
           .gte('deadline', DateTime.now().toIso8601String())
           .order('deadline', ascending: true)
@@ -112,16 +112,17 @@ class _StudentHomeState extends State<StudentHome> {
 
       setState(() {
         _studentName = studentData['name'] ?? '';
-        _completedHours = (studentData['completedtraininghours'] ?? 0)
-            .toDouble();
-        _totalHours = (studentData['requiredtraininghours'] ?? 0).toDouble();
+        // ✅ Use calculated approved hours (only APPROVED trainings)
+        _completedHours = (trainingProgress['approvedHours'] as int).toDouble();
+        _totalHours = (trainingProgress['requiredHours'] as int).toDouble();
         _pendingCount = pendingData.length;
-        _approvedCount = approvedData.length;
+        _approvedCount = trainingProgress['approvedHours'] > 0 ? 1 : 0;
         _vacancies = List<Map<String, dynamic>>.from(vacanciesData);
         _deadlines = List<Map<String, dynamic>>.from(deadlinesData);
         _isLoading = false;
       });
     } catch (e) {
+      print('Error fetching data: $e');
       setState(() => _isLoading = false);
     }
   }
@@ -548,6 +549,8 @@ class _StudentHomeState extends State<StudentHome> {
                           hours: vacancy['deadline'] != null
                               ? "Deadline: ${DateTime.parse(vacancy['deadline']).day}/${DateTime.parse(vacancy['deadline']).month}"
                               : 'No deadline',
+                          logoUrl: vacancy['company_logo_url'],
+                          vacancyType: vacancy['type'] ?? 'INTERNSHIP',
                           onViewDetails: () => _showDetailsModal(
                             context,
                             vacancy['title'] ?? '',

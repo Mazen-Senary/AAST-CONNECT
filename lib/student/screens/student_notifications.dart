@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/rounded_container.dart';
 import '../../services/notification_service.dart';
@@ -33,21 +33,101 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
     });
 
     try {
-      final notifications =
+      final allNotifications =
           await _notificationService.fetchNotifications(_studentId);
+      
+      // Filter to only show unread notifications
+      final unreadNotifications = allNotifications
+          .where((notif) => notif['isread'] == false)
+          .toList();
+      
       setState(() {
-        _notifications = notifications;
+        _notifications = unreadNotifications;
         _isLoading = false;
       });
-
-      // Mark all as read
-      await _notificationService.markAllAsRead(_studentId);
     } catch (e) {
       setState(() {
         _error = 'Failed to load notifications';
         _isLoading = false;
       });
       print('Error: $e');
+    }
+  }
+
+  /// Delete notification from database and remove from local list
+  Future<void> _deleteNotification(int notificationId, int index) async {
+    try {
+      // First mark as read (so it persists even if delete fails)
+      await _notificationService.markNotificationAsDeletedAndRead(notificationId);
+      
+      // Then try to delete
+      try {
+        await _notificationService.deleteNotification(notificationId);
+      } catch (e) {
+        // Don't throw - it's marked as read so it won't show
+      }
+
+      // Remove from local list immediately (no refetch!)
+      setState(() {
+        if (index < _notifications.length) {
+          _notifications.removeAt(index);
+        }
+      });
+
+      // Show success feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('✅ Notification deleted'),
+            backgroundColor: Colors.green,
+            duration: Duration(milliseconds: 1200),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('❌ Error: $e'),
+            backgroundColor: Colors.red,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  /// Mark all as read and hide read notifications
+  Future<void> _markAllAsRead() async {
+    try {
+      await _notificationService.markAllAsRead(_studentId);
+
+      // Update UI: filter out all read notifications
+      setState(() {
+        _notifications = _notifications
+            .where((notif) => notif['isread'] == false)
+            .toList();
+      });
+    } catch (e) {
+      print('Error marking all as read: $e');
+    }
+  }
+
+  /// Mark single notification as read and remove from list
+  Future<void> _markAsRead(int notificationId, int index) async {
+    try {
+      if (!_notifications[index]['isread']) {
+        await _notificationService.markAsRead(notificationId);
+
+        // Remove from list immediately for better UX
+        setState(() {
+          if (index < _notifications.length) {
+            _notifications.removeAt(index);
+          }
+        });
+      }
+    } catch (e) {
+      print('Error marking notification as read: $e');
     }
   }
 
@@ -71,10 +151,7 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
         actions: [
           if (_notifications.isNotEmpty)
             TextButton(
-              onPressed: () async {
-                await _notificationService.markAllAsRead(_studentId);
-                await _fetchNotifications();
-              },
+              onPressed: _markAllAsRead,
               child: Text(
                 'Mark all read',
                 style: TextStyle(
@@ -125,10 +202,19 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'No notifications yet',
+                            'No notifications',
                             style: TextStyle(
                               color: Colors.grey.shade500,
                               fontSize: 16,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'All caught up! You\'re all set.',
+                            style: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontSize: 14,
                             ),
                           ),
                         ],
@@ -144,94 +230,188 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                           final message = notification['message'] ?? '';
                           final isRead = notification['isread'] ?? false;
                           final timestamp = notification['createdat'];
+                          final notificationId = notification['notificationid'];
 
                           final style =
                               _notificationService.getNotificationStyle(message);
                           final icon = style['icon'] as IconData;
                           final color = style['color'] as Color;
 
-                          return GestureDetector(
-                            onTap: () async {
-                              // Mark as read on tap
-                              if (!isRead) {
-                                await _notificationService
-                                    .markAsRead(notification['notificationid']);
-                                await _fetchNotifications();
-                              }
-                            },
-                            child: RoundedContainer(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              backgroundColor: isRead
-                                  ? (isDark
-                                      ? Colors.grey.shade900
-                                      : Colors.white)
-                                  : color.withOpacity(0.05),
-                              borderColor: isRead
-                                  ? Colors.grey.shade300
-                                  : color.withOpacity(0.3),
-                              borderRadius: 15.0,
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  // Icon with colored background
-                                  Container(
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: color.withOpacity(0.15),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: Icon(
-                                      icon,
-                                      color: color,
-                                      size: 24,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 16),
-                                  // Message and timestamp
-                                  Expanded(
-                                    child: Column(
+                          // Extract rejection reason if present
+                          final rejectionReason =
+                              _notificationService.extractRejectionReason(message);
+                          final hasReason = rejectionReason.isNotEmpty;
+
+                          // Parse main message and reason part
+                          String displayMessage = message;
+                          if (hasReason) {
+                            final reasonIndex = message.indexOf('Reason:');
+                            displayMessage = message.substring(0, reasonIndex).trim();
+                          }
+
+                          return Slidable(
+                            key: ValueKey(notificationId),
+                            startActionPane: ActionPane(
+                              motion: const ScrollMotion(),
+                              dismissible: DismissiblePane(
+                                onDismissed: () {
+                                  _deleteNotification(notificationId, index);
+                                },
+                              ),
+                              children: [
+                                 SlidableAction(
+                                   onPressed: (_) => _deleteNotification(
+                                       notificationId, index),
+                                   backgroundColor: AppColors.rejected,
+                                   foregroundColor: Colors.white,
+                                   icon: Icons.delete_outline,
+                                   label: 'Delete',
+                                   borderRadius: BorderRadius.circular(18.0),
+                                 ),
+                               ],
+                            ),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(18.0),
+                              child: GestureDetector(
+                                onTap: () =>
+                                    _markAsRead(notificationId, index),
+                                child: RoundedContainer(
+                                  margin: const EdgeInsets.only(bottom: 14),
+                                  backgroundColor: isRead
+                                      ? (isDark
+                                          ? Colors.grey.shade900
+                                          : Colors.white)
+                                      : color.withOpacity(0.08),
+                                  borderColor: isRead
+                                      ? (isDark
+                                          ? Colors.grey.shade800
+                                          : Colors.grey.shade200)
+                                      : color.withOpacity(0.25),
+                                  borderRadius: 18.0,
+                                  padding: const EdgeInsets.all(16),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      // Header: Icon + Message + Unread badge
+                                      Row(
                                       crossAxisAlignment:
                                           CrossAxisAlignment.start,
                                       children: [
-                                        Text(
-                                          message,
-                                          style: TextStyle(
-                                            fontSize: 14,
-                                            fontWeight: isRead
-                                                ? FontWeight.normal
-                                                : FontWeight.w600,
-                                            color: isDark
-                                                ? Colors.white
-                                                : Colors.black87,
-                                            height: 1.4,
+                                        // Colored circular icon container
+                                        Container(
+                                          padding:
+                                              const EdgeInsets.all(12),
+                                          decoration: BoxDecoration(
+                                            color: color.withOpacity(0.18),
+                                            shape: BoxShape.circle,
                                           ),
-                                          maxLines: 3,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        Text(
-                                          _notificationService
-                                              .formatTimestamp(timestamp),
-                                          style: TextStyle(
-                                            fontSize: 12,
-                                            color: Colors.grey.shade500,
+                                          child: Icon(
+                                            icon,
+                                            color: color,
+                                            size: 22,
                                           ),
                                         ),
+                                        const SizedBox(width: 14),
+                                        // Main message
+                                        Expanded(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                displayMessage,
+                                                style: TextStyle(
+                                                  fontSize: 14,
+                                                  fontWeight: isRead
+                                                      ? FontWeight.w500
+                                                      : FontWeight.w700,
+                                                  color: isDark
+                                                      ? Colors.white
+                                                      : Colors.black87,
+                                                  height: 1.35,
+                                                ),
+                                                maxLines: 3,
+                                                overflow:
+                                                    TextOverflow.ellipsis,
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                        // Unread indicator badge
+                                        if (!isRead)
+                                          Padding(
+                                            padding:
+                                                const EdgeInsets.only(left: 8),
+                                            child: Container(
+                                              width: 10,
+                                              height: 10,
+                                              decoration: BoxDecoration(
+                                                color: color,
+                                                shape: BoxShape.circle,
+                                              ),
+                                            ),
+                                          ),
                                       ],
                                     ),
-                                  ),
-                                  // Unread indicator
-                                  if (!isRead)
-                                    Container(
-                                      width: 10,
-                                      height: 10,
-                                      decoration: BoxDecoration(
-                                        color: color,
-                                        shape: BoxShape.circle,
+
+                                    // Rejection reason (if present)
+                                    if (hasReason) ...[
+                                      const SizedBox(height: 12),
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: color.withOpacity(0.1),
+                                          borderRadius:
+                                              BorderRadius.circular(10),
+                                          border: Border.all(
+                                            color: color.withOpacity(0.2),
+                                          ),
+                                        ),
+                                        child: RichText(
+                                          text: TextSpan(
+                                            children: [
+                                              TextSpan(
+                                                text: 'Reason: ',
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isDark
+                                                      ? Colors.white70
+                                                      : Colors.black54,
+                                                ),
+                                              ),
+                                              TextSpan(
+                                                text: rejectionReason,
+                                                style: TextStyle(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w500,
+                                                  color: isDark
+                                                      ? Colors.white70
+                                                      : Colors.black54,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+
+                                    // Timestamp
+                                    const SizedBox(height: 10),
+                                    Text(
+                                      _notificationService
+                                          .formatTimestamp(timestamp),
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        color: Colors.grey.shade500,
+                                        fontWeight: FontWeight.w400,
                                       ),
                                     ),
-                                ],
+                                  ],
+                                  ),
+                                ),
                               ),
                             ),
                           );

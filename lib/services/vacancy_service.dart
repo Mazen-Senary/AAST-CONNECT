@@ -182,3 +182,68 @@ class VacancyService {
         });
   }
 }
+
+/// Service for calculating student training progress
+class TrainingService {
+  final SupabaseClient _supabase = Supabase.instance.client;
+
+  /// Calculate training progress based on APPROVED training hours only
+  ///
+  /// Logic:
+  /// - Progress = 0 if no APPROVED trainings
+  /// - Progress = 100 if APPROVED hours >= Required hours
+  /// - Progress = (APPROVED hours / Required hours) * 100 otherwise
+  ///
+  /// Returns: Map with:
+  /// - 'approvedHours': int (sum of APPROVED training hours)
+  /// - 'requiredHours': int (from student table)
+  /// - 'progressPercentage': double (0-100, capped at 100)
+  Future<Map<String, dynamic>> calculateTrainingProgress(int studentId) async {
+    try {
+      // Get required training hours from student table
+      final studentData = await _supabase
+          .from('student')
+          .select('requiredtraininghours')
+          .eq('studentid', studentId)
+          .single();
+
+      final requiredHours = (studentData['requiredtraininghours'] as int?) ?? 0;
+
+      // Get all APPROVED training records and sum hours
+      final approvedTrainings = await _supabase
+          .from('trainingrecord')
+          .select('hourssubmitted')
+          .eq('studentid', studentId)
+          .eq('status', 'APPROVED');
+
+      // Sum approved hours only
+      int totalApprovedHours = 0;
+      for (var training in approvedTrainings) {
+        totalApprovedHours += (training['hourssubmitted'] as int?) ?? 0;
+      }
+
+      // Calculate percentage (0-100, capped at 100)
+      double progressPercentage = 0.0;
+
+      if (requiredHours > 0 && totalApprovedHours > 0) {
+        progressPercentage = (totalApprovedHours / requiredHours) * 100;
+        if (progressPercentage > 100) {
+          progressPercentage = 100.0;
+        }
+      }
+
+      return {
+        'approvedHours': totalApprovedHours,
+        'requiredHours': requiredHours,
+        'progressPercentage': double.parse(progressPercentage.toStringAsFixed(1)),
+      };
+    } catch (e) {
+      print('Error calculating training progress: $e');
+      return {
+        'approvedHours': 0,
+        'requiredHours': 0,
+        'progressPercentage': 0.0,
+      };
+    }
+  }
+}

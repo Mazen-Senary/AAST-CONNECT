@@ -48,6 +48,10 @@ class AppColors {
   static const Color darkContainer = Color(0xFF2C2C2C);
   static const Color darkModal = Color(0xFF1E1E1E);
   static const Color darkDropdown = Color(0xFF3C3C3C);
+  //navbar colors
+  static const Color navSelectedBackground = Color(0xFFD6EAF2);
+  static const Color navSelectedIcon = Color(0xFF057C99);
+  static const Color navUnselectedIcon = Color(0xFF9E9E9E);
 
   // Opacity Variants
   static Color primaryWithOpacity(double opacity) =>

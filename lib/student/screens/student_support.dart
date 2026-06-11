@@ -3,14 +3,11 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../services/theme_provider.dart';
 import '../../widgets/app_bar_with_logout.dart';
-
 import 'student_tracking.dart';
-
 class StudentSupport extends StatelessWidget {
   const StudentSupport({super.key});
-
+  
   // ================= MODAL HELPERS =================
-
   void _showChatBot(BuildContext context) {
     showModalBottomSheet(
       context: context,

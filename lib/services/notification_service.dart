@@ -61,6 +61,42 @@ class NotificationService {
     }
   }
 
+  /// Delete a single notification from database
+  Future<void> deleteNotification(int notificationId) async {
+    try {
+      print('🗑️ Attempting to delete notificationid: $notificationId');
+      
+      final response = await _supabase
+          .from('notification')
+          .delete()
+          .eq('notificationid', notificationId);
+      
+      print('✅ Successfully deleted notification $notificationId');
+      print('Response: $response');
+    } catch (e) {
+      print('❌ Error deleting notification $notificationId: $e');
+      throw Exception('Failed to delete notification: $e');
+    }
+  }
+
+  /// Mark notification as deleted and read (for persistence across app restarts)
+  Future<void> markNotificationAsDeletedAndRead(int notificationId) async {
+    try {
+      print('📌 Marking notificationid $notificationId as read AND deleted');
+      
+      // Mark as read so it doesn't show even if delete fails
+      await _supabase
+          .from('notification')
+          .update({'isread': true})
+          .eq('notificationid', notificationId);
+      
+      print('✅ Marked as read: $notificationId');
+    } catch (e) {
+      print('❌ Error marking as read: $e');
+      throw Exception('Failed to mark as read: $e');
+    }
+  }
+
   /// Listen to new notifications in real-time
   RealtimeChannel listenToNotifications(
     int userId,
@@ -176,5 +212,19 @@ class NotificationService {
       'color': const Color(0xFF284B8C), // AppColors.lightPrimary
     };
   }
+
+  /// Extract rejection reason from notification message
+  /// Returns the reason part if it contains "Reason: ", otherwise returns empty string
+  String extractRejectionReason(String message) {
+    if (!message.contains('Reason:')) return '';
+    final reasonIndex = message.indexOf('Reason:');
+    return message.substring(reasonIndex + 8).trim();
+  }
+
+  /// Get default rejection message if admin didn't provide reason
+  String getDefaultRejectionReason() {
+    return 'No reason provided';
+  }
 }
+
 

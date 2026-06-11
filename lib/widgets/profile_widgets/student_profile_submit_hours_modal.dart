@@ -1,13 +1,42 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import '../../services/vacancy_service.dart';
 
 class StudentProfileSubmitHoursModal {
   static void show(
     BuildContext context, {
     required int studentId,
     VoidCallback? onSubmitted,
-  }) {
+  }) async {
+    // ✅ FIX: Check if training is already completed before showing modal
+    try {
+      final trainingService = TrainingService();
+      final trainingProgress = await trainingService.calculateTrainingProgress(studentId);
+      
+      final approvedHours = (trainingProgress['approvedHours'] as int?) ?? 0;
+      final requiredHours = (trainingProgress['requiredHours'] as int?) ?? 0;
+      final progress = requiredHours > 0 ? (approvedHours / requiredHours).clamp(0.0, 1.0) : 0.0;
+      
+      // If training is 100% completed, show error and return
+      if (progress >= 1.0) {
+        final snackBar = SnackBar(
+          elevation: 0,
+          behavior: SnackBarBehavior.floating,
+          backgroundColor: Colors.transparent,
+          content: const AwesomeSnackbarContent(
+            title: 'Training Complete',
+            message: 'You have already completed your required training hours! No more submissions allowed.',
+            contentType: ContentType.warning,
+          ),
+        );
+        ScaffoldMessenger.of(context).showSnackBar(snackBar);
+        return;
+      }
+    } catch (e) {
+      print('Error checking training progress: $e');
+      // Continue with normal flow if check fails
+    }
     final companyController = TextEditingController();
     final hoursController = TextEditingController();
     final supervisorController = TextEditingController();

@@ -44,6 +44,70 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
     }
   }
 
+  /// Build company logo or fallback to icon
+  Widget _buildCompanyLogo() {
+    final logoUrl = program['company_logo_url'] ?? program['companyLogoUrl'];
+    
+    // If logo URL exists and is not empty, display the image
+    if (logoUrl != null && logoUrl.toString().isNotEmpty) {
+      return Container(
+        width: 50,
+        height: 50,
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(10),
+          child: Image.network(
+            logoUrl.toString(),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              // Fallback to icon if image fails to load
+              return Container(
+                decoration: BoxDecoration(
+                  color: _getColorForCategory(program['category'] ?? ''),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(
+                  _getIconForCategory(program['category'] ?? ''),
+                  size: 24,
+                ),
+              );
+            },
+            loadingBuilder: (context, child, loadingProgress) {
+              if (loadingProgress == null) return child;
+              return Container(
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade100,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: const Center(
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+
+    // Fallback: Show default icon if no logo URL
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: _getColorForCategory(program['category'] ?? ''),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Icon(_getIconForCategory(program['category'] ?? ''), size: 24),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return RoundedContainer(
@@ -53,21 +117,14 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Container(
-                padding: const EdgeInsets.all(10),
-                decoration: BoxDecoration(
-                  color: _getColorForCategory(program['category']),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(_getIconForCategory(program['category']), size: 24),
-              ),
+              _buildCompanyLogo(),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      program['title'],
+                      program['title'] ?? 'N/A',
                       style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
@@ -75,7 +132,7 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      program['company'],
+                      program['company'] ?? program['company_name'] ?? 'Unknown Company',
                       style: const TextStyle(color: Colors.grey),
                     ),
                   ],
