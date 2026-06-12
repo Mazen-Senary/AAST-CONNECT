@@ -53,3 +53,6 @@ lib/supabase_config.dart
 !DESIGN_SYSTEM.md
 !CANCELLATION_FEATURE_CHANGES.md
 
+# Secret API Keys
+lib/chatbot_api_config.dart
+

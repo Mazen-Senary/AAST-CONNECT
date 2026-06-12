@@ -1,4 +1,6 @@
+import 'package:aast_connect/providers/CachedChatProvider.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import '../../services/vacancy_service.dart';
@@ -234,6 +236,8 @@ class StudentProfileSubmitHoursModal {
 
                     onSubmitted?.call();
                     Navigator.pop(context);
+                    // 🔥 NEW: Invalidate the cache so the bot sees the new hours instantly!
+                    Provider.of<CachedChatProvider>(context, listen: false).invalidateCache();
                     final snackBar = SnackBar(
                       elevation: 0,
                       behavior: SnackBarBehavior.floating,

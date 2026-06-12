@@ -1,9 +1,9 @@
+import 'package:aast_connect/providers/CachedChatProvider.dart';
 import 'package:aast_connect/widgets/custom_navbar.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
-
 import 'student/screens/student_home.dart';
 import 'student/screens/student_opportunities.dart';
 import 'student/screens/student_profile.dart';
@@ -22,14 +22,16 @@ void main() async {
   );
   runApp(const MyApp());
 }
-
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return ChangeNotifierProvider(
-      create: (context) => ThemeProvider(),
+    return MultiProvider( // Changed to MultiProvider
+      providers: [
+        ChangeNotifierProvider(create: (context) => ThemeProvider()),
+        ChangeNotifierProvider(create: (context) =>CachedChatProvider()), // Add ChatProvider here
+      ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
           return MaterialApp(
@@ -44,6 +46,28 @@ class MyApp extends StatelessWidget {
     );
   }
 }
+
+// class MyApp extends StatelessWidget {
+//   const MyApp({super.key});
+//
+//   @override
+//   Widget build(BuildContext context) {
+//     return ChangeNotifierProvider(
+//       create: (context) => ThemeProvider(),
+//       child: Consumer<ThemeProvider>(
+//         builder: (context, themeProvider, child) {
+//           return MaterialApp(
+//             debugShowCheckedModeBanner: false,
+//             theme: themeProvider.lightTheme,
+//             darkTheme: themeProvider.darkTheme,
+//             themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
+//             home: const MainNavigation(),
+//           );
+//         },
+//       ),
+//     );
+//   }
+// }
 
 class MainNavigation extends StatefulWidget {
   const MainNavigation({super.key});

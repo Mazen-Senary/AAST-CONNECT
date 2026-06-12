@@ -4,11 +4,156 @@ import '../../constants/app_colors.dart';
 import '../../services/theme_provider.dart';
 import '../../widgets/app_bar_with_logout.dart';
 import 'student_tracking.dart';
+import '../../providers/CachedChatProvider.dart';
 class StudentSupport extends StatelessWidget {
   const StudentSupport({super.key});
   
   // ================= MODAL HELPERS =================
+  // void _showChatBot(BuildContext context) {
+  //   showModalBottomSheet(
+  //     context: context,
+  //     isScrollControlled: true,
+  //     backgroundColor: Colors.transparent,
+  //     builder: (context) => Container(
+  //       height: MediaQuery.of(context).size.height * 0.85,
+  //       decoration: BoxDecoration(
+  //         color: Theme.of(context).colorScheme.surface,
+  //         borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+  //       ),
+  //       padding: const EdgeInsets.all(25),
+  //       child: Column(
+  //         children: [
+  //           Row(
+  //             children: [
+  //               CircleAvatar(
+  //                 backgroundColor: Colors.blue.shade50,
+  //                 child: const Icon(
+  //                   Icons.smart_toy_outlined,
+  //                   color: Colors.blue,
+  //                 ),
+  //               ),
+  //               const SizedBox(width: 15),
+  //               const Column(
+  //                 crossAxisAlignment: CrossAxisAlignment.start,
+  //                 children: [
+  //                   Text(
+  //                     "FAQ Assistant",
+  //                     style: TextStyle(
+  //                       fontWeight: FontWeight.bold,
+  //                       fontSize: 18,
+  //                     ),
+  //                   ),
+  //                   Text(
+  //                     "Online",
+  //                     style: TextStyle(color: Colors.green, fontSize: 12),
+  //                   ),
+  //                 ],
+  //               ),
+  //               const Spacer(),
+  //               IconButton(
+  //                 icon: const Icon(Icons.close),
+  //                 onPressed: () => Navigator.pop(context),
+  //               ),
+  //             ],
+  //           ),
+  //           const Divider(height: 30),
+  //           Expanded(
+  //             child: ListView(
+  //               children: [
+  //                 _buildChatBubble(
+  //                   "Hi! I'm here to help you with questions about AAST Connect. You can ask me about training hours, applications, documents, and system features.",
+  //                 ),
+  //                 const SizedBox(height: 20),
+  //                 Text(
+  //                   "Frequently Asked Questions:",
+  //                   style: TextStyle(
+  //                     color: Theme.of(context).colorScheme.onSurface,
+  //                     fontWeight: FontWeight.bold,
+  //                     fontSize: 16,
+  //                   ),
+  //                 ),
+  //                 const SizedBox(height: 10),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "What are training hours?",
+  //                   "Training hours are the required practical work hours that students must complete as part of their academic program. These hours can be completed through internships, workshops, or on-campus training programs.",
+  //                 ),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "How do I submit my training hours?",
+  //                   "To submit your training hours:\n1. Go to your Profile page\n2. Click on 'Submit Training Hours'\n3. Fill in the program details\n4. Upload your training certificate\n5. Add supervisor information\n6. Click Submit",
+  //                 ),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "Who approves my training hours?",
+  //                   "Training hours are approved by your academic advisor and the training coordinator. You can track the approval status in your dashboard under 'Pending' applications.",
+  //                 ),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "What happens if my training hours are rejected?",
+  //                   "If your training hours are rejected, you'll receive feedback explaining why. Common reasons include incomplete documentation or incorrect information. You can resubmit after addressing the feedback.",
+  //                 ),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "How do I apply for an opportunity?",
+  //                   "To apply for an opportunity:\n1. Go to the Training page\n2. Browse available programs\n3. Click 'Apply Now' on your chosen program\n4. Confirm your application\n5. Track its status in your dashboard",
+  //                 ),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "Can I cancel an application after applying?",
+  //                   "Yes, you can cancel an application within 24 hours of submission by going to your dashboard and selecting 'Cancel Application'. After 24 hours, please contact your program coordinator directly.",
+  //                 ),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "What documents do I need to apply?",
+  //                   "Typically you'll need:\n• Updated CV/Resume\n• Cover letter (if required)\n• Academic transcripts\n• Any certificates relevant to the position\nYou can upload these in your Profile under 'Documents'.",
+  //                 ),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "How do I know the status of my application?",
+  //                   "You can check your application status in the dashboard. Statuses include: Pending, Under Review, Accepted, or Rejected. You'll also receive email notifications for any updates.",
+  //                 ),
+  //                 _buildFAQItem(
+  //                   context,
+  //                   "Can fresh graduates use the same features as students?",
+  //                   "Yes! Fresh graduates can access all features including training opportunities, document management, and program applications. Some programs may have specific eligibility criteria for graduates.",
+  //                 ),
+  //               ],
+  //             ),
+  //           ),
+  //           const SizedBox(height: 10),
+  //           TextField(
+  //             decoration: InputDecoration(
+  //               hintText: "Ask a question...",
+  //               suffixIcon: IconButton(
+  //                 icon: const Icon(Icons.send, color: AppColors.lightPrimary),
+  //                 onPressed: () {},
+  //               ),
+  //               filled: true,
+  //               fillColor: Colors.grey.shade100,
+  //               border: OutlineInputBorder(
+  //                 borderRadius: BorderRadius.circular(15),
+  //                 borderSide: BorderSide.none,
+  //               ),
+  //             ),
+  //           ),
+  //         ],
+  //       ),
+  //     ),
+  //   );
+  // }
+
   void _showChatBot(BuildContext context) {
+    final TextEditingController controller = TextEditingController();
+
+    final List<String> quickQuestions = [
+      "What is my current application status?",
+      "Are there new opportunities for me?",
+      "What are training hours?",
+      "How do I submit my training hours?",
+      "What documents do I need to apply?",
+    ];
+
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -20,127 +165,128 @@ class StudentSupport extends StatelessWidget {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
         ),
         padding: const EdgeInsets.all(25),
-        child: Column(
-          children: [
-            Row(
-              children: [
-                CircleAvatar(
-                  backgroundColor: Colors.blue.shade50,
-                  child: const Icon(
-                    Icons.smart_toy_outlined,
-                    color: Colors.blue,
+        child: Consumer<CachedChatProvider>(
+            builder: (context, chatProvider, child) {
+              return Column(
+                children: [
+                  // Header
+                  Row(
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.blue.shade50,
+                        child: const Icon(Icons.smart_toy_outlined, color: Colors.blue),
+                      ),
+                      const SizedBox(width: 15),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("FAQ Assistant", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
+                          Text("Online", style: TextStyle(color: Colors.green, fontSize: 12)),
+                        ],
+                      ),
+                      const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.close),
+                        onPressed: () => Navigator.pop(context),
+                      ),
+                    ],
                   ),
-                ),
-                const SizedBox(width: 15),
-                const Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "FAQ Assistant",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
+                  const Divider(height: 30),
+
+                  // Chat List
+                  Expanded(
+                    child: ListView.builder(
+                      itemCount: chatProvider.messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = chatProvider.messages[index];
+                        return Align(
+                          alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
+                          child: Container(
+                            margin: const EdgeInsets.symmetric(vertical: 5),
+                            padding: const EdgeInsets.all(15),
+                            decoration: BoxDecoration(
+                              color: msg.isUser ? AppColors.lightPrimary : Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Text(
+                              msg.text,
+                              style: TextStyle(color: msg.isUser ? Colors.white : Colors.black87),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+
+                  // Typing Indicator
+                  if (chatProvider.isLoading)
+                    const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text("Assistant is typing...", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
                       ),
                     ),
-                    Text(
-                      "Online",
-                      style: TextStyle(color: Colors.green, fontSize: 12),
-                    ),
-                  ],
-                ),
-                const Spacer(),
-                IconButton(
-                  icon: const Icon(Icons.close),
-                  onPressed: () => Navigator.pop(context),
-                ),
-              ],
-            ),
-            const Divider(height: 30),
-            Expanded(
-              child: ListView(
-                children: [
-                  _buildChatBubble(
-                    "Hi! I'm here to help you with questions about AAST Connect. You can ask me about training hours, applications, documents, and system features.",
-                  ),
-                  const SizedBox(height: 20),
-                  Text(
-                    "Frequently Asked Questions:",
-                    style: TextStyle(
-                      color: Theme.of(context).colorScheme.onSurface,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 16,
-                    ),
-                  ),
+
                   const SizedBox(height: 10),
-                  _buildFAQItem(
-                    context,
-                    "What are training hours?",
-                    "Training hours are the required practical work hours that students must complete as part of their academic program. These hours can be completed through internships, workshops, or on-campus training programs.",
+
+                  // Quick Questions Chips
+                  SizedBox(
+                    height: 40,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: quickQuestions.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 8.0),
+                          child: ActionChip(
+                            label: Text(quickQuestions[index], style: const TextStyle(fontSize: 12)),
+                            backgroundColor: Colors.blue.shade50,
+                            side: BorderSide.none,
+                            onPressed: () {
+                              chatProvider.sendMessage(quickQuestions[index]);
+                            },
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                  _buildFAQItem(
-                    context,
-                    "How do I submit my training hours?",
-                    "To submit your training hours:\n1. Go to your Profile page\n2. Click on 'Submit Training Hours'\n3. Fill in the program details\n4. Upload your training certificate\n5. Add supervisor information\n6. Click Submit",
-                  ),
-                  _buildFAQItem(
-                    context,
-                    "Who approves my training hours?",
-                    "Training hours are approved by your academic advisor and the training coordinator. You can track the approval status in your dashboard under 'Pending' applications.",
-                  ),
-                  _buildFAQItem(
-                    context,
-                    "What happens if my training hours are rejected?",
-                    "If your training hours are rejected, you'll receive feedback explaining why. Common reasons include incomplete documentation or incorrect information. You can resubmit after addressing the feedback.",
-                  ),
-                  _buildFAQItem(
-                    context,
-                    "How do I apply for an opportunity?",
-                    "To apply for an opportunity:\n1. Go to the Training page\n2. Browse available programs\n3. Click 'Apply Now' on your chosen program\n4. Confirm your application\n5. Track its status in your dashboard",
-                  ),
-                  _buildFAQItem(
-                    context,
-                    "Can I cancel an application after applying?",
-                    "Yes, you can cancel an application within 24 hours of submission by going to your dashboard and selecting 'Cancel Application'. After 24 hours, please contact your program coordinator directly.",
-                  ),
-                  _buildFAQItem(
-                    context,
-                    "What documents do I need to apply?",
-                    "Typically you'll need:\n• Updated CV/Resume\n• Cover letter (if required)\n• Academic transcripts\n• Any certificates relevant to the position\nYou can upload these in your Profile under 'Documents'.",
-                  ),
-                  _buildFAQItem(
-                    context,
-                    "How do I know the status of my application?",
-                    "You can check your application status in the dashboard. Statuses include: Pending, Under Review, Accepted, or Rejected. You'll also receive email notifications for any updates.",
-                  ),
-                  _buildFAQItem(
-                    context,
-                    "Can fresh graduates use the same features as students?",
-                    "Yes! Fresh graduates can access all features including training opportunities, document management, and program applications. Some programs may have specific eligibility criteria for graduates.",
+
+                  const SizedBox(height: 10),
+
+                  // Input Field
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      hintText: "Ask a question...",
+                      suffixIcon: IconButton(
+                        icon: const Icon(Icons.send, color: AppColors.lightPrimary),
+                        onPressed: () {
+                          chatProvider.sendMessage(controller.text);
+                          controller.clear();
+                        },
+                      ),
+                      filled: true,
+                      fillColor: Colors.grey.shade100,
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(15),
+                        borderSide: BorderSide.none,
+                      ),
+                    ),
+                    onSubmitted: (text) {
+                      chatProvider.sendMessage(text);
+                      controller.clear();
+                    },
                   ),
                 ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              decoration: InputDecoration(
-                hintText: "Ask a question...",
-                suffixIcon: IconButton(
-                  icon: const Icon(Icons.send, color: AppColors.lightPrimary),
-                  onPressed: () {},
-                ),
-                filled: true,
-                fillColor: Colors.grey.shade100,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(15),
-                  borderSide: BorderSide.none,
-                ),
-              ),
-            ),
-          ],
+              );
+            }
         ),
       ),
     );
   }
+
+
 
   Widget _buildFAQItem(BuildContext context, String question, String answer) {
     return Card(
