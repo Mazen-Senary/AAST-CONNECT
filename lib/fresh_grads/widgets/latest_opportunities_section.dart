@@ -19,7 +19,9 @@ class LatestOpportunitiesSection extends StatelessWidget {
               style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.bold,
-                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
               ),
             ),
             GestureDetector(
@@ -37,7 +39,7 @@ class LatestOpportunitiesSection extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         ...AppData.opportunities.map(
-              (job) => Padding(
+          (job) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
             child: OpportunityCard(job: job, isDark: isDark),
           ),
@@ -85,7 +87,9 @@ class OpportunityCard extends StatelessWidget {
             job.company,
             style: TextStyle(
               fontSize: 13,
-              color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+              color: isDark
+                  ? AppColors.darkTextSecondary
+                  : AppColors.textSecondary,
             ),
           ),
           const SizedBox(height: 10),
@@ -94,13 +98,17 @@ class OpportunityCard extends StatelessWidget {
               Icon(
                 Icons.attach_money,
                 size: 16,
-                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.textSecondary,
               ),
               Text(
                 job.salaryRange,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
                 ),
               ),
               const SizedBox(width: 8),
@@ -108,7 +116,9 @@ class OpportunityCard extends StatelessWidget {
                 width: 4,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
                   shape: BoxShape.circle,
                 ),
               ),
@@ -117,7 +127,9 @@ class OpportunityCard extends StatelessWidget {
                 job.workType,
                 style: TextStyle(
                   fontSize: 13,
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                  color: isDark
+                      ? AppColors.darkTextSecondary
+                      : AppColors.textSecondary,
                 ),
               ),
             ],
