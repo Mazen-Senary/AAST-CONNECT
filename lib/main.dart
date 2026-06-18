@@ -176,7 +176,8 @@ class _MainNavigationState extends State<MainNavigation> {
       ),
 
       bottomNavigationBar: Container(
-        color: Colors.white,
+        color:Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+        // color: Colors.white,
         padding: const EdgeInsets.symmetric(vertical: 8),
         child: Row(
           children: [
