@@ -44,8 +44,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-# Supabase configuration (contains sensitive data)
-lib/supabase_config.dart
 
 # Local documentation files (not to be pushed)
 *.md
@@ -53,6 +51,4 @@ lib/supabase_config.dart
 !DESIGN_SYSTEM.md
 !CANCELLATION_FEATURE_CHANGES.md
 
-# Secret API Keys
-lib/chatbot_api_config.dart
-
+.env

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import '../chatbot_api_config.dart';
+import 'package:aast_connect/chatbot_api_config.dart';
 
 class ChatService {
   late final GenerativeModel _model;
