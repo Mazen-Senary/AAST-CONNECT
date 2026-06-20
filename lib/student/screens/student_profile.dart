@@ -54,11 +54,12 @@ class _StudentProfileState extends State<StudentProfile> {
       final supabase = Supabase.instance.client;
       final userId = UserSession.instance.userId!;
 
+      // Use maybeSingle to avoid crash if no student record exists
       final data = await supabase
           .from('student')
           .select()
           .eq('studentid', userId)
-          .single();
+          .maybeSingle();
 
       final profile = await supabase
           .from('profile')
@@ -90,7 +91,21 @@ class _StudentProfileState extends State<StudentProfile> {
           .eq('studentid', userId);
 
       setState(() {
-        _student = Student.fromMap(data);
+        if (data != null) {
+          _student = Student.fromMap(data);
+        } else {
+          // Fallback: create a minimal Student from UserSession
+          _student = Student(
+            studentID: userId,
+            studentName: UserSession.instance.name ?? '',
+            studentEmail: '',
+            major: '',
+            academicYear: '',
+            requiredTrainingHours: 0,
+            completedTrainingHours: 0,
+            collegeID: UserSession.instance.collegeId,
+          );
+        }
         _profileId = profileId;
         _documents = List<Map<String, dynamic>>.from(docs);
         _savedPrograms = List<Map<String, dynamic>>.from(savedData);
@@ -98,7 +113,20 @@ class _StudentProfileState extends State<StudentProfile> {
       });
     } catch (e) {
       print('Error: $e');
-      setState(() => _isLoading = false);
+      setState(() {
+        // Even on error, create a minimal student so UI doesn't crash
+        _student ??= Student(
+          studentID: UserSession.instance.userId ?? 0,
+          studentName: UserSession.instance.name ?? '',
+          studentEmail: '',
+          major: '',
+          academicYear: '',
+          requiredTrainingHours: 0,
+          completedTrainingHours: 0,
+          collegeID: UserSession.instance.collegeId,
+        );
+        _isLoading = false;
+      });
     }
   }
 

@@ -4,7 +4,6 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
 import '../utils/profile_provider.dart';
@@ -18,6 +17,7 @@ import '../widgets/saved_jobs_sections.dart';
 import '../widgets/section_box.dart';
 import '../widgets/form_field.dart';
 import '../widgets/skill_chip.dart';
+import '../../services/user_session.dart';
 
 // ─── Profile Screen ───────────────────────────────────────────────────────────
 
@@ -61,7 +61,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _fetchRealDocuments() async {
     try {
       final supabase = Supabase.instance.client;
-      final files = await supabase.storage.from('documents').list(path: 'student_6');
+      final userId = UserSession.instance.userId;
+      final storagePath = 'student_$userId';
+      final files = await supabase.storage.from('documents').list(path: storagePath);
 
       if (mounted) {
         setState(() {
@@ -263,7 +265,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final supabase = Supabase.instance.client;
       final uniqueFileName =
           '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-      final storagePath = 'student_6/$uniqueFileName';
+      final userId = UserSession.instance.userId;
+      final storagePath = 'student_$userId/$uniqueFileName';
 
       // ✅ SINGLE upload method for ALL platforms
       await supabase.storage.from('documents').uploadBinary(
@@ -334,9 +337,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           final supabase = Supabase.instance.client;
                           
                           // FIX 3: Actually delete from Supabase storage
+                          final userId = UserSession.instance.userId;
                           await supabase.storage
                               .from('documents')
-                              .remove(['student_6/${doc.name}']);
+                              .remove(['student_$userId/${doc.name}']);
 
                           // Only remove from UI if the storage delete succeeds
                           setState(() {
@@ -389,8 +393,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final majorCtrl = TextEditingController(text: profile.major);
     final gpaCtrl = TextEditingController(text: profile.gpa);
     final bioCtrl = TextEditingController(text: profile.bio);
-    String selectedYear = profile.academicYear;
     final years = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate'];
+    String selectedYear = profile.academicYear.isNotEmpty && years.contains(profile.academicYear)
+        ? profile.academicYear
+        : years.last;
 
     showDialog(
       context: context,
@@ -431,7 +437,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ])),
                   const SizedBox(height: 6),
-                  Center(child: Text('ID: 2', style: TextStyle(fontSize: 12,
+                  Center(child: Text('ID: ${UserSession.instance.userId ?? ''}', style: TextStyle(fontSize: 12,
                       color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary))),
                   const SizedBox(height: 20),
 

@@ -64,12 +64,12 @@ class _StudentHomeState extends State<StudentHome> {
       // ✅ Get user ID from UserSession (set at login)
       final userId = UserSession.instance.userId!;
 
-      // fetch student info
+      // fetch student info (use maybeSingle to avoid crash if no record)
       final studentData = await supabase
           .from('student')
           .select()
           .eq('studentid', userId)
-          .single();
+          .maybeSingle();
 
       // fetch profileId
       final profile = await supabase
@@ -110,7 +110,8 @@ class _StudentHomeState extends State<StudentHome> {
       _applications = await _vacancyService.getUserApplications(userId);
 
       setState(() {
-        _studentName = studentData['name'] ?? '';
+        // Use student table name if available, otherwise fall back to UserSession name
+        _studentName = studentData?['name'] ?? UserSession.instance.name ?? '';
         // ✅ Use calculated approved hours (only APPROVED trainings)
         _completedHours = (trainingProgress['approvedHours'] as int).toDouble();
         _totalHours = (trainingProgress['requiredHours'] as int).toDouble();

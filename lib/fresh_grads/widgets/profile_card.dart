@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import 'info_row.dart';
+import '../../services/user_session.dart';
 
 class ProfileInfoCard extends StatelessWidget {
   final String initials, firstName, lastName, major, gpa, email, phone, bio;
@@ -24,14 +25,14 @@ class ProfileInfoCard extends StatelessWidget {
               decoration: BoxDecoration(color: const Color(0xFF4A7C59), borderRadius: BorderRadius.circular(12)),
               child: Center(child: Text(initials, style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)))),
           const SizedBox(width: 14),
-          Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text('$firstName $lastName', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold,
                 color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
-            Text('$major • Class of 2024', style: TextStyle(fontSize: 13,
+            Text(major.isNotEmpty ? major : 'Graduate', style: TextStyle(fontSize: 13,
                 color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-            Text('ID: 2', style: TextStyle(fontSize: 12,
+            Text('ID: ${UserSession.instance.collegeId ?? UserSession.instance.userId ?? ''}', style: TextStyle(fontSize: 12,
                 color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-          ]),
+          ])),
         ]),
         const SizedBox(height: 16),
         const Divider(height: 1),
@@ -44,7 +45,7 @@ class ProfileInfoCard extends StatelessWidget {
         const SizedBox(height: 14),
         Text('Bio', style: TextStyle(fontSize: 12, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
         const SizedBox(height: 4),
-        Text(bio, style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary, height: 1.4)),
+        Text(bio.isNotEmpty ? bio : 'No bio added', style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary, height: 1.4)),
       ]),
     );
   }

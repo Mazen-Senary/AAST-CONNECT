@@ -62,6 +62,10 @@ class _SignInScreenState extends State<SignInScreen> {
       }
 
       if (role == 'FRESH_GRAD') {
+        // Load full profile data from freshgraduate table
+        if (mounted) {
+          await context.read<ProfileProvider>().loadFromDatabase();
+        }
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
