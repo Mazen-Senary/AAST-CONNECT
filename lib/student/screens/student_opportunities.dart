@@ -5,6 +5,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import '../../services/vacancy_service.dart';
+import '../../services/user_session.dart';
 import '../../models/vacancy.dart';
 import '../../widgets/app_bar_with_logout.dart';
 import '../../widgets/loading_widget.dart';
@@ -53,7 +54,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
     });
 
     try {
-      _currentUserId = 5; // temp hardcode
+      _currentUserId = UserSession.instance.userId!;
       // fetch profileId
       final supabase = Supabase.instance.client;
       final profile = await supabase
@@ -92,7 +93,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
       final data = await supabase
           .from('saved_programs')
           .select('vacancyid')
-          .eq('studentid', _currentUserId ?? 5);
+          .eq('studentid', _currentUserId ?? UserSession.instance.userId!);
       setState(() {
         _savedVacancyIds = List<String>.from(
           data.map((row) => row['vacancyid'].toString()),
@@ -112,7 +113,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
         await supabase
             .from('saved_programs')
             .delete()
-            .eq('studentid', _currentUserId ?? 5)
+            .eq('studentid', _currentUserId ?? UserSession.instance.userId!)
             .eq('vacancyid', vacancyId);
         setState(() => _savedVacancyIds.remove(vacancyId));
         final snackBar = SnackBar(
@@ -128,7 +129,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
       } else {
         await supabase.from('saved_programs').insert({
-          'studentid': _currentUserId ?? 5,
+          'studentid': _currentUserId ?? UserSession.instance.userId!,
           'vacancyid': vacancyId,
         });
         setState(() => _savedVacancyIds.add(vacancyId));
@@ -250,10 +251,10 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
       context,
       program,
       () => _loadData(),
-      profileId: _profileId, // need to add this variable
+      profileId: _profileId,
       studentId: _currentUserId,
-      collegeId: 'STD2023005', // temp hardcode
-      studentName: 'Mohamed Tarek', // temp hardcode
+      collegeId: UserSession.instance.collegeId ?? '',
+      studentName: UserSession.instance.name ?? '',
     );
   }
 
@@ -479,7 +480,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
                       return FutureBuilder<bool>(
                         future: _vacancyService.hasUserApplied(
                           program['vacancyId'].toString(),
-                          _currentUserId ?? 5,
+                          _currentUserId ?? UserSession.instance.userId!,
                         ),
                         builder: (context, snapshot) {
                           final hasApplied = snapshot.data ?? false;

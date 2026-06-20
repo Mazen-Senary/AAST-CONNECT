@@ -8,6 +8,7 @@ import '../../widgets/tracking_status_chip.dart';
 import '../../widgets/profile_widgets/student_profile_submit_hours_modal.dart';
 import '../../widgets/cancellation_confirmation_dialog.dart';
 import '../../services/vacancy_service.dart';
+import '../../services/user_session.dart';
 import '../../constants/app_colors.dart';
 
 class StudentTrackingScreen extends StatefulWidget {
@@ -56,10 +57,8 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
     try {
       final supabase = Supabase.instance.client;
       
-      // ✅ Get user ID from Supabase auth (fallback to 5 for testing)
-      final studentId = supabase.auth.currentUser?.id != null
-          ? int.tryParse(supabase.auth.currentUser!.id) ?? 5
-          : 5;
+      // ✅ Get user ID from UserSession (set at login)
+      final studentId = UserSession.instance.userId!;
 
       // ✅ Calculate progress based on APPROVED trainings only
       final trainingProgress = await _trainingService.calculateTrainingProgress(studentId);
@@ -182,7 +181,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
           ? FloatingActionButton.extended(
               onPressed: () => StudentProfileSubmitHoursModal.show(
                 context,
-                studentId: 5,
+                studentId: UserSession.instance.userId!,
                 onSubmitted: _fetchTrackingData,
               ),
               icon: const Icon(Icons.add),

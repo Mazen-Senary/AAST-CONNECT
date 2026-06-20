@@ -3,6 +3,7 @@ import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/rounded_container.dart';
 import '../../services/notification_service.dart';
+import '../../services/user_session.dart';
 
 class StudentNotificationsScreen extends StatefulWidget {
   const StudentNotificationsScreen({super.key});
@@ -14,7 +15,7 @@ class StudentNotificationsScreen extends StatefulWidget {
 
 class _StudentNotificationsScreenState extends State<StudentNotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
-  final int _studentId = 5; // Replace with actual userId when auth is implemented
+  int get _studentId => UserSession.instance.userId!;
 
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;

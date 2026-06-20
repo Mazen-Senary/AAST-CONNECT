@@ -15,6 +15,7 @@ import '../../widgets/home_widgets/student_home_stat_card.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_apply_modal.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.dart';
 import '../../services/vacancy_service.dart';
+import '../../services/user_session.dart';
 import 'student_tracking.dart';
 import 'student_notifications.dart';
 
@@ -60,10 +61,8 @@ class _StudentHomeState extends State<StudentHome> {
     try {
       final supabase = Supabase.instance.client;
       
-      // ✅ Get user ID from Supabase auth (fallback to 5 for testing)
-      final userId = supabase.auth.currentUser?.id != null
-          ? int.tryParse(supabase.auth.currentUser!.id) ?? 5
-          : 5;
+      // ✅ Get user ID from UserSession (set at login)
+      final userId = UserSession.instance.userId!;
 
       // fetch student info
       final studentData = await supabase
@@ -163,8 +162,8 @@ class _StudentHomeState extends State<StudentHome> {
       },
       () => _fetchData(), // Refresh data after apply
       profileId: _profileId,
-      studentId: 5,
-      collegeId: 'STD2023005',
+      studentId: UserSession.instance.userId!,
+      collegeId: UserSession.instance.collegeId ?? '',
       studentName: _studentName,
     );
   }

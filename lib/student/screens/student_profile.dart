@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import '../../services/theme_provider.dart';
+import '../../services/user_session.dart';
 import '../../widgets/profile_widgets/student_profile_edit_modal.dart';
 import '../../widgets/rounded_container.dart';
 import '../../widgets/home_widgets/student_home_section_header.dart';
@@ -14,6 +15,7 @@ import '../../widgets/profile_widgets/student_profile_portfolio_modal.dart';
 import '../../widgets/profile_widgets/student_profile_submit_hours_modal.dart';
 import '../../models/student.dart';
 import '../../widgets/app_bar_with_logout.dart';
+import '../../signIn.dart';
 import 'student_tracking.dart';
 
 class StudentProfile extends StatefulWidget {
@@ -50,7 +52,7 @@ class _StudentProfileState extends State<StudentProfile> {
   Future<void> _fetchStudentData() async {
     try {
       final supabase = Supabase.instance.client;
-      final userId = 5;
+      final userId = UserSession.instance.userId!;
 
       final data = await supabase
           .from('student')
@@ -270,11 +272,13 @@ class _StudentProfileState extends State<StudentProfile> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.rejected,
             ),
-            onPressed: () async {
+            onPressed: () {
               Navigator.pop(context);
-              // TODO: Implement logout logic with Supabase auth
-              // await Supabase.instance.client.auth.signOut();
-              // Navigate to login screen
+              UserSession.instance.clear();
+              Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const SignInScreen()),
+                (route) => false,
+              );
             },
             child: const Text('Logout'),
           ),

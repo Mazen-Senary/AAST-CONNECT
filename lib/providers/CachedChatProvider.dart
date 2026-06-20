@@ -73,6 +73,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/chat_service.dart';
+import '../services/user_session.dart';
 
 // 1. Define the ChatMessage model right here to prevent import errors
 class ChatMessage {
@@ -122,8 +123,8 @@ class CachedChatProvider extends ChangeNotifier {
     try {
       debugPrint("Fetching Fresh Data from Supabase");
 
-      // DEMO MODE: Hardcoded User ID 5
-      const int userId = 5;
+      // Use logged-in user's ID from UserSession
+      final int userId = UserSession.instance.userId ?? 0;
 
       // --- FETCH USER INFO ---
       final userData = await _supabase

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../../services/vacancy_service.dart';
+import '../../services/user_session.dart';
 
 class StudentOpportunitiesApplyModal {
   static void show(
@@ -200,9 +201,9 @@ class _ApplyModalContentState extends State<_ApplyModalContent> {
       final vacancyService = VacancyService();
       await vacancyService.submitApplication(
         vacancyId: widget.program['vacancyId'],
-        applicantId: widget.studentId ?? 5,
-        applicantName: widget.studentName ?? 'Student',
-        collegeId: widget.collegeId ?? 'STD2023005',
+        applicantId: widget.studentId ?? UserSession.instance.userId!,
+        applicantName: widget.studentName ?? UserSession.instance.name ?? 'Student',
+        collegeId: widget.collegeId ?? UserSession.instance.collegeId ?? '',
         coverLetter: _coverLetterController.text.trim(),
         documentId: _selectedDocumentId,
       );
