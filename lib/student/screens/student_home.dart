@@ -17,7 +17,6 @@ import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.d
 import '../../services/vacancy_service.dart';
 import '../../services/user_session.dart';
 import 'student_tracking.dart';
-import 'student_notifications.dart';
 
 class StudentHome extends StatefulWidget {
   final VoidCallback onSeeAll;
@@ -63,12 +62,13 @@ class _StudentHomeState extends State<StudentHome> {
       
       // ✅ Get user ID from UserSession (set at login)
       final userId = UserSession.instance.userId!;
+      final studentId = UserSession.instance.studentId ?? userId;
 
       // fetch student info (use maybeSingle to avoid crash if no record)
       final studentData = await supabase
           .from('student')
           .select()
-          .eq('studentid', userId)
+          .eq('studentid', studentId)
           .maybeSingle();
 
       // fetch profileId
@@ -83,11 +83,12 @@ class _StudentHomeState extends State<StudentHome> {
       final pendingData = await supabase
           .from('trainingrecord')
           .select()
-          .eq('studentid', userId)
+          .eq('studentid', studentId)
           .eq('status', 'PENDING');
 
       // ✅ Calculate progress based on APPROVED trainings only
-      final trainingProgress = await _trainingService.calculateTrainingProgress(userId);
+      final trainingProgress =
+          await _trainingService.calculateTrainingProgress(studentId);
 
       // fetch available vacancies for students
       final vacanciesData = await supabase
@@ -444,9 +445,13 @@ class _StudentHomeState extends State<StudentHome> {
           ? const Center(child: CircularProgressIndicator())
           : LayoutBuilder(
               builder: (context, constraints) {
-                return SingleChildScrollView(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
+                return RefreshIndicator(
+                  color: AppColors.lightPrimary,
+                  onRefresh: _fetchData,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
@@ -567,6 +572,7 @@ class _StudentHomeState extends State<StudentHome> {
                       }),
                       const SizedBox(height: 40),
                     ],
+                    ),
                   ),
                 );
               },
@@ -574,10 +580,4 @@ class _StudentHomeState extends State<StudentHome> {
     );
   }
 
-  Widget _buildProgressCard(BuildContext context) {
-    return StudentHomeProgressCard(
-      completedHours: _completedHours,
-      totalHours: _totalHours == 0 ? 1 : _totalHours,
-    );
-  }
 }

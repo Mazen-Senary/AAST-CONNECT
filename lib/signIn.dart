@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'fresh_grads/widgets/fresh_grad_navigation.dart';
 import 'fresh_grads/theme/app_theme.dart';
 import 'fresh_grads/utils/profile_provider.dart';
 import 'student/student_main_navigation.dart';
+import 'services/student_identity_service.dart';
 import 'services/user_session.dart';
 
 class SignInScreen extends StatefulWidget {
@@ -19,7 +19,7 @@ class _SignInScreenState extends State<SignInScreen> {
   String _loginMessage = '';
   bool _isLoading = false;
 
-  final supabase = Supabase.instance.client;
+  final StudentIdentityService _identityService = StudentIdentityService();
 
   Future<void> _signIn() async {
     final collegeId = _registrationController.text.trim();
@@ -37,31 +37,22 @@ class _SignInScreenState extends State<SignInScreen> {
     });
 
     try {
-      // Look up the user in the users table
-      final response = await supabase
-          .from('users')
-          .select('userid, name, role, college_id')
-          .eq('college_id', collegeId)
-          .single();
-
-      final role = response['role'];
-      final userId = response['userid'] as int;
-      final name = response['name'] ?? '';
-      final userCollegeId = response['college_id'] ?? collegeId;
+      final sessionData = await _identityService.resolveByCollegeId(collegeId);
 
       // Populate the global UserSession
       UserSession.instance
-        ..userId = userId
-        ..name = name
-        ..role = role
-        ..collegeId = userCollegeId;
+        ..userId = sessionData.userId
+        ..studentId = sessionData.studentId
+        ..name = sessionData.name
+        ..role = sessionData.role
+        ..collegeId = sessionData.collegeId;
 
       // Save college ID to fresh-grad ProfileProvider too
       if (mounted) {
-        context.read<ProfileProvider>().setCollegeId(userCollegeId);
+        context.read<ProfileProvider>().setCollegeId(sessionData.collegeId);
       }
 
-      if (role == 'FRESH_GRAD') {
+      if (sessionData.role == 'FRESH_GRAD') {
         // Load full profile data from freshgraduate table
         if (mounted) {
           await context.read<ProfileProvider>().loadFromDatabase();
@@ -71,13 +62,13 @@ class _SignInScreenState extends State<SignInScreen> {
           context,
           MaterialPageRoute(builder: (_) => const FreshGradNavigation()),
         );
-      } else if (role == 'STUDENT') {
+      } else if (sessionData.role == 'STUDENT') {
         if (!mounted) return;
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (_) => const StudentMainNavigation()),
         );
-      } else if (role == 'ADMIN') {
+      } else if (sessionData.role == 'ADMIN') {
         setState(() {
           _isLoading = false;
           _loginMessage = 'Admin portal not available in this app.';

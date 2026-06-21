@@ -8,6 +8,7 @@ class UserSession {
   UserSession._();
 
   int? userId;
+  int? studentId;
   String? name;
   String? role; // 'STUDENT', 'FRESH_GRAD', 'ADMIN'
   String? collegeId;
@@ -17,6 +18,7 @@ class UserSession {
   /// Call on logout to wipe session data.
   void clear() {
     userId = null;
+    studentId = null;
     name = null;
     role = null;
     collegeId = null;

@@ -37,6 +37,12 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
   List<Map<String, dynamic>> _applications = [];
   List<String> _savedVacancyIds = [];
   int? _currentUserId;
+  int? _currentStudentId;
+
+  int get _studentRecordId =>
+      _currentStudentId ??
+      UserSession.instance.studentId ??
+      UserSession.instance.userId!;
 
   // Method channel for Android
   static const platform = MethodChannel('com.aastconnect.app/url_launcher');
@@ -55,6 +61,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
 
     try {
       _currentUserId = UserSession.instance.userId!;
+      _currentStudentId = UserSession.instance.studentId ?? _currentUserId;
       // fetch profileId
       final supabase = Supabase.instance.client;
       final profile = await supabase
@@ -93,7 +100,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
       final data = await supabase
           .from('saved_programs')
           .select('vacancyid')
-          .eq('studentid', _currentUserId ?? UserSession.instance.userId!);
+          .eq('studentid', _studentRecordId);
       setState(() {
         _savedVacancyIds = List<String>.from(
           data.map((row) => row['vacancyid'].toString()),
@@ -113,7 +120,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
         await supabase
             .from('saved_programs')
             .delete()
-            .eq('studentid', _currentUserId ?? UserSession.instance.userId!)
+            .eq('studentid', _studentRecordId)
             .eq('vacancyid', vacancyId);
         setState(() => _savedVacancyIds.remove(vacancyId));
         final snackBar = SnackBar(
@@ -129,7 +136,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
         ScaffoldMessenger.of(context).showSnackBar(snackBar);
       } else {
         await supabase.from('saved_programs').insert({
-          'studentid': _currentUserId ?? UserSession.instance.userId!,
+          'studentid': _studentRecordId,
           'vacancyid': vacancyId,
         });
         setState(() => _savedVacancyIds.add(vacancyId));
@@ -465,39 +472,50 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
           ),
 
           Expanded(
-            child: _filteredPrograms.isEmpty
-                ? const Center(
-                    child: Text(
-                      "No programs found",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: _filteredPrograms.length,
-                    itemBuilder: (context, index) {
-                      final program = _filteredPrograms[index];
-                      return FutureBuilder<bool>(
-                        future: _vacancyService.hasUserApplied(
-                          program['vacancyId'].toString(),
-                          _currentUserId ?? UserSession.instance.userId!,
+            child: RefreshIndicator(
+              color: const Color(0xFF284B8C),
+              onRefresh: _loadData,
+              child: _filteredPrograms.isEmpty
+                  ? ListView(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      children: const [
+                        SizedBox(height: 180),
+                        Center(
+                          child: Text(
+                            "No programs found",
+                            style: TextStyle(color: Colors.grey),
+                          ),
                         ),
-                        builder: (context, snapshot) {
-                          final hasApplied = snapshot.data ?? false;
-                          return StudentOpportunitiesProgramCard(
-                            program: {...program, 'applied': hasApplied},
-                            onViewDetails: () =>
-                                _showDetailsModal(context, program),
-                            onApply: () => _showApplyModal(context, program),
-                            isSaved: _savedVacancyIds.contains(
-                              program['vacancyId'],
-                            ),
-                            onSave: () => _toggleSave(program['vacancyId']),
-                          );
-                        },
-                      );
-                    },
-                  ),
+                      ],
+                    )
+                  : ListView.builder(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      itemCount: _filteredPrograms.length,
+                      itemBuilder: (context, index) {
+                        final program = _filteredPrograms[index];
+                        return FutureBuilder<bool>(
+                          future: _vacancyService.hasUserApplied(
+                            program['vacancyId'].toString(),
+                            _currentUserId ?? UserSession.instance.userId!,
+                          ),
+                          builder: (context, snapshot) {
+                            final hasApplied = snapshot.data ?? false;
+                            return StudentOpportunitiesProgramCard(
+                              program: {...program, 'applied': hasApplied},
+                              onViewDetails: () =>
+                                  _showDetailsModal(context, program),
+                              onApply: () => _showApplyModal(context, program),
+                              isSaved: _savedVacancyIds.contains(
+                                program['vacancyId'],
+                              ),
+                              onSave: () => _toggleSave(program['vacancyId']),
+                            );
+                          },
+                        );
+                      },
+                    ),
+            ),
           ),
         ],
       ),

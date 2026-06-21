@@ -146,6 +146,7 @@ class ChatProvider extends ChangeNotifier {
     try {
       // Use logged-in user's ID from UserSession
       final int userId = UserSession.instance.userId ?? 0;
+      final int studentId = UserSession.instance.studentId ?? userId;
 
       // 1. Fetch user info using the hardcoded ID directly
       final userData = await _supabase
@@ -166,7 +167,7 @@ class ChatProvider extends ChangeNotifier {
         final studentData = await _supabase
             .from('student')
             .select('completedtraininghours, requiredtraininghours')
-            .eq('studentid', userId)
+            .eq('studentid', studentId)
             .maybeSingle();
 
         if (studentData != null) {

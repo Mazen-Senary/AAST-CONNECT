@@ -1,5 +1,6 @@
 //new program card with save bookmark button and applied state
 import 'package:flutter/material.dart';
+import '../company_logo.dart';
 import '../rounded_container.dart';
 import '../../constants/app_colors.dart';
 
@@ -18,10 +19,6 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
     this.onSave,
     this.isSaved = false,
   });
-
-  Color _getColorForCategory(String category) {
-    return AppColors.getCategoryColor(category).withOpacity(0.3);
-  }
 
   IconData _getIconForCategory(String category) {
     switch (category.toLowerCase()) {
@@ -47,64 +44,12 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
   /// Build company logo or fallback to icon
   Widget _buildCompanyLogo() {
     final logoUrl = program['company_logo_url'] ?? program['companyLogoUrl'];
-    
-    // If logo URL exists and is not empty, display the image
-    if (logoUrl != null && logoUrl.toString().isNotEmpty) {
-      return Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            logoUrl.toString(),
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback to icon if image fails to load
-              return Container(
-                decoration: BoxDecoration(
-                  color: _getColorForCategory(program['category'] ?? ''),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Icon(
-                  _getIconForCategory(program['category'] ?? ''),
-                  size: 24,
-                ),
-              );
-            },
-            loadingBuilder: (context, child, loadingProgress) {
-              if (loadingProgress == null) return child;
-              return Container(
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade100,
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Center(
-                  child: SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  ),
-                ),
-              );
-            },
-          ),
-        ),
-      );
-    }
 
-    // Fallback: Show default icon if no logo URL
-    return Container(
-      padding: const EdgeInsets.all(10),
-      decoration: BoxDecoration(
-        color: _getColorForCategory(program['category'] ?? ''),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(_getIconForCategory(program['category'] ?? ''), size: 24),
+    return CompanyLogo(
+      logoUrl: logoUrl?.toString(),
+      fallbackIcon: _getIconForCategory(program['category'] ?? ''),
+      fallbackColor: AppColors.lightPrimary,
+      borderColor: Colors.grey.shade200,
     );
   }
 

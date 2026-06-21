@@ -6,7 +6,17 @@ import '../../services/notification_service.dart';
 import '../../services/user_session.dart';
 
 class StudentNotificationsScreen extends StatefulWidget {
-  const StudentNotificationsScreen({super.key});
+  final Future<List<Map<String, dynamic>>> Function()? loadExtraNotifications;
+  final Future<void> Function(Map<String, dynamic> notification)?
+      onExtraNotificationRead;
+  final Future<void> Function()? onAllExtraNotificationsRead;
+
+  const StudentNotificationsScreen({
+    super.key,
+    this.loadExtraNotifications,
+    this.onExtraNotificationRead,
+    this.onAllExtraNotificationsRead,
+  });
 
   @override
   State<StudentNotificationsScreen> createState() =>
@@ -36,11 +46,21 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
     try {
       final allNotifications =
           await _notificationService.fetchNotifications(_studentId);
+      final extraNotifications =
+          await widget.loadExtraNotifications?.call() ??
+          <Map<String, dynamic>>[];
       
       // Filter to only show unread notifications
       final unreadNotifications = allNotifications
           .where((notif) => notif['isread'] == false)
           .toList();
+      unreadNotifications.addAll(extraNotifications);
+      unreadNotifications.sort((a, b) {
+        final aDate = DateTime.tryParse(a['createdat']?.toString() ?? '');
+        final bDate = DateTime.tryParse(b['createdat']?.toString() ?? '');
+        if (aDate == null || bDate == null) return 0;
+        return bDate.compareTo(aDate);
+      });
       
       setState(() {
         _notifications = unreadNotifications;
@@ -56,10 +76,22 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
   }
 
   /// Delete notification from database and remove from local list
-  Future<void> _deleteNotification(int notificationId, int index) async {
+  Future<void> _deleteNotification(dynamic notificationId, int index) async {
     try {
+      if (_isExtraNotification(index)) {
+        await widget.onExtraNotificationRead?.call(_notifications[index]);
+        setState(() {
+          if (index < _notifications.length) {
+            _notifications.removeAt(index);
+          }
+        });
+        return;
+      }
+
       // First mark as read (so it persists even if delete fails)
-      await _notificationService.markNotificationAsDeletedAndRead(notificationId);
+      await _notificationService.markNotificationAsDeletedAndRead(
+        notificationId as int,
+      );
       
       // Then try to delete
       try {
@@ -102,12 +134,11 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
   Future<void> _markAllAsRead() async {
     try {
       await _notificationService.markAllAsRead(_studentId);
+      await widget.onAllExtraNotificationsRead?.call();
 
       // Update UI: filter out all read notifications
       setState(() {
-        _notifications = _notifications
-            .where((notif) => notif['isread'] == false)
-            .toList();
+        _notifications = [];
       });
     } catch (e) {
       print('Error marking all as read: $e');
@@ -115,10 +146,20 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
   }
 
   /// Mark single notification as read and remove from list
-  Future<void> _markAsRead(int notificationId, int index) async {
+  Future<void> _markAsRead(dynamic notificationId, int index) async {
     try {
+      if (_isExtraNotification(index)) {
+        await widget.onExtraNotificationRead?.call(_notifications[index]);
+        setState(() {
+          if (index < _notifications.length) {
+            _notifications.removeAt(index);
+          }
+        });
+        return;
+      }
+
       if (!_notifications[index]['isread']) {
-        await _notificationService.markAsRead(notificationId);
+        await _notificationService.markAsRead(notificationId as int);
 
         // Remove from list immediately for better UX
         setState(() {
@@ -130,6 +171,11 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
     } catch (e) {
       print('Error marking notification as read: $e');
     }
+  }
+
+  bool _isExtraNotification(int index) {
+    if (index >= _notifications.length) return false;
+    return _notifications[index]['is_virtual_opportunity'] == true;
   }
 
   @override
@@ -282,12 +328,12 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                                       ? (isDark
                                           ? Colors.grey.shade900
                                           : Colors.white)
-                                      : color.withOpacity(0.08),
+                                      : color.withValues(alpha: 0.08),
                                   borderColor: isRead
                                       ? (isDark
                                           ? Colors.grey.shade800
                                           : Colors.grey.shade200)
-                                      : color.withOpacity(0.25),
+                                      : color.withValues(alpha: 0.25),
                                   borderRadius: 18.0,
                                   padding: const EdgeInsets.all(16),
                                   child: Column(
@@ -304,7 +350,7 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                                           padding:
                                               const EdgeInsets.all(12),
                                           decoration: BoxDecoration(
-                                            color: color.withOpacity(0.18),
+                                            color: color.withValues(alpha: 0.18),
                                             shape: BoxShape.circle,
                                           ),
                                           child: Icon(
@@ -363,11 +409,11 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                                         width: double.infinity,
                                         padding: const EdgeInsets.all(10),
                                         decoration: BoxDecoration(
-                                          color: color.withOpacity(0.1),
+                                          color: color.withValues(alpha: 0.1),
                                           borderRadius:
                                               BorderRadius.circular(10),
                                           border: Border.all(
-                                            color: color.withOpacity(0.2),
+                                            color: color.withValues(alpha: 0.2),
                                           ),
                                         ),
                                         child: RichText(

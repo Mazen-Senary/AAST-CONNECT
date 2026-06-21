@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../theme/app_theme.dart';
 import '../../signIn.dart';
@@ -8,11 +7,15 @@ import '../../services/user_session.dart';
 class AastAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isDark;
   final VoidCallback onThemeToggle;
+  final int unreadNotificationCount;
+  final VoidCallback? onNotificationsPressed;
 
   const AastAppBar({
     super.key,
     required this.isDark,
     required this.onThemeToggle,
+    this.unreadNotificationCount = 0,
+    this.onNotificationsPressed,
   });
 
   Future<void> _logout(BuildContext context) async {
@@ -46,6 +49,7 @@ class AastAppBar extends StatelessWidget implements PreferredSizeWidget {
         (route) => false,
       );
     } catch (e) {
+      if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Logout failed: $e'),
@@ -81,6 +85,48 @@ class AastAppBar extends StatelessWidget implements PreferredSizeWidget {
                 isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
         ),
+        if (onNotificationsPressed != null)
+          Stack(
+            children: [
+              IconButton(
+                tooltip: 'Notifications',
+                onPressed: onNotificationsPressed,
+                icon: Icon(
+                  Icons.notifications_outlined,
+                  color: isDark
+                      ? AppColors.darkTextPrimary
+                      : AppColors.textPrimary,
+                ),
+              ),
+              if (unreadNotificationCount > 0)
+                Positioned(
+                  right: 8,
+                  top: 8,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.red,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      unreadNotificationCount > 99
+                          ? '99+'
+                          : unreadNotificationCount.toString(),
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
+          ),
         TextButton.icon(
           onPressed: () => _logout(context),
           icon: Icon(

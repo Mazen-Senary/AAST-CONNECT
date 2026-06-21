@@ -73,6 +73,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../services/chat_service.dart';
+import '../services/chat_session_scope.dart';
+import '../services/chat_session_store.dart';
 import '../services/user_session.dart';
 
 // 1. Define the ChatMessage model right here to prevent import errors
@@ -86,37 +88,77 @@ class ChatMessage {
 class CachedChatProvider extends ChangeNotifier {
   final ChatService _chatService = ChatService();
   final _supabase = Supabase.instance.client;
+  final ChatSessionStore<ChatMessage> _sessionStore =
+      ChatSessionStore<ChatMessage>();
 
-  // Cache variables
-  String? _cachedContext;
-  DateTime? _lastFetched;
+  String? _activeSessionKey;
   static const Duration _cacheDuration = Duration(minutes: 5);
 
-  final List<ChatMessage> _messages = [
-    ChatMessage(
-        text: "Hi! I'm your AAST Connect Assistant. How can I help you today?",
-        isUser: false
-    )
-  ];
-
   bool _isLoading = false;
-  List<ChatMessage> get messages => _messages;
+  List<ChatMessage> get messages {
+    _ensureCurrentSession();
+    return _sessionStore.messagesFor(_activeSessionKey!) ?? [];
+  }
   bool get isLoading => _isLoading;
+
+  CachedChatProvider() {
+    _resetConversationForCurrentSession();
+  }
 
   // PUBLIC: Call this after any DB change (like submitting hours)
   void invalidateCache() {
-    _cachedContext = null;
-    _lastFetched = null;
+    _ensureCurrentSession();
+    _sessionStore.invalidateContext(_activeSessionKey!);
     debugPrint("Cache invalidated: Next fetch will be fresh from Supabase.");
   }
 
+  void clearActiveSession() {
+    if (_activeSessionKey != null) {
+      _sessionStore.clearSession(_activeSessionKey!);
+    }
+    _resetConversationForCurrentSession();
+    notifyListeners();
+  }
+
+  void _ensureCurrentSession() {
+    final currentKey = ChatSessionScope.currentKey();
+    if (ChatSessionScope.hasChanged(_activeSessionKey, currentKey)) {
+      _activeSessionKey = currentKey;
+      _sessionStore.setMessages(
+        currentKey,
+        _sessionStore.messagesFor(currentKey) ?? [_welcomeMessage()],
+      );
+      _isLoading = false;
+    }
+  }
+
+  void _resetConversationForCurrentSession() {
+    _activeSessionKey = ChatSessionScope.currentKey();
+    _sessionStore.clearSession(_activeSessionKey!);
+    _sessionStore.setMessages(_activeSessionKey!, [_welcomeMessage()]);
+    _isLoading = false;
+  }
+
+  ChatMessage _welcomeMessage() {
+    final role = UserSession.instance.role;
+    final text = role == 'FRESH_GRAD'
+        ? "Hi! I'm your AAST Connect Assistant. Ask me about your job applications, profile, documents, or graduate opportunities."
+        : "Hi! I'm your AAST Connect Assistant. Ask me about training hours, applications, documents, or opportunities.";
+    return ChatMessage(text: text, isUser: false);
+  }
+
   Future<String> _buildUserContext() async {
+    _ensureCurrentSession();
+
     // 1. Check Cache First
-    if (_cachedContext != null &&
-        _lastFetched != null &&
-        DateTime.now().difference(_lastFetched!) < _cacheDuration) {
+    final cachedContext = _sessionStore.contextFor(
+      _activeSessionKey!,
+      _cacheDuration,
+      DateTime.now(),
+    );
+    if (cachedContext != null) {
       debugPrint("Using Cached Database Context");
-      return _cachedContext!;
+      return cachedContext;
     }
 
     // 2. Fetch Fresh Data (The "Smart" Part)
@@ -125,6 +167,9 @@ class CachedChatProvider extends ChangeNotifier {
 
       // Use logged-in user's ID from UserSession
       final int userId = UserSession.instance.userId ?? 0;
+      final int studentId = UserSession.instance.studentId ?? userId;
+      final String role = UserSession.instance.role ?? '';
+      final String collegeId = UserSession.instance.collegeId ?? '';
 
       // --- FETCH USER INFO ---
       final userData = await _supabase
@@ -135,26 +180,46 @@ class CachedChatProvider extends ChangeNotifier {
 
       if (userData == null) return "System Error: Could not find user with ID $userId";
 
-      final String role = userData['role'];
       final String name = userData['name'];
 
       String contextString = "User Name: $name\nRole: $role\n";
 
-      // --- FETCH TRAINING HOURS ---
       if (role == 'STUDENT') {
+        contextString += await _buildStudentContext(userId, studentId);
+      } else if (role == 'FRESH_GRAD') {
+        contextString += await _buildFreshGradContext(userId, collegeId);
+      } else {
+        contextString += "Assistant Scope: user-facing student and fresh graduate support only.\n";
+      }
+
+      // 3. Save to Cache
+      _sessionStore.setContext(
+        _activeSessionKey!,
+        contextString,
+        DateTime.now(),
+      );
+
+      return contextString;
+    } catch (e) {
+      debugPrint("Error fetching context: $e");
+      return "Could not fetch live database context.";
+    }
+  }
+
+  Future<String> _buildStudentContext(int userId, int studentId) async {
+    String contextString = "";
+
         final studentData = await _supabase
             .from('student')
             .select('completedtraininghours, requiredtraininghours')
-            .eq('studentid', userId)
+            .eq('studentid', studentId)
             .maybeSingle();
 
         if (studentData != null) {
           contextString += "Required Training Hours: ${studentData['requiredtraininghours']}\n";
           contextString += "Completed Training Hours: ${studentData['completedtraininghours']}\n";
         }
-      }
 
-      // --- FETCH RECENT APPLICATIONS ---
       final applications = await _supabase
           .from('application')
           .select('status, vacancies(title)')
@@ -174,12 +239,10 @@ class CachedChatProvider extends ChangeNotifier {
         contextString += "Recent Applications: None yet.\n";
       }
 
-      // --- FETCH AVAILABLE OPPORTUNITIES ---
-      final audienceFilter = (role == 'STUDENT') ? ['STUDENT', 'BOTH'] : ['GRADUATE', 'BOTH'];
       final latestVacancies = await _supabase
           .from('vacancies')
           .select('title, type, company_name')
-          .inFilter('target_audience', audienceFilter)
+          .inFilter('target_audience', ['STUDENT', 'BOTH'])
           .order('created_at', ascending: false)
           .limit(3);
 
@@ -190,28 +253,95 @@ class CachedChatProvider extends ChangeNotifier {
         }
       }
 
-      // 3. Save to Cache
-      _cachedContext = contextString;
-      _lastFetched = DateTime.now();
+    return contextString;
+  }
 
-      return _cachedContext!;
-    } catch (e) {
-      debugPrint("Error fetching context: $e");
-      return "Could not fetch live database context.";
+  Future<String> _buildFreshGradContext(int userId, String collegeId) async {
+    String contextString =
+        "Assistant Focus: fresh graduate job applications, profile, documents, and graduate opportunities only.\n";
+
+    if (collegeId.isNotEmpty) {
+      final profile = await _supabase
+          .from('freshgraduate')
+          .select('name, email, major, gpa, phone, bio, skills, interests, portfolio_links')
+          .eq('college_id', collegeId)
+          .maybeSingle();
+
+      if (profile != null) {
+        contextString += "Fresh Graduate Profile:\n";
+        contextString += "Name: ${profile['name'] ?? ''}\n";
+        contextString += "Email: ${profile['email'] ?? ''}\n";
+        contextString += "Major: ${profile['major'] ?? ''}\n";
+        contextString += "GPA: ${profile['gpa'] ?? ''}\n";
+        contextString += "Skills: ${profile['skills'] ?? ''}\n";
+        contextString += "Interests: ${profile['interests'] ?? ''}\n";
+      }
     }
+
+    final applications = await _supabase
+        .from('application')
+        .select('status, submissiondate, rejectionreason, vacancies(title, company_name, type)')
+        .eq('applicantid', userId)
+        .order('submissiondate', ascending: false)
+        .limit(5);
+
+    if (applications.isNotEmpty) {
+      contextString += "Recent Fresh Graduate Applications:\n";
+      for (var app in applications) {
+        final vacancy = app['vacancies'];
+        final title = (vacancy != null && vacancy is Map) ? vacancy['title'] : 'Unknown Vacancy';
+        final company = (vacancy != null && vacancy is Map) ? vacancy['company_name'] : 'Unknown Company';
+        final status = app['status'];
+        final rejectionReason = app['rejectionreason'];
+        contextString += "- $title at $company: $status";
+        if (rejectionReason != null && rejectionReason.toString().isNotEmpty) {
+          contextString += " (Reason: $rejectionReason)";
+        }
+        contextString += "\n";
+      }
+    } else {
+      contextString += "Recent Fresh Graduate Applications: None yet.\n";
+    }
+
+    final latestVacancies = await _supabase
+        .from('vacancies')
+        .select('title, type, company_name, deadline, application_method')
+        .inFilter('target_audience', ['GRADUATE', 'BOTH'])
+        .order('created_at', ascending: false)
+        .limit(5);
+
+    if (latestVacancies.isNotEmpty) {
+      contextString += "\nLatest Graduate Opportunities:\n";
+      for (var job in latestVacancies) {
+        contextString += "- ${job['title']} at ${job['company_name']} (${job['type']})";
+        if (job['deadline'] != null) {
+          contextString += ", deadline: ${job['deadline']}";
+        }
+        contextString += "\n";
+      }
+    }
+
+    return contextString;
   }
 
   Future<void> sendMessage(String text) async {
+    _ensureCurrentSession();
     if (text.trim().isEmpty) return;
 
-    _messages.add(ChatMessage(text: text, isUser: true));
+    _sessionStore.addMessage(
+      _activeSessionKey!,
+      ChatMessage(text: text, isUser: true),
+    );
     _isLoading = true;
     notifyListeners();
 
     final hiddenContext = await _buildUserContext();
     final response = await _chatService.sendMessage(text, hiddenContext);
 
-    _messages.add(ChatMessage(text: response, isUser: false));
+    _sessionStore.addMessage(
+      _activeSessionKey!,
+      ChatMessage(text: response, isUser: false),
+    );
     _isLoading = false;
     notifyListeners();
   }

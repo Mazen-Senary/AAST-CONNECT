@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../company_logo.dart';
 import '../rounded_container.dart';
 
 class StudentHomeProgramCard extends StatelessWidget {
@@ -40,49 +41,14 @@ class StudentHomeProgramCard extends StatelessWidget {
     }
   }
 
-  /// Build fallback icon with type-specific styling
-  Widget _buildFallbackIcon(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Icon(
-        _getDefaultIcon(),
-        size: 24,
-        color: Theme.of(context).colorScheme.primary,
-      ),
-    );
-  }
-
   /// Build company logo or fallback to type-specific icon
   Widget _buildCompanyLogo(BuildContext context) {
-    if (logoUrl != null && logoUrl!.isNotEmpty) {
-      return Container(
-        width: 50,
-        height: 50,
-        decoration: BoxDecoration(
-          color: Colors.grey.shade100,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade200),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(10),
-          child: Image.network(
-            logoUrl!,
-            fit: BoxFit.cover,
-            errorBuilder: (context, error, stackTrace) {
-              // Fallback to type-specific icon if image fails to load
-              return _buildFallbackIcon(context);
-            },
-          ),
-        ),
-      );
-    }
-
-    // Fallback: Show type-specific icon if no logo URL
-    return _buildFallbackIcon(context);
+    return CompanyLogo(
+      logoUrl: logoUrl,
+      fallbackIcon: _getDefaultIcon(),
+      fallbackColor: Theme.of(context).colorScheme.primary,
+      borderColor: Colors.grey.shade200,
+    );
   }
 
   @override
@@ -126,7 +92,10 @@ class StudentHomeProgramCard extends StatelessWidget {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+                  color: Theme.of(context)
+                      .colorScheme
+                      .primary
+                      .withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(

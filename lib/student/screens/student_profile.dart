@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
-import '../../services/theme_provider.dart';
 import '../../services/user_session.dart';
 import '../../widgets/profile_widgets/student_profile_edit_modal.dart';
 import '../../widgets/rounded_container.dart';
@@ -53,12 +51,13 @@ class _StudentProfileState extends State<StudentProfile> {
     try {
       final supabase = Supabase.instance.client;
       final userId = UserSession.instance.userId!;
+      final studentId = UserSession.instance.studentId ?? userId;
 
       // Use maybeSingle to avoid crash if no student record exists
       final data = await supabase
           .from('student')
           .select()
-          .eq('studentid', userId)
+          .eq('studentid', studentId)
           .maybeSingle();
 
       final profile = await supabase
@@ -88,7 +87,7 @@ class _StudentProfileState extends State<StudentProfile> {
       final savedData = await supabase
           .from('saved_programs')
           .select('*, vacancies(title, company_name)')
-          .eq('studentid', userId);
+          .eq('studentid', studentId);
 
       setState(() {
         if (data != null) {
@@ -96,7 +95,7 @@ class _StudentProfileState extends State<StudentProfile> {
         } else {
           // Fallback: create a minimal Student from UserSession
           _student = Student(
-            studentID: userId,
+            studentID: studentId,
             studentName: UserSession.instance.name ?? '',
             studentEmail: '',
             major: '',
@@ -116,7 +115,8 @@ class _StudentProfileState extends State<StudentProfile> {
       setState(() {
         // Even on error, create a minimal student so UI doesn't crash
         _student ??= Student(
-          studentID: UserSession.instance.userId ?? 0,
+          studentID:
+              UserSession.instance.studentId ?? UserSession.instance.userId ?? 0,
           studentName: UserSession.instance.name ?? '',
           studentEmail: '',
           major: '',
@@ -334,10 +334,13 @@ class _StudentProfileState extends State<StudentProfile> {
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
-          : SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              padding: const EdgeInsets.all(20),
-              child: Column(
+          : RefreshIndicator(
+              color: AppColors.lightPrimary,
+              onRefresh: _fetchStudentData,
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
@@ -537,6 +540,7 @@ class _StudentProfileState extends State<StudentProfile> {
                   ),
                   const SizedBox(height: 40),
                 ],
+                ),
               ),
             ),
     );

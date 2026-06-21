@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../providers/CachedChatProvider.dart';
 import '../theme/app_theme.dart';
 import '../widgets/contact_card.dart';
 import '../widgets/quick_action_card.dart';
@@ -13,30 +15,20 @@ class SupportScreen extends StatefulWidget {
 
 class _SupportScreenState extends State<SupportScreen> {
   void _showChatDialog(BuildContext context, bool isDark) {
-    final TextEditingController _chatController = TextEditingController();
-    final List<Map<String, String>> _messages = [
-      {
-        'sender': 'bot',
-        'text':
-        "Hi! I'm here to help you with questions about AAST Connect. You can ask me about training hours, applications, documents, and system features.",
-        'time': _currentTime(),
-      }
-    ];
+    final TextEditingController chatController = TextEditingController();
 
     final List<String> quickQuestions = [
-      'What are training hours?',
-      'How do I submit my training?',
-      'How do I apply for a job?',
-      'Where is my application status?',
+      'What is my application status?',
+      'Are there new graduate opportunities?',
+      'How do I improve my profile?',
+      'What documents should I upload?',
     ];
 
     showDialog(
       context: context,
-      barrierColor: Colors.black.withOpacity(0.4),
+      barrierColor: Colors.black.withValues(alpha: 0.4),
       builder: (ctx) {
-        return StatefulBuilder(
-          builder: (ctx, setModalState) {
-            return Dialog(
+        return Dialog(
               backgroundColor: Colors.transparent,
               insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
               child: Container(
@@ -100,57 +92,56 @@ class _SupportScreenState extends State<SupportScreen> {
 
                     // Messages
                     Expanded(
-                      child: ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        itemCount: _messages.length,
-                        itemBuilder: (_, i) {
-                          final msg = _messages[i];
-                          final isBot = msg['sender'] == 'bot';
-                          return Align(
-                            alignment: isBot
-                                ? Alignment.centerLeft
-                                : Alignment.centerRight,
-                            child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              mainAxisAlignment: isBot
-                                  ? MainAxisAlignment.start
-                                  : MainAxisAlignment.end,
-                              children: [
-                                if (isBot) ...[
-                                  Container(
-                                    width: 32,
-                                    height: 32,
-                                    margin: const EdgeInsets.only(right: 8, top: 4),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.lightBlue,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.support_agent,
-                                        color: AppColors.accentBlue, size: 16),
-                                  ),
-                                ],
-                                Flexible(
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 12),
-                                    padding: const EdgeInsets.all(12),
-                                    decoration: BoxDecoration(
-                                      color: isBot
-                                          ? (isDark
-                                          ? AppColors.darkSurface
-                                          : const Color(0xFFF0F4F8))
-                                          : AppColors.primaryGreen,
-                                      borderRadius: BorderRadius.only(
-                                        topLeft: const Radius.circular(16),
-                                        topRight: const Radius.circular(16),
-                                        bottomLeft: Radius.circular(isBot ? 4 : 16),
-                                        bottomRight: Radius.circular(isBot ? 16 : 4),
+                      child: Consumer<CachedChatProvider>(
+                        builder: (_, chatProvider, child) {
+                          return ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: chatProvider.messages.length,
+                            itemBuilder: (_, i) {
+                              final msg = chatProvider.messages[i];
+                              final isBot = !msg.isUser;
+                              return Align(
+                                alignment: isBot
+                                    ? Alignment.centerLeft
+                                    : Alignment.centerRight,
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisAlignment: isBot
+                                      ? MainAxisAlignment.start
+                                      : MainAxisAlignment.end,
+                                  children: [
+                                    if (isBot) ...[
+                                      Container(
+                                        width: 32,
+                                        height: 32,
+                                        margin: const EdgeInsets.only(right: 8, top: 4),
+                                        decoration: BoxDecoration(
+                                          color: AppColors.lightBlue,
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: const Icon(Icons.support_agent,
+                                            color: AppColors.accentBlue, size: 16),
                                       ),
-                                    ),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          msg['text']!,
+                                    ],
+                                    Flexible(
+                                      child: Container(
+                                        margin: const EdgeInsets.only(bottom: 12),
+                                        padding: const EdgeInsets.all(12),
+                                        decoration: BoxDecoration(
+                                          color: isBot
+                                              ? (isDark
+                                              ? AppColors.darkSurface
+                                              : const Color(0xFFF0F4F8))
+                                              : AppColors.primaryGreen,
+                                          borderRadius: BorderRadius.only(
+                                            topLeft: const Radius.circular(16),
+                                            topRight: const Radius.circular(16),
+                                            bottomLeft: Radius.circular(isBot ? 4 : 16),
+                                            bottomRight: Radius.circular(isBot ? 16 : 4),
+                                          ),
+                                        ),
+                                        child: Text(
+                                          msg.text,
                                           style: TextStyle(
                                             fontSize: 14,
                                             color: isBot
@@ -160,25 +151,35 @@ class _SupportScreenState extends State<SupportScreen> {
                                                 : Colors.white,
                                           ),
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          msg['time']!,
-                                          style: TextStyle(
-                                            fontSize: 11,
-                                            color: isBot
-                                                ? AppColors.textSecondary
-                                                : Colors.white70,
-                                          ),
-                                        ),
-                                      ],
+                                      ),
                                     ),
-                                  ),
+                                  ],
                                 ),
-                              ],
-                            ),
+                              );
+                            },
                           );
                         },
                       ),
+                    ),
+
+                    Consumer<CachedChatProvider>(
+                      builder: (_, chatProvider, child) {
+                        if (!chatProvider.isLoading) return const SizedBox.shrink();
+                        return const Padding(
+                          padding: EdgeInsets.only(bottom: 8),
+                          child: Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Assistant is typing...',
+                              style: TextStyle(
+                                color: AppColors.textSecondary,
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
+                        );
+                      },
                     ),
 
                     // Quick questions
@@ -203,21 +204,9 @@ class _SupportScreenState extends State<SupportScreen> {
                               children: quickQuestions
                                   .map(
                                     (q) => GestureDetector(
-                                  onTap: () {
-                                    setModalState(() {
-                                      _messages.add({
-                                        'sender': 'user',
-                                        'text': q,
-                                        'time': _currentTime(),
-                                      });
-                                      _messages.add({
-                                        'sender': 'bot',
-                                        'text':
-                                        'Thanks for asking! Please contact training@aast.edu for detailed information on this topic.',
-                                        'time': _currentTime(),
-                                      });
-                                    });
-                                  },
+                                  onTap: () => context
+                                      .read<CachedChatProvider>()
+                                      .sendMessage(q),
                                   child: Container(
                                     margin: const EdgeInsets.only(right: 8),
                                     padding: const EdgeInsets.symmetric(
@@ -256,7 +245,7 @@ class _SupportScreenState extends State<SupportScreen> {
                         children: [
                           Expanded(
                             child: TextField(
-                              controller: _chatController,
+                              controller: chatController,
                               decoration: InputDecoration(
                                 hintText: 'Ask a question...',
                                 hintStyle: TextStyle(
@@ -281,22 +270,12 @@ class _SupportScreenState extends State<SupportScreen> {
                           const SizedBox(width: 8),
                           GestureDetector(
                             onTap: () {
-                              final text = _chatController.text.trim();
+                              final text = chatController.text.trim();
                               if (text.isEmpty) return;
-                              setModalState(() {
-                                _messages.add({
-                                  'sender': 'user',
-                                  'text': text,
-                                  'time': _currentTime(),
-                                });
-                                _messages.add({
-                                  'sender': 'bot',
-                                  'text':
-                                  'Thanks for reaching out! For more details, please contact training@aast.edu.',
-                                  'time': _currentTime(),
-                                });
-                              });
-                              _chatController.clear();
+                              context
+                                  .read<CachedChatProvider>()
+                                  .sendMessage(text);
+                              chatController.clear();
                             },
                             child: Container(
                               width: 44,
@@ -315,9 +294,7 @@ class _SupportScreenState extends State<SupportScreen> {
                   ],
                 ),
               ), // Container
-            );  // Dialog
-          },
-        );
+            );
       },
     );
   }
@@ -378,7 +355,7 @@ class _SupportScreenState extends State<SupportScreen> {
                         height: 24,
                         margin: const EdgeInsets.only(right: 12, top: 1),
                         decoration: BoxDecoration(
-                          color: AppColors.primaryGreen.withOpacity(0.15),
+                          color: AppColors.primaryGreen.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
                         child: const Icon(Icons.check_circle,
@@ -461,7 +438,7 @@ class _SupportScreenState extends State<SupportScreen> {
                         height: 26,
                         margin: const EdgeInsets.only(right: 12, top: 1),
                         decoration: BoxDecoration(
-                          color: AppColors.accentOrange.withOpacity(0.15),
+                          color: AppColors.accentOrange.withValues(alpha: 0.15),
                           shape: BoxShape.circle,
                         ),
                         child: Center(
@@ -623,14 +600,6 @@ class _SupportScreenState extends State<SupportScreen> {
         ),
       ),
     );
-  }
-
-  String _currentTime() {
-    final now = DateTime.now();
-    final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
-    final minute = now.minute.toString().padLeft(2, '0');
-    final period = now.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $period';
   }
 
   @override

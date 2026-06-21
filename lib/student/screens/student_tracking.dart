@@ -58,7 +58,8 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
       final supabase = Supabase.instance.client;
       
       // ✅ Get user ID from UserSession (set at login)
-      final studentId = UserSession.instance.userId!;
+      final userId = UserSession.instance.userId!;
+      final studentId = UserSession.instance.studentId ?? userId;
 
       // ✅ Calculate progress based on APPROVED trainings only
       final trainingProgress = await _trainingService.calculateTrainingProgress(studentId);
@@ -69,7 +70,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
             *,
             vacancy:vacancyid(title, company_name, type, location)
           ''')
-          .eq('applicantid', studentId)
+          .eq('applicantid', userId)
           .order('submissiondate', ascending: false);
 
       final trainingRecords = await supabase
@@ -181,7 +182,8 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
           ? FloatingActionButton.extended(
               onPressed: () => StudentProfileSubmitHoursModal.show(
                 context,
-                studentId: UserSession.instance.userId!,
+                studentId:
+                    UserSession.instance.studentId ?? UserSession.instance.userId!,
                 onSubmitted: _fetchTrackingData,
               ),
               icon: const Icon(Icons.add),

@@ -62,6 +62,7 @@ class JobOpportunity {
   final String level;
   final String applicationMethod;
   final String? externalApplyUrl;
+  final String? companyLogoUrl;
 
   const JobOpportunity({
     required this.vacancyId,
@@ -72,6 +73,7 @@ class JobOpportunity {
     this.level = 'Entry Level',
     this.applicationMethod = 'INTERNAL',
     this.externalApplyUrl,
+    this.companyLogoUrl,
   });
 
   factory JobOpportunity.fromMap(Map<String, dynamic> map) {
@@ -84,6 +86,7 @@ class JobOpportunity {
       level: map['type'] ?? 'JOB',
       applicationMethod: map['application_method'] ?? 'INTERNAL',
       externalApplyUrl: map['external_apply_url'],
+      companyLogoUrl: map['company_logo_url'],
     );
   }
 
