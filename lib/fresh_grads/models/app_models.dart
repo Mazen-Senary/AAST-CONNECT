@@ -63,6 +63,10 @@ class JobOpportunity {
   final String applicationMethod;
   final String? externalApplyUrl;
   final String? companyLogoUrl;
+  final String? description;
+  final String? requirements;
+  final String? location;
+  final String? deadline;
 
   const JobOpportunity({
     required this.vacancyId,
@@ -74,6 +78,10 @@ class JobOpportunity {
     this.applicationMethod = 'INTERNAL',
     this.externalApplyUrl,
     this.companyLogoUrl,
+    this.description,
+    this.requirements,
+    this.location,
+    this.deadline,
   });
 
   factory JobOpportunity.fromMap(Map<String, dynamic> map) {
@@ -87,6 +95,10 @@ class JobOpportunity {
       applicationMethod: map['application_method'] ?? 'INTERNAL',
       externalApplyUrl: map['external_apply_url'],
       companyLogoUrl: map['company_logo_url'],
+      description: map['description'],
+      requirements: map['requiredskills'],
+      location: map['location'],
+      deadline: map['deadline']?.toString(),
     );
   }
 

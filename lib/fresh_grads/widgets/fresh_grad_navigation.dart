@@ -11,8 +11,6 @@ import '../../services/fresh_grad_opportunity_notification_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_session.dart';
 
-
-
 class _NavItem {
   final IconData icon;
   final IconData activeIcon;
@@ -39,8 +37,8 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
   RealtimeChannel? _notifChannel;
   RealtimeChannel? _vacancyChannel;
   final NotificationService _notificationService = NotificationService();
-  final FreshGradOpportunityNotificationService _opportunityNotificationService =
-      FreshGradOpportunityNotificationService();
+  final FreshGradOpportunityNotificationService
+  _opportunityNotificationService = FreshGradOpportunityNotificationService();
   final SupabaseClient _supabase = Supabase.instance.client;
 
   final List<Widget> _screens = const [
@@ -84,16 +82,19 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
   int get _userId => UserSession.instance.userId!;
 
   Future<void> _loadUnreadCount() async {
-    final notificationCount = await _notificationService.getUnreadCount(_userId);
-    final opportunityCount =
-        await _opportunityNotificationService.unreadOpportunityCount(_userId);
+    final notificationCount = await _notificationService.getUnreadCount(
+      _userId,
+    );
+    final opportunityCount = await _opportunityNotificationService
+        .unreadOpportunityCount(_userId);
     if (!mounted) return;
     setState(() => _unreadCount = notificationCount + opportunityCount);
   }
 
   void _listenForNotifications() {
-    _notifChannel =
-        _notificationService.listenToNotifications(_userId, (payload) {
+    _notifChannel = _notificationService.listenToNotifications(_userId, (
+      payload,
+    ) {
       if (!mounted) return;
       setState(() => _unreadCount++);
 
@@ -101,10 +102,7 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(message),
-          action: SnackBarAction(
-            label: 'View',
-            onPressed: _openNotifications,
-          ),
+          action: SnackBarAction(label: 'View', onPressed: _openNotifications),
         ),
       );
     });
@@ -123,7 +121,8 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
             if (audience != 'GRADUATE' && audience != 'BOTH') return;
 
             final title = vacancy['title']?.toString() ?? 'New opportunity';
-            final company = vacancy['company_name']?.toString() ?? 'AAST Connect';
+            final company =
+                vacancy['company_name']?.toString() ?? 'AAST Connect';
             final message =
                 'New graduate opportunity posted: $title at $company';
 
@@ -146,9 +145,7 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
   void _openNotifications() {
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const FreshGradNotificationsScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const FreshGradNotificationsScreen()),
     ).then((_) => _loadUnreadCount());
   }
 
@@ -161,28 +158,24 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
 
   @override
   Widget build(BuildContext context) {
-        return Theme(
-  data: AppTheme.light(),
-  child: Scaffold(
-    appBar: AastAppBar(
-  isDark: false,
-  onThemeToggle: () {},
-  unreadNotificationCount: _unreadCount,
-  onNotificationsPressed: _openNotifications,
-),
-            body: IndexedStack(
-              index: _currentIndex,
-              children: _screens,
-            ),
-            bottomNavigationBar: _buildCustomBottomNavBar(false),
-          ),
-        );
+    return Theme(
+      data: AppTheme.light(),
+      child: Scaffold(
+        appBar: AastAppBar(
+          isDark: false,
+          onThemeToggle: () {},
+          unreadNotificationCount: _unreadCount,
+          onNotificationsPressed: _openNotifications,
+        ),
+        body: IndexedStack(index: _currentIndex, children: _screens),
+        bottomNavigationBar: _buildCustomBottomNavBar(false),
+      ),
+    );
   }
 
   Widget _buildCustomBottomNavBar(bool isDark) {
-    const Color activeHighlight = Color(0xFFE8F5E9);
-    const Color activeIcon = AppColors.primaryGreen;
     const Color inactiveIcon = AppColors.textSecondary;
+
     final Color navBg = isDark ? AppColors.darkCardBg : Colors.white;
 
     return Container(
@@ -211,9 +204,7 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
                 margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 decoration: BoxDecoration(
                   color: isSelected
-                      ? (isDark
-                      ? AppColors.primaryGreen.withValues(alpha: 0.15)
-                      : activeHighlight)
+                      ? const Color(0xFFD6EAF1)
                       : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
@@ -222,17 +213,22 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
                   children: [
                     Icon(
                       isSelected ? item.activeIcon : item.icon,
-                      color: isSelected ? activeIcon : inactiveIcon,
+                      color: isSelected
+                          ? const Color(0xFF1B6FA8)
+                          : inactiveIcon,
                       size: 24,
                     ),
                     const SizedBox(height: 4),
                     Text(
                       item.label,
                       style: TextStyle(
-                        color: isSelected ? activeIcon : inactiveIcon,
+                        color: isSelected
+                            ? const Color(0xFF1B6FA8)
+                            : inactiveIcon,
                         fontSize: 12,
-                        fontWeight:
-                        isSelected ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                     ),
                   ],

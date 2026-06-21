@@ -34,10 +34,9 @@ class FreshGradVacancyService {
         .toList();
   }
 
-  static Future<void> applyInternal({
-    required String vacancyId,
-    required String coverLetter,
-  }) async {
+  /// Looks up the logged-in user's row in `users` by college_id.
+  /// Returns the raw map so callers can grab `userid`, `name`, etc.
+  static Future<Map<String, dynamic>> fetchCurrentUserData() async {
     final session = UserSession.instance;
     final collegeId = session.collegeId ?? '';
 
@@ -46,6 +45,16 @@ class FreshGradVacancyService {
         .select('userid, name, college_id')
         .eq('college_id', collegeId)
         .single();
+
+    return userData;
+  }
+
+  static Future<void> applyInternal({
+    required String vacancyId,
+    required String coverLetter,
+    String? documentId,
+  }) async {
+    final userData = await fetchCurrentUserData();
 
     await _client.from('application').insert({
       'vacancyid': vacancyId,
@@ -56,6 +65,26 @@ class FreshGradVacancyService {
       'created_at': DateTime.now().toIso8601String(),
       'college_id': userData['college_id'],
       'applicant_name': userData['name'],
+      // Note: 'documentid' column does not exist on 'application' yet.
+      // The CV itself is still uploaded and saved in the 'document' table,
+      // it's just not linked to this specific application row for now.
     });
+  }
+
+  /// Returns the set of vacancyIds this user has already applied to.
+  static Future<Set<String>> fetchAppliedVacancyIds() async {
+    try {
+      final userData = await fetchCurrentUserData();
+      final response = await _client
+          .from('application')
+          .select('vacancyid')
+          .eq('applicantid', userData['userid']);
+
+      return (response as List)
+          .map((row) => row['vacancyid'].toString())
+          .toSet();
+    } catch (e) {
+      return {};
+    }
   }
 }

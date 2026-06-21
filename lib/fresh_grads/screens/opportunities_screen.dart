@@ -346,7 +346,11 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                     ...filtered.map(
                       (job) => Padding(
                         padding: const EdgeInsets.only(bottom: 12),
-                        child: JobCard(job: job, isDark: isDark),
+                        child: JobCard(
+                          job: job,
+                          isDark: isDark,
+                          isApplied: provider.isApplied(job.vacancyId),
+                        ),
                       ),
                     ),
 
