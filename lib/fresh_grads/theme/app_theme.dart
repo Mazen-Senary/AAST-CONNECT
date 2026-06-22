@@ -76,6 +76,11 @@ class AppColors {
   static const Color darkInteractive = Color(0xFF7A9BB8);
   static const Color darkInteractiveHover = Color(0xFF8BAEC9);
 
+  //navabr colors
+  static const Color navSelectedBackground = Color(0xFFD6EAF2);
+  static const Color navSelectedIcon = Color(0xFF057C99);
+  static const Color navUnselectedIcon = Color(0xFF9E9E9E);
+
   // 📏 Radius
   static const double radius = 14.0;
 

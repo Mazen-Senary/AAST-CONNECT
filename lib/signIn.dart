@@ -16,17 +16,38 @@ class SignInScreen extends StatefulWidget {
 
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _registrationController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
   String _loginMessage = '';
   bool _isLoading = false;
+  bool _registrationHasError = false;
+  bool _passwordHasError = false;
 
   final StudentIdentityService _identityService = StudentIdentityService();
 
+  bool _isErrorMessage(String message) {
+    final lower = message.toLowerCase();
+    return lower.startsWith('please') ||
+        lower.startsWith('invalid') ||
+        lower.startsWith('unknown') ||
+        lower.startsWith('admin portal not available');
+  }
+
   Future<void> _signIn() async {
     final collegeId = _registrationController.text.trim();
+    final password = _passwordController.text;
+    final hasCollegeId = collegeId.isNotEmpty;
+    final hasPassword = password.isNotEmpty;
 
-    if (collegeId.isEmpty) {
+    setState(() {
+      _registrationHasError = !hasCollegeId;
+      _passwordHasError = !hasPassword;
+    });
+
+    if (!hasCollegeId || !hasPassword) {
       setState(() {
-        _loginMessage = 'Please enter your registration number';
+        _loginMessage = !hasCollegeId
+            ? 'Please enter your registration number'
+            : 'Please enter your password';
       });
       return;
     }
@@ -37,7 +58,10 @@ class _SignInScreenState extends State<SignInScreen> {
     });
 
     try {
-      final sessionData = await _identityService.resolveByCollegeId(collegeId);
+      final sessionData = await _identityService.resolveByCollegeId(
+        collegeId,
+        password: password,
+      );
 
       // Populate the global UserSession
       UserSession.instance
@@ -82,13 +106,45 @@ class _SignInScreenState extends State<SignInScreen> {
     } catch (e) {
       setState(() {
         _isLoading = false;
-        _loginMessage = 'College ID not found. Please try again.';
+        _loginMessage = 'Invalid registration number or password.';
       });
     }
   }
 
   @override
   Widget build(BuildContext context) {
+    InputDecoration buildDecoration({
+      required String hintText,
+      required bool hasError,
+    }) {
+      return InputDecoration(
+        filled: true,
+        fillColor: AppColors.inputBackground,
+        hintText: hintText,
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: hasError ? Colors.red : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: hasError ? Colors.red : Colors.transparent,
+            width: 1.5,
+          ),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: BorderSide(
+            color: hasError ? Colors.red : AppColors.interactive,
+            width: 1.8,
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       body: SafeArea(
@@ -163,23 +219,51 @@ class _SignInScreenState extends State<SignInScreen> {
 
                       TextField(
                         controller: _registrationController,
-                        decoration: InputDecoration(
-                          filled: true,
-                          fillColor: AppColors.inputBackground,
+                        decoration: buildDecoration(
                           hintText: 'Enter your registration number',
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12),
-                            borderSide: BorderSide.none,
-                          ),
+                          hasError: _registrationHasError,
                         ),
+                        onChanged: (_) {
+                          if (_registrationHasError && _registrationController.text.trim().isNotEmpty) {
+                            setState(() {
+                              _registrationHasError = false;
+                            });
+                          }
+                        },
+                      ),
+
+                      const SizedBox(height: 16),
+
+                      const Text(
+                        'Password',
+                        style: AppTextStyles.label,
+                      ),
+                      const SizedBox(height: 8),
+
+                      TextField(
+                        controller: _passwordController,
+                        obscureText: true,
+                        decoration: buildDecoration(
+                          hintText: 'Enter your password',
+                          hasError: _passwordHasError,
+                        ),
+                        onChanged: (_) {
+                          if (_passwordHasError && _passwordController.text.isNotEmpty) {
+                            setState(() {
+                              _passwordHasError = false;
+                            });
+                          }
+                        },
                       ),
 
                       if (_loginMessage.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         Text(
                           _loginMessage,
-                          style: const TextStyle(
-                            color: AppColors.interactive,
+                          style: TextStyle(
+                            color: _isErrorMessage(_loginMessage)
+                                ? Colors.red
+                                : AppColors.interactive,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -225,6 +309,7 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   void dispose() {
     _registrationController.dispose();
+    _passwordController.dispose();
     super.dispose();
   }
 }

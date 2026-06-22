@@ -38,8 +38,18 @@ class FreshGradVacancyService {
   /// Returns the raw map so callers can grab `userid`, `name`, etc.
   static Future<Map<String, dynamic>> fetchCurrentUserData() async {
     final session = UserSession.instance;
-    final collegeId = session.collegeId ?? '';
+    if (session.userId != null) {
+      final byUserId = await _client
+          .from('users')
+          .select('userid, name, college_id')
+          .eq('userid', session.userId!)
+          .maybeSingle();
+      if (byUserId != null) {
+        return byUserId;
+      }
+    }
 
+    final collegeId = session.collegeId ?? '';
     final userData = await _client
         .from('users')
         .select('userid, name, college_id')

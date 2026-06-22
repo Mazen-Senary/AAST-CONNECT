@@ -8,6 +8,7 @@ class AastAppBar extends StatelessWidget implements PreferredSizeWidget {
   final bool isDark;
   final VoidCallback onThemeToggle;
   final int unreadNotificationCount;
+  final VoidCallback? onTrackingPressed;
   final VoidCallback? onNotificationsPressed;
 
   const AastAppBar({
@@ -15,6 +16,7 @@ class AastAppBar extends StatelessWidget implements PreferredSizeWidget {
     required this.isDark,
     required this.onThemeToggle,
     this.unreadNotificationCount = 0,
+    this.onTrackingPressed,
     this.onNotificationsPressed,
   });
 
@@ -85,6 +87,16 @@ class AastAppBar extends StatelessWidget implements PreferredSizeWidget {
                 isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
         ),
+        if (onTrackingPressed != null)
+          IconButton(
+            tooltip: 'Tracking',
+            onPressed: onTrackingPressed,
+            icon: Icon(
+              Icons.timeline,
+              color:
+                  isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+            ),
+          ),
         if (onNotificationsPressed != null)
           Stack(
             children: [

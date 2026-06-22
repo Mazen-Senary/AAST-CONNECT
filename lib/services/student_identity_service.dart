@@ -31,9 +31,15 @@ class StudentIdentityService {
   StudentIdentityService({SupabaseClient? supabase})
       : _supabase = supabase ?? Supabase.instance.client;
 
-  Future<StudentSessionData> resolveByCollegeId(String collegeId) async {
-    final userByCollegeId = await _fetchUserByCollegeId(collegeId);
-    final studentByCollegeId = await _fetchStudentByCollegeId(collegeId);
+  Future<StudentSessionData> resolveByCollegeId(
+    String collegeId, {
+    String? password,
+  }) async {
+    final userByCollegeId = password == null
+        ? await _fetchUserByCollegeId(collegeId)
+        : await _verifyLogin(collegeId, password);
+    final studentByCollegeId =
+        password == null ? await _fetchStudentByCollegeId(collegeId) : null;
 
     Map<String, dynamic>? studentByUserId;
     if (userByCollegeId != null && _roleOf(userByCollegeId) == 'STUDENT') {
@@ -47,6 +53,10 @@ class StudentIdentityService {
       linkedUserForStudent = await _fetchUserById(
         _readInt(studentByCollegeId, 'studentid'),
       );
+    }
+
+    if (password != null && userByCollegeId == null) {
+      throw StudentIdentityNotFoundException(collegeId);
     }
 
     return resolveStudentSessionFromRows(
@@ -65,6 +75,28 @@ class StudentIdentityService {
         .eq('college_id', collegeId)
         .maybeSingle();
     return _asMap(data);
+  }
+
+  Future<Map<String, dynamic>?> _verifyLogin(
+    String collegeId,
+    String password,
+  ) async {
+    final data = await _supabase.rpc(
+      'verify_login',
+      params: {
+        'p_college_id': collegeId,
+        'p_password': password,
+      },
+    );
+
+    if (data == null) return null;
+    if (data is List && data.isNotEmpty) {
+      return _asMap(data.first);
+    }
+    if (data is Map) {
+      return _asMap(data);
+    }
+    return null;
   }
 
   Future<Map<String, dynamic>?> _fetchUserById(int userId) async {
