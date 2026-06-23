@@ -50,6 +50,15 @@ class AppTextStyles {
     letterSpacing: 0,
     color: AppColors.caption,
   );
+    static const TextStyle tableHeader = TextStyle(
+    fontFamily: 'Inter',
+    fontSize: 15,
+    fontWeight: FontWeight.w400,
+    height: 16 / 12, // line-height / font-size
+    letterSpacing: 0,
+    color: AppColors.caption,
+  );
+
 
   static const TextStyle button = TextStyle(
     fontSize: 15,

@@ -16,9 +16,8 @@ class Student {
   final String? skills;
   final String? bio;
   final String? profileImageUrl;
-
   final bool expanded; 
-
+  final int requiredTrainingHours;
   Student({
     required this.id,
     required this.name,
@@ -37,7 +36,8 @@ class Student {
     this.skills,
     this.bio,
     this.profileImageUrl,
-    this.expanded = false, // 👈 default
+    this.expanded = false, 
+    required this.requiredTrainingHours
   });
 
   Student copyWith({bool? expanded , String? collegeId}) {
@@ -60,6 +60,7 @@ class Student {
       bio: bio,
       profileImageUrl: profileImageUrl,
       expanded: expanded ?? this.expanded,
+      requiredTrainingHours: requiredTrainingHours,
     );
   }
 }

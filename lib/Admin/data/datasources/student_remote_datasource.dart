@@ -1,33 +1,38 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:grad_project/supabase_helper.dart';
 
 class StudentRemoteDataSource {
   final SupabaseClient client;
-
   StudentRemoteDataSource(this.client);
 
-  Future<List<Map<String, dynamic>>> fetchStudents() async {
-  // Step 1: fetch all students
-  final students = await client.from('student').select();
+  static const int pageSize = 20;
 
-  // Step 2: fetch application counts
-  final counts = await client.from('student_application_counts').select();
+  Future<List<Map<String, dynamic>>> fetchStudents({int page = 0}) async {
+  await setContext();
+  final from = page * pageSize;
+  final to = from + pageSize - 1;
 
-  // Build a map of college_id -> total_applications
+  final studentsRaw = await client
+      .rpc('admin_fetch_students', params: {'p_from': from, 'p_to': to});
+  final students = (studentsRaw as List)
+      .map((s) => Map<String, dynamic>.from(s as Map))
+      .toList();
+  print('📦 students fetched: ${students.length}');
+
+  final countsRaw = await client.rpc('admin_fetch_application_counts');
+  final counts = (countsRaw as List)
+      .map((c) => Map<String, dynamic>.from(c as Map))
+      .toList();
+  print('📦 counts fetched: ${counts.length}');
+
   final countMap = <String, int>{};
   for (final c in counts) {
     final id = c['college_id'] as String?;
-    if (id != null) {
-      countMap[id] = (c['total_applications'] as int?) ?? 0;
-    }
+    if (id != null) countMap[id] = (c['total_applications'] as num?)?.toInt() ?? 0;
   }
 
-  // Step 3: merge
   return students.map<Map<String, dynamic>>((s) {
-    final collegeId = s['college_id'] as String?;
-    return {
-      ...s,
-      'application_count': countMap[collegeId] ?? 0,
-    };
+    return {...s, 'application_count': countMap[s['college_id']] ?? 0};
   }).toList();
 }
 }

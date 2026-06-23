@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'auth_session.dart';
 import 'Admin/presentation/views/admin_navigation.dart';
 import 'Admin/presentation/views/theme_provider.dart';
 // import 'Student/ui/student_navigation.dart';
@@ -22,51 +22,58 @@ class _SignInScreenState extends State<SignInScreen> {
   final supabase = Supabase.instance.client;
 
   Future<void> _signIn() async {
-    final collegeId = _registrationController.text.trim();
-    final password = _passwordController.text.trim();
+  final collegeId = _registrationController.text.trim();
+  final password = _passwordController.text.trim();
 
-    if (collegeId.isEmpty || password.isEmpty) {
-      setState(() {
-        _loginMessage = 'Invalid Admin ID or password';
-      });
+  if (collegeId.isEmpty || password.isEmpty) {
+    setState(() => _loginMessage = 'Invalid Admin ID or password');
+    return;
+  }
+
+  try {
+    print('collegeId=[$collegeId]');
+print('password=[$password]');
+    final result = await supabase.rpc(
+      'signin_admin',
+      params: {
+        'input_college_id': collegeId,
+        'input_password': password,
+      },
+    );
+    print('RPC RESULT = $result');
+
+    final admins = List<Map<String, dynamic>>.from(result);
+
+    if (admins.isEmpty) {
+      setState(() => _loginMessage = 'Invalid Admin ID or password');
       return;
     }
-    setState(() {
-      _loginMessage = 'Checking admin ID...';
-    });
 
-    try {
-      final response = await supabase.rpc(
-        'signin_admin',
-        params: {'input_college_id': collegeId, 'input_password': password},
-      );
+    final adminId = admins.first['adminid'] as int;
 
-      if (response == null || response.isEmpty) {
-        setState(() {
-          _loginMessage = 'Invalid Admin ID or password';
-        });
-        return;
-      }
+    AuthSession.set(
+  collegeId,
+  'ADMIN',
+  password,
+  '',
+);
 
-      final adminId = response[0]['adminid'];
+    if (!mounted) return;
 
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ChangeNotifierProvider(
-            create: (_) => ThemeProvider(),
-            child: AdminNavigation(adminId: adminId),
-          ),
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(
+        builder: (_) => ChangeNotifierProvider(
+          create: (_) => ThemeProvider(),
+          child: AdminNavigation(adminId: adminId),
         ),
-      );
-    } catch (e) {
-      debugPrint('SIGN IN ERROR: $e');
-
-      setState(() {
-        _loginMessage = e.toString();
-      });
-    }
+      ),
+    );
+  } catch (e) {
+    debugPrint('SIGN IN ERROR: $e');
+    setState(() => _loginMessage = 'Invalid Admin ID or password');
   }
+}
 
   @override
   Widget build(BuildContext context) {

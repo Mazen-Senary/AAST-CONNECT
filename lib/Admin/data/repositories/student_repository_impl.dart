@@ -9,11 +9,8 @@ class StudentRepositoryImpl implements StudentRepository {
   StudentRepositoryImpl(this.remote);
 
   @override
-  Future<List<Student>> getStudents() async {
-    final response = await remote.fetchStudents();
-
-    return response.map((e) {
-      return StudentModel.fromJson(e);
-    }).toList();
-  }
+  Future<List<Student>> getStudents({int page = 0}) async {
+  final data = await remote.fetchStudents(page: page);
+  return data.map((e) => StudentModel.fromJson(e)).toList();
+}
 }

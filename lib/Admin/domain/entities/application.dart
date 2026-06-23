@@ -9,6 +9,7 @@ class Application {
   final String? rejectionReason;
   final bool expanded;
   final double? gpa;
+  final String? profileImageUrl;
 
   Application({
     required this.applicationId,
@@ -21,6 +22,7 @@ class Application {
     this.rejectionReason,
     this.expanded = false,
     this.gpa,
+    this.profileImageUrl,
   });
 
   Application copyWith({
@@ -28,6 +30,7 @@ class Application {
     String? rejectionReason,
     bool? expanded,
     double? gpa,
+    String? profileImageUrl,
   }) {
     return Application(
       applicationId: applicationId,
@@ -40,6 +43,7 @@ class Application {
       rejectionReason: rejectionReason ?? this.rejectionReason,
       expanded: expanded ?? this.expanded,
       gpa: gpa ?? this.gpa,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
     );
   }
 }

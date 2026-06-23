@@ -10,6 +10,10 @@ import 'stat_card.dart';
 import 'activity_card.dart';
 import '../../models/recent_activity.dart';
 import '../../core/di/dashboard_providers.dart';
+import '../widgets/skeleton_stat_card.dart';          
+import '../widgets/skeleton_activity_card.dart'; 
+import '../../../auth_session.dart';  
+import '../../../supabase_helper.dart';
 
 class AdminDashboard extends ConsumerStatefulWidget {
   const AdminDashboard({super.key});
@@ -24,21 +28,15 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     super.initState();
   }
 
-  Future<void> _logout() async {
-    try {
-      await Supabase.instance.client.auth.signOut();
-
-      if (!mounted) return;
-
-      Navigator.of(
-        context,
-      ).pushNamedAndRemoveUntil('/signin', (route) => false);
-    } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Logout failed: $e')));
-    }
+ Future<void> _logout() async {
+  if (AuthSession.token != null) {
+    await supabase.rpc('logout', params: {
+      'p_token': AuthSession.token,
+    });
   }
+  AuthSession.clear();
+  Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
+}
 
   @override
   Widget build(BuildContext context) {
@@ -46,138 +44,148 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     final isDark = themeProvider.isDarkMode;
     final state = ref.watch(dashboardProvider);
 
-    if (state.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     if (state.error != null) {
       return Center(child: Text(state.error!));
     }
     final dashboard = state.data;
 
-    if (dashboard == null) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
-        elevation: 0,
-        title: Text(
-          'Dashboard',
-          style: AppTextStyles.h3.copyWith(
-            fontWeight: FontWeight.w600,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-          ),
-        ),
-        actions: [
-          // Dark Mode Toggle
-          IconButton(
-            icon: Icon(
-              isDark ? Icons.light_mode : Icons.dark_mode_outlined,
-              color: isDark
-                  ? AppColors.darkTextPrimary
-                  : AppColors.textSecondary,
-            ),
-            onPressed: themeProvider.toggleTheme,
-          ),
-          // Logout Button
-          IconButton(
-            onPressed: _logout,
-            icon: Icon(
-              Icons.logout,
-              color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-            ),
-            tooltip: 'Logout',
-          ),
-        ],
-      ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(20, MediaQuery.of(context).padding.top + 20, 20, 20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+           Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ADMIN PANEL',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.5,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Dashboard',
+                      style: AppTextStyles.h2.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
+                ),
+                Container(
+  decoration: BoxDecoration(
+    color: isDark ? AppColors.darkCard : Colors.white,
+    borderRadius: BorderRadius.circular(12),
+    boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 8)],
+  ),
+  child: 
+                Row(
+                  children: [
+                    IconButton(
+                      icon: Icon(
+                        isDark ? Icons.light_mode : Icons.dark_mode_outlined,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.textSecondary,
+                      ),
+                      onPressed: themeProvider.toggleTheme,
+                    ),
+                    IconButton(
+                      onPressed: _logout,
+                      icon: Icon(
+                        Icons.logout,
+                        color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
+                      ),
+                      tooltip: 'Logout',
+                    ),
+                  ],
+                ),),
+              ],
+            ),
+            const SizedBox(height: 8),
             Text(
               'Overview of all activities',
               style: AppTextStyles.body.copyWith(
-                color: isDark
-                    ? AppColors.darkTextSecondary
-                    : AppColors.textSecondary,
+                color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
               ),
             ),
             const SizedBox(height: 24),
+            if (state.isLoading) ...[
+  const Row(
+    children: [
+      Expanded(child: SkeletonStatCard()),
+      SizedBox(width: 12),
+      Expanded(child: SkeletonStatCard()),
+    ],
+  ),
+  const SizedBox(height: 12),
+  const SkeletonStatCard(),  // 👈 uploads skeleton inside here
+] else ...[
+  Row(
+    children: [
+      Expanded(
+        child: StatCard(
+          icon: LucideIcons.trendingUp,
+          label: 'Total Applications',
+          value: dashboard!.totalApplications.toString(),
+          change: '${dashboard.totalAppsChange.toStringAsFixed(1)}%',
+          backgroundColor: AppColors.accentInfo,
+          textColor: AppColors.accentInfoText,
+        ),
+      ),
+      const SizedBox(width: 12),
+      Expanded(
+        child: StatCard(
+          icon: LucideIcons.clock,
+          label: 'Pending Approvals',
+          value: dashboard.pendingApplications.toString(),
+          change: '${dashboard.pendingChange.toStringAsFixed(1)}%',
+          backgroundColor: AppColors.accentAlert,
+          textColor: AppColors.accentAlertText,
+        ),
+      ),
+    ],
+  ),
+  const SizedBox(height: 12),
+  SizedBox(
+  width: double.infinity,
+  child:
+  StatCard(                
+    icon: LucideIcons.upload,
+    label: 'New Student Uploads',
+    value: dashboard.trainingUploads.toString(),
+    change: '${dashboard.uploadsChange.toStringAsFixed(1)}',
+    backgroundColor: AppColors.accentSuccess,
+    textColor: AppColors.accentSuccessText,
+  ),),
+],
 
-            Row(
-              children: [
-                Expanded(
-                  child: StatCard(
-                    icon: LucideIcons.trendingUp,
-                    label: 'Total Applications',
-                    value: state.isLoading
-                        ? '—'
-                        : dashboard.totalApplications.toString(),
-                    change: state.isLoading
-                        ? '—'
-                        : '${dashboard.totalAppsChange.toStringAsFixed(1)}%',
+const SizedBox(height: 32),
+const Text(
+  'Recent Activity',
+  style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
+),
+const SizedBox(height: 12),
 
-                    backgroundColor: AppColors.accentInfo,
-                    textColor: AppColors.accentInfoText,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: StatCard(
-                    icon: LucideIcons.clock,
-                    label: 'Pending Approvals',
-                    value: state.isLoading
-                        ? '—'
-                        : dashboard.pendingApplications.toString(),
-                    change: state.isLoading
-                        ? '—'
-                        : '${dashboard.pendingChange.toStringAsFixed(1)}%',
-
-                    backgroundColor: AppColors.accentAlert,
-                    textColor: AppColors.accentAlertText,
-                  ),
-                ),
-              ],
-            ),
-
-            const SizedBox(height: 12),
-
-            StatCard(
-              icon: LucideIcons.upload,
-              label: 'New Student Uploads',
-              value: state.isLoading
-                  ? '—'
-                  : dashboard.trainingUploads.toString(),
-              change: state.isLoading
-                  ? '—'
-                  : '${dashboard.uploadsChange.toStringAsFixed(1)}',
-
-              backgroundColor: AppColors.accentSuccess,
-              textColor: AppColors.accentSuccessText,
-            ),
-            const SizedBox(height: 32),
-            const Text(
-              'Recent Activity',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-            ),
-            const SizedBox(height: 12),
-
-            if (dashboard.recentActivities.isEmpty)
-              const Text('No recent activity')
-            else
-              ...dashboard.recentActivities.map(
-                (RecentActivity a) => ActivityCard(
-                  student: a.studentName,
-                  action: a.action,
-                  time: a.timeAgo,
-                  status: a.status,
-                ),
-              ),
+if (state.isLoading)
+  ...List.generate(4, (_) => const SkeletonActivityCard())
+else if (dashboard!.recentActivities.isEmpty)
+  const Text('No recent activity')
+else
+  ...dashboard.recentActivities.map(
+    (RecentActivity a) => ActivityCard(
+      student: a.studentName,
+      action: a.action,
+      time: a.timeAgo,
+      status: a.status,
+    ),
+  ),
           ],
         ),
       ),

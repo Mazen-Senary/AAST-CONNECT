@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_colors.dart';
@@ -17,6 +19,7 @@ import 'dart:html' as html;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 
+
 class ApprovalsScreen extends ConsumerStatefulWidget {
   const ApprovalsScreen({super.key});
 
@@ -25,6 +28,25 @@ class ApprovalsScreen extends ConsumerStatefulWidget {
 }
 
 class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
+  Timer? _bannerTimer;
+  double _bannerOpacity = 1.0;
+  void _startBannerTimer() {
+    _bannerTimer?.cancel();
+    _bannerOpacity = 1.0;
+    _bannerTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) setState(() => _bannerOpacity = 0.0);
+      Future.delayed(const Duration(milliseconds: 400), () {
+        if (mounted) ref.read(approvalsProvider.notifier).dismissNewData();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _bannerTimer?.cancel();
+    super.dispose();
+  }
+
   Future<void> _showTrainingRejectDialog(Training record) async {
     final controller = TextEditingController();
     final themeProvider = provider.Provider.of<ThemeProvider>(
@@ -473,153 +495,370 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
     final isDark = themeProvider.isDarkMode;
     final state = ref.watch(approvalsProvider);
     final notifier = ref.read(approvalsProvider.notifier);
-
+    if (state.hasNewData && _bannerTimer == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _startBannerTimer());
+    }
+    if (!state.hasNewData) {
+      _bannerTimer = null;
+      _bannerOpacity = 1.0;
+    }
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
-      appBar: AppBar(
-        automaticallyImplyLeading: false,
-        backgroundColor: isDark ? AppColors.darkCard : AppColors.card,
-        elevation: 0,
-        title: Text(
-          'APPROVALS',
-          style: AppTextStyles.h3.copyWith(
-            fontWeight: FontWeight.w600,
-            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => notifier.loadAll(),
-            tooltip: 'Refresh',
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          MediaQuery.of(context).padding.top + 20,
+          20,
+          20,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (state.hasNewData)
-              GestureDetector(
-                onTap: () {
-                  notifier.dismissNewData();
-                  notifier.loadAll();
-                },
-                child: Container(
-                  width: double.infinity,
-                  margin: const EdgeInsets.only(bottom: 16),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 16,
-                    vertical: 12,
-                  ),
-                  decoration: BoxDecoration(
-                    color: AppColors.interactive.withOpacity(0.15),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: AppColors.interactive),
-                  ),
-                  child: Row(
-                    children: [
-                      Icon(
-                        Icons.notifications_active,
-                        color: AppColors.interactive,
-                        size: 20,
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Text(
-                          'New data available — tap to refresh',
-                          style: AppTextStyles.label.copyWith(
-                            color: AppColors.interactive,
-                            fontWeight: FontWeight.w600,
+            Text(
+              'ADMIN PANEL',
+              style: TextStyle(
+                fontSize: 10,
+                letterSpacing: 1.5,
+                color: isDark
+                    ? AppColors.darkTextSecondary
+                    : AppColors.textSecondary,
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              'Approvals',
+              style: AppTextStyles.h2.copyWith(
+                fontWeight: FontWeight.w700,
+                color: isDark
+                    ? AppColors.darkTextPrimary
+                    : AppColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 24),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (state.hasNewData)
+                    AnimatedOpacity(
+                      opacity: _bannerOpacity,
+                      duration: const Duration(milliseconds: 400),
+                      child: GestureDetector(
+                        onTap: () {
+                          _bannerTimer?.cancel();
+                          _bannerTimer = null;
+                          ref.read(approvalsProvider.notifier).dismissNewData();
+                          notifier.loadAll();
+                        },
+                        child: Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: AppColors.interactive.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: AppColors.interactive),
+                          ),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.notifications_active,
+                                color: AppColors.interactive,
+                                size: 20,
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'New data available — tap to refresh',
+                                  style: AppTextStyles.label.copyWith(
+                                    color: AppColors.interactive,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
-                      Icon(
-                        Icons.refresh,
-                        color: AppColors.interactive,
-                        size: 20,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            // Section Selector
-            _buildSectionSelector(isDark, state, notifier),
-            const SizedBox(height: 24),
+                    ),
+                  // Section Selector
+                  _buildSectionSelector(isDark, state, notifier),
+                  const SizedBox(height: 24),
 
-            // Status Tabs
-            _buildStatusTabs(isDark, state, notifier),
-            const SizedBox(height: 20),
+                  // Status Tabs
+                  _buildStatusTabs(isDark, state, notifier),
+                  const SizedBox(height: 20),
 
-            // Sort Bar (applications only)
-            if (state.selectedSection == 'applications') ...[
-              _buildApplicationSortBar(isDark, state, notifier),
-              const SizedBox(height: 12),
-            ],
+                  // Sort Bar (applications only)
+                  if (state.selectedSection == 'applications') ...[
+                    _buildApplicationSortBar(isDark, state, notifier),
+                    const SizedBox(height: 12),
+                  ],
 
-            // Content
-            Expanded(
-              child: state.selectedSection == 'applications'
-                  ? (state.filteredApplications.isEmpty
-                        ? RefreshIndicator(
-                            onRefresh: () => notifier.loadAll(),
-                            child: SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: SizedBox(
-                                height: 400,
-                                child: _emptyState('applications', isDark),
-                              ),
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () => notifier.loadAll(),
-                            child: ListView.separated(
-                              itemCount: state.filteredApplications.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 16),
-                              itemBuilder: (_, index) {
-                                final app = state.filteredApplications[index];
-
-                                return KeyedSubtree(
-                                  key: ValueKey(app.applicationId),
-                                  child: _buildApplicationCard(
-                                    app,
-                                    isDark,
-                                    notifier,
+                  // Content
+                  Expanded(
+                    child: state.selectedSection == 'applications'
+                        ? (state.filteredApplications.isEmpty
+                              ? RefreshIndicator(
+                                  onRefresh: () => notifier.loadAll(),
+                                  child: SingleChildScrollView(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    child: SizedBox(
+                                      height: 400,
+                                      child: _emptyState(
+                                        'applications',
+                                        isDark,
+                                      ),
+                                    ),
                                   ),
-                                );
-                              },
-                            ),
-                          ))
-                  : (state.filteredTrainingHours.isEmpty
-                        ? RefreshIndicator(
-                            onRefresh: () => notifier.loadAll(),
-                            child: SingleChildScrollView(
-                              physics: const AlwaysScrollableScrollPhysics(),
-                              child: SizedBox(
-                                height: 400,
-                                child: _emptyState('applications', isDark),
-                              ),
-                            ),
-                          )
-                        : RefreshIndicator(
-                            onRefresh: () => notifier.loadAll(),
-                            child: ListView.separated(
-                              itemCount: state.filteredTrainingHours.length,
-                              separatorBuilder: (_, __) =>
-                                  const SizedBox(height: 16),
-                              itemBuilder: (_, index) => _buildTrainingCard(
-                                state.filteredTrainingHours[index],
-                                isDark,
-                                notifier,
-                              ),
-                            ),
-                          )),
+                                )
+                              : RefreshIndicator(
+                                  onRefresh: () => notifier.loadAll(),
+                                  child: state.applicationsFilter == 'PENDING'
+                                      ? ListView.separated(
+                                          itemCount:
+                                              state.filteredApplications.length,
+                                          separatorBuilder: (_, __) =>
+                                              const SizedBox(height: 16),
+                                          itemBuilder: (_, index) {
+                                            final app = state
+                                                .filteredApplications[index];
+                                            return KeyedSubtree(
+                                              key: ValueKey(app.applicationId),
+                                              child: _buildApplicationCard(
+                                                app,
+                                                isDark,
+                                                notifier,
+                                              ),
+                                            );
+                                          },
+                                        )
+                                      : Builder(
+                                          builder: (_) {
+                                            final grouped =
+                                                state.groupedApplications;
+                                            final names = grouped.keys.toList();
+                                            return ListView.separated(
+                                              itemCount: names.length,
+                                              separatorBuilder: (_, __) =>
+                                                  const SizedBox(height: 16),
+                                              itemBuilder: (_, index) {
+                                                final name = names[index];
+                                                final records = grouped[name]!;
+                                                final profileImageUrl = records.first.profileImageUrl;
+                                                return _buildGroupedApplicationCard(
+                                                  name,
+                                                  records,
+                                                  isDark,
+                                                  notifier,
+                                                  profileImageUrl: profileImageUrl,
+                                                );
+                                              },
+                                            );
+                                          },
+                                        ),
+                                ))
+                        : (state.filteredTrainingHours.isEmpty
+                              ? RefreshIndicator(
+                                  onRefresh: () => notifier.loadAll(),
+                                  child: SingleChildScrollView(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    child: SizedBox(
+                                      height: 400,
+                                      child: _emptyState(
+                                        'applications',
+                                        isDark,
+                                      ),
+                                    ),
+                                  ),
+                                )
+                              : RefreshIndicator(
+                                  onRefresh: () => notifier.loadAll(),
+                                  child: Builder(
+                                    builder: (_) {
+                                      final grouped = state.groupedTraining;
+                                      final names = grouped.keys.toList();
+                                      return ListView.separated(
+                                        itemCount: names.length,
+                                        separatorBuilder: (_, __) =>
+                                            const SizedBox(height: 16),
+                                        itemBuilder: (_, index) {
+                                          final name = names[index];
+                                          final records = grouped[name]!;
+                                          return _buildGroupedTrainingCard(
+                                            name,
+                                            records,
+                                            isDark,
+                                            notifier,
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
+                                )),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildGroupedApplicationCard(
+  String studentName,
+  List<Application> records,
+  bool isDark,
+  ApprovalsNotifier notifier, {
+  String? profileImageUrl,
+}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              CircleAvatar(
+  radius: 24,
+  backgroundImage: profileImageUrl != null &&
+          profileImageUrl.isNotEmpty
+      ? NetworkImage(profileImageUrl)
+      : null,
+  child: profileImageUrl == null ||
+          profileImageUrl.isEmpty
+      ? const Icon(Icons.person)
+      : null,
+),
+              const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(studentName, style: AppTextStyles.h3),
+                  Text(
+                    '${records.length} application${records.length > 1 ? 's' : ''}',
+                    style: AppTextStyles.body.copyWith(
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 8),
+          ...records.map((r) => _buildApplicationSubCard(r, isDark, notifier)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildApplicationSubCard(
+    Application record,
+    bool isDark,
+    ApprovalsNotifier notifier,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBackground : AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? AppColors.darkDivider : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.calendar_today,
+                    size: 16,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    DateFormat('MMM dd, yyyy').format(record.submissionDate),
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              _statusChip(record.status),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildLabeledItem(
+            Icons.badge,
+            'College ID',
+            record.collegeId,
+            isDark,
+          ),
+          _buildLabeledItem(
+            Icons.workspace_premium,
+            'GPA',
+            record.gpa?.toStringAsFixed(2) ?? 'N/A',
+            isDark,
+          ),
+          if (record.expanded) ...[
+            const Divider(height: 24),
+            _buildLabeledItem(
+              Icons.description,
+              'Cover Letter',
+              record.coverLetter ?? 'No cover letter',
+              isDark,
+            ),
+            if (record.documentId != null)
+              _buildLabeledLink(
+                Icons.picture_as_pdf,
+                'CV',
+                'View CV',
+                () => _openCV(record.documentId!),
+                isDark,
+              ),
+            if (record.rejectionReason != null &&
+                record.rejectionReason!.isNotEmpty)
+              _buildLabeledItem(
+                Icons.info_outline,
+                'Rejection Reason',
+                record.rejectionReason!,
+                isDark,
+              ),
+          ],
+          TextButton(
+            onPressed: () =>
+                notifier.toggleApplicationExpanded(record.applicationId),
+            child: Text(
+              record.expanded ? 'Show less' : 'Show more',
+              style: TextStyle(color: AppColors.interactive),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -885,7 +1124,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 ),
               ],
             ),
-          ], // ✅ AND THIS COMMA TOO
+          ],
         ],
       ),
     );
@@ -967,144 +1206,6 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
     }
   }
 
-  Widget _buildTrainingCard(
-    Training record,
-    bool isDark,
-    ApprovalsNotifier notifier,
-  ) {
-    final completed = record.completedTrainingHours;
-    final submitted = record.hoursSubmitted;
-    const total = 80;
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: isDark ? AppColors.darkCard : AppColors.card,
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // HEADER
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(record.studentName, style: AppTextStyles.h3),
-              _statusChip(record.status),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-
-          _buildLabeledItem(
-            Icons.badge,
-            'ID',
-            record.collegeId ?? 'N/A',
-            isDark,
-          ),
-          _buildLabeledItem(
-            Icons.access_time,
-            'Training Hours',
-            '${record.hoursSubmitted} hrs',
-            isDark,
-          ),
-          _buildLabeledItem(
-            Icons.calendar_today,
-            'Date Applied',
-            DateFormat('MMM dd, yyyy').format(record.createdAt),
-            isDark,
-          ),
-          // EXPANDED CONTENT
-          if (record.expanded) ...[
-            const Divider(height: 32),
-
-            // AFTER divider in expanded
-            _buildLabeledItem(
-              Icons.business,
-              'Company Name',
-              record.companyName,
-              isDark,
-            ),
-            _buildLabeledItem(
-              Icons.supervisor_account,
-              'Supervisor Name',
-              record.supervisorName,
-              isDark,
-            ),
-            _buildLabeledItem(
-              Icons.date_range,
-              'Training Duration',
-              '${DateFormat.yMMMd().format(record.startDate)} → ${DateFormat.yMMMd().format(record.endDate)}',
-              isDark,
-            ),
-
-            if (record.proofImageUrl != null &&
-                record.proofImageUrl!.isNotEmpty) ...[
-              _buildLabeledLink(
-                Icons.image,
-                'Proof of Training',
-                'View (signature & stamp)',
-                () => html.window.open(record.proofImageUrl!, '_blank'),
-                isDark,
-              ),
-            ],
-            if (record.certificateUrl != null &&
-                record.certificateUrl!.isNotEmpty) ...[
-              const SizedBox(height: 8),
-              _buildLabeledLink(
-                Icons.workspace_premium,
-                'Certificate',
-                'View Certificate',
-                () => html.window.open(record.certificateUrl!, '_blank'),
-                isDark,
-              ),
-            ],
-          ],
-
-          const SizedBox(height: 12),
-
-          TextButton(
-            onPressed: () => notifier.toggleTrainingExpanded(record.recordId),
-            child: Text(
-              record.expanded ? 'Show less' : 'Show more',
-              style: TextStyle(color: AppColors.interactive),
-            ),
-          ),
-
-          if (record.status == 'PENDING') ...[
-            const SizedBox(height: 16),
-            Row(
-              children: [
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: () => _showTrainingRejectDialog(record),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.accentAlertText,
-                      side: const BorderSide(color: AppColors.accentAlertText),
-                    ),
-                    child: const Text('Reject'),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () => notifier.approveTraining(record),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.accentSuccess,
-                      foregroundColor: AppColors.accentSuccessText,
-                    ),
-                    child: const Text('Accept'),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-
   // Helper: labeled row with icon + bold label + value
   Widget _buildLabeledItem(
     IconData icon,
@@ -1141,6 +1242,195 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
               ],
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGroupedTrainingCard(
+    String studentName,
+    List<Training> records,
+    bool isDark,
+    ApprovalsNotifier notifier,
+  ) {
+    final profileImageUrl = records.isNotEmpty
+      ? records.first.profileImageUrl
+      : null;
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : AppColors.card,
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+          children: [
+            CircleAvatar(
+              radius: 24,
+              backgroundImage:
+                  profileImageUrl != null &&
+                          profileImageUrl.isNotEmpty
+                      ? NetworkImage(profileImageUrl)
+                      : null,
+              child:
+                  profileImageUrl == null ||
+                          profileImageUrl.isEmpty
+                      ? const Icon(Icons.person)
+                      : null,
+            ),
+            const SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(studentName, style: AppTextStyles.h3),
+                  Text(
+                    '${records.length} record${records.length > 1 ? 's' : ''}',
+                    style: AppTextStyles.body.copyWith(
+                      color: isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          const Divider(),
+          const SizedBox(height: 8),
+          ...records.map((r) => _buildSubCard(r, isDark, notifier)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSubCard(
+    Training record,
+    bool isDark,
+    ApprovalsNotifier notifier,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkBackground : AppColors.background,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(
+          color: isDark ? AppColors.darkDivider : AppColors.border,
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.access_time,
+                    size: 16,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    '${record.hoursSubmitted} hrs • ${record.companyName}',
+                    style: AppTextStyles.body.copyWith(
+                      fontWeight: FontWeight.w600,
+                      color: isDark
+                          ? AppColors.darkTextPrimary
+                          : AppColors.textPrimary,
+                    ),
+                  ),
+                ],
+              ),
+              _statusChip(record.status),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildLabeledItem(
+            Icons.calendar_today,
+            'Date Applied',
+            DateFormat('MMM dd, yyyy').format(record.createdAt),
+            isDark,
+          ),
+          if (record.expanded) ...[
+            const Divider(height: 24),
+            _buildLabeledItem(
+              Icons.badge,
+              'ID',
+              record.collegeId ?? 'N/A',
+              isDark,
+            ),
+            _buildLabeledItem(
+              Icons.supervisor_account,
+              'Supervisor',
+              record.supervisorName,
+              isDark,
+            ),
+            _buildLabeledItem(
+              Icons.date_range,
+              'Duration',
+              '${DateFormat.yMMMd().format(record.startDate)} → ${DateFormat.yMMMd().format(record.endDate)}',
+              isDark,
+            ),
+            if (record.proofImageUrl != null &&
+                record.proofImageUrl!.isNotEmpty)
+              _buildLabeledLink(
+                Icons.image,
+                'Proof',
+                'View',
+                () => html.window.open(record.proofImageUrl!, '_blank'),
+                isDark,
+              ),
+            if (record.certificateUrl != null &&
+                record.certificateUrl!.isNotEmpty)
+              _buildLabeledLink(
+                Icons.workspace_premium,
+                'Certificate',
+                'View',
+                () => html.window.open(record.certificateUrl!, '_blank'),
+                isDark,
+              ),
+          ],
+          TextButton(
+            onPressed: () => notifier.toggleTrainingExpanded(record.recordId),
+            child: Text(
+              record.expanded ? 'Show less' : 'Show more',
+              style: TextStyle(color: AppColors.interactive),
+            ),
+          ),
+          if (record.status == 'PENDING') ...[
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _showTrainingRejectDialog(record),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accentAlertText,
+                      side: const BorderSide(color: AppColors.accentAlertText),
+                    ),
+                    child: const Text('Reject'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => notifier.approveTraining(record),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentSuccess,
+                      foregroundColor: AppColors.accentSuccessText,
+                    ),
+                    child: const Text('Accept'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );

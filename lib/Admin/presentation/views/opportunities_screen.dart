@@ -10,6 +10,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/di/opportunity_providers.dart';
 import '../../domain/entities/opportunity.dart';
 import '../widgets/opportunity_table.dart';
+import 'dart:async';
+import '../widgets/opportunities_skeleton_list.dart';
 
 class OpportunitiesScreen extends ConsumerStatefulWidget {
   final int adminId;
@@ -43,10 +45,57 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
 
   String? _formError;
   bool _isSubmitting = false;
+  Timer? _debounce;
 
   @override
   void initState() {
     super.initState();
+    _verticalController.addListener(_onScroll);
+  }
+
+  void showSuccessSnackBar(BuildContext context, String message) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          width: 280,
+          content: Text(
+            message,
+            style: const TextStyle(
+              color: AppColors.accentSuccessText,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: AppColors.accentSuccess,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
+  }
+
+  void _onScroll() {
+    if (_verticalController.position.pixels >=
+        _verticalController.position.maxScrollExtent - 200) {
+      ref.read(opportunitiesProvider.notifier).fetchNextPage();
+    }
+  }
+
+  void _onSearchChanged(String value) {
+    setState(() => _searchTerm = value);
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(milliseconds: 350), () {
+      ref.read(opportunitiesProvider.notifier).updateSearch(value);
+    });
+  }
+
+  void _onTypeChanged(String value) {
+    setState(() => _filterType = value);
+    ref
+        .read(opportunitiesProvider.notifier)
+        .updateTypeFilter(value == 'all' ? 'all' : uiToDbType(value));
   }
 
   // ─────────────────────────────────────────────
@@ -267,6 +316,12 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                         ref
                             .read(opportunitiesProvider.notifier)
                             .deleteOpportunity(opportunity.id);
+                        if (mounted) {
+                          showSuccessSnackBar(
+                            context,
+                            'Opportunity deleted successfully',
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentAlert,
@@ -301,7 +356,12 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
     return Scaffold(
       backgroundColor: isDark ? AppColors.darkBackground : AppColors.background,
       body: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.fromLTRB(
+          20,
+          MediaQuery.of(context).padding.top + 20,
+          20,
+          20,
+        ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -309,13 +369,30 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  'Opportunities Management',
-                  style: AppTextStyles.h3.copyWith(
-                    color: isDark
-                        ? AppColors.darkTextPrimary
-                        : AppColors.textPrimary,
-                  ),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ADMIN PANEL',
+                      style: TextStyle(
+                        fontSize: 10,
+                        letterSpacing: 1.5,
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Opportunities',
+                      style: AppTextStyles.h2.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                  ],
                 ),
                 ElevatedButton.icon(
                   onPressed: () => _showOpportunityForm(context),
@@ -342,7 +419,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
               children: [
                 Expanded(
                   child: TextField(
-                    onChanged: (v) => setState(() => _searchTerm = v),
+                    onChanged: (value) => _onSearchChanged,
                     style: AppTextStyles.body.copyWith(
                       color: isDark
                           ? AppColors.darkTextPrimary
@@ -397,12 +474,22 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
 
             // Table
             Expanded(
-              child: opportunitiesAsync.when(
-                loading: () => const Center(child: CircularProgressIndicator()),
-                error: (e, _) =>
-                    Center(child: Text('Error: $e', style: AppTextStyles.body)),
-                data: (opportunities) {
-                  if (opportunities.isEmpty) {
+              child: Builder(
+                builder: (context) {
+                  final opState = ref.watch(opportunitiesProvider);
+
+                  if (opState.isLoading) {
+                    return OpportunitiesSkeletonList(isDark: isDark);
+                  }
+                  if (opState.error != null) {
+                    return Center(
+                      child: Text(
+                        'Error: ${opState.error}',
+                        style: AppTextStyles.body,
+                      ),
+                    );
+                  }
+                  if (opState.items.isEmpty) {
                     return Center(
                       child: Text(
                         'No opportunities found',
@@ -414,26 +501,13 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                       ),
                     );
                   }
-                  final filtered = opportunities.where((opp) {
-                    final notExpired = opp.deadline.isAfter(DateTime.now());
-                    final matchesSearch =
-                        opp.title.toLowerCase().contains(
-                          _searchTerm.toLowerCase(),
-                        ) ||
-                        opp.company.toLowerCase().contains(
-                          _searchTerm.toLowerCase(),
-                        );
-                    final matchesFilter =
-                        _filterType == 'all' ||
-                        uiToDbType(_filterType) == opp.type;
-                    return notExpired && matchesSearch && matchesFilter;
-                  }).toList();
 
                   return OpportunityTable(
-                    opportunities: filtered,
+                    opportunities: opState.items,
                     isDark: isDark,
+                    isLoadingMore: opState.isLoadingMore,
                     onDelete: (id) => _showDeleteConfirmationDialog(
-                      filtered.firstWhere((e) => e.id == id),
+                      opState.items.firstWhere((e) => e.id == id),
                     ),
                     onEdit: (opp) =>
                         _showOpportunityForm(context, opportunity: opp),
@@ -474,7 +548,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
           style: AppTextStyles.body.copyWith(
             color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
           ),
-          onChanged: (value) => setState(() => _filterType = value!),
+          onChanged: (value) => _onTypeChanged(value!),
           items: const [
             DropdownMenuItem(value: 'all', child: Text('All Types')),
             DropdownMenuItem(value: 'Internship', child: Text('Internship')),
@@ -607,25 +681,30 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                       const SizedBox(height: 16),
                     ],
 
-                    _buildFormField('Title', titleController, '', isDark),
+                    _buildFormField('Title *', titleController, '', isDark),
                     const SizedBox(height: 16),
 
-                    _buildFormField('Company', companyController, '', isDark),
+                    _buildFormField('Company *', companyController, '', isDark),
                     const SizedBox(height: 16),
 
                     _buildFormField(
-                      'Company Logo URL (optional)',
+                      'Company Logo URL',
                       companyLogoUrlController,
                       'https://',
                       isDark,
                     ),
                     const SizedBox(height: 16),
 
-                    _buildFormField('Location', locationController, '', isDark),
+                    _buildFormField(
+                      'Location *',
+                      locationController,
+                      '',
+                      isDark,
+                    ),
                     const SizedBox(height: 16),
 
                     _buildDropdownField(
-                      'Type',
+                      'Type *',
                       selectedType,
                       [
                         'Internship',
@@ -640,7 +719,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                     const SizedBox(height: 16),
 
                     _buildDropdownField(
-                      'Work Mode',
+                      'Work Mode *',
                       selectedWorkMode,
                       ['REMOTE', 'ONSITE', 'HYBRID'],
                       (v) => setState(() => selectedWorkMode = v!),
@@ -682,7 +761,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                       child: SwitchListTile(
                         value: paidStatus,
                         title: Text(
-                          'Paid Opportunity',
+                          'Paid Opportunity *',
                           style: AppTextStyles.label.copyWith(
                             color: primaryText,
                           ),
@@ -713,7 +792,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Deadline',
+                          'Deadline *',
                           style: AppTextStyles.label.copyWith(
                             color: primaryText,
                           ),
@@ -793,7 +872,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                     const SizedBox(height: 16),
 
                     _buildDropdownField(
-                      'Target Audience',
+                      'Target Audience *',
                       selectedAudience,
                       ['STUDENT', 'GRADUATE', 'BOTH'],
                       (v) => setState(() => selectedAudience = v!),
@@ -802,7 +881,7 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                     const SizedBox(height: 16),
 
                     _buildDropdownField(
-                      'Application Method',
+                      'Application Method *',
                       applicationMethod,
                       ['INTERNAL', 'EXTERNAL'],
                       (v) => setState(() => applicationMethod = v!),
@@ -919,6 +998,13 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                                                       .trim()
                                                 : null,
                                           });
+                                      if (mounted) {
+                                        Navigator.pop(context);
+                                        showSuccessSnackBar(
+                                          context,
+                                          'Opportunity updated successfully',
+                                        );
+                                      }
                                     } else {
                                       await ref
                                           .read(opportunitiesProvider.notifier)
@@ -958,8 +1044,14 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
                                                       .trim()
                                                 : null,
                                           });
+                                      if (mounted) {
+                                        Navigator.pop(context);
+                                        showSuccessSnackBar(
+                                          context,
+                                          'Opportunity added successfully',
+                                        );
+                                      }
                                     }
-                                    Navigator.pop(context);
                                   } finally {
                                     if (mounted) {
                                       setState(() => _isSubmitting = false);
@@ -1140,6 +1232,8 @@ class _OpportunitiesScreenState extends ConsumerState<OpportunitiesScreen> {
   // ─────────────────────────────────────────────
   @override
   void dispose() {
+    _debounce?.cancel();
+    _verticalController.removeListener(_onScroll);
     titleController.dispose();
     companyController.dispose();
     companyLogoUrlController.dispose();

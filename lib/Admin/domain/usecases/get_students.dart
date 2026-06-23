@@ -7,7 +7,7 @@ class GetStudents {
 
   GetStudents(this.repository);
 
-  Future<List<Student>> call() async {
-    return await repository.getStudents();
+  Future<List<Student>> call({int page = 0}) async {
+    return await repository.getStudents(page:page);
   }
 }

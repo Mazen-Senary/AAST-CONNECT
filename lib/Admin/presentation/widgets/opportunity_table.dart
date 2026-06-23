@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../../domain/entities/opportunity.dart';
 import 'package:intl/intl.dart';
 import '../../theme/app_colors.dart';
 import '../../theme/app_text_styles.dart';
+
 class OpportunityTable extends StatefulWidget {
   final List<Opportunity> opportunities;
   final bool isDark;
+  final bool isLoadingMore;
   final Function(String id) onDelete;
   final Function(Opportunity) onEdit;
 
@@ -13,6 +16,7 @@ class OpportunityTable extends StatefulWidget {
     super.key,
     required this.opportunities,
     required this.isDark,
+    this.isLoadingMore = false,
     required this.onDelete,
     required this.onEdit,
   });
@@ -22,8 +26,10 @@ class OpportunityTable extends StatefulWidget {
 }
 
 class _OpportunityTableState extends State<OpportunityTable> {
-  final ScrollController _verticalController = ScrollController();
   final ScrollController _horizontalController = ScrollController();
+  final ScrollController _verticalController = ScrollController();
+
+  static const double _tableWidth = 4000;
 
   @override
   void dispose() {
@@ -35,30 +41,58 @@ class _OpportunityTableState extends State<OpportunityTable> {
   @override
   Widget build(BuildContext context) {
     return Scrollbar(
-      controller: _verticalController,
+      controller: _horizontalController,
       thumbVisibility: true,
+      notificationPredicate: (notif) => notif.metrics.axis == Axis.horizontal,
       child: SingleChildScrollView(
-        controller: _verticalController,
+        controller: _horizontalController,
         scrollDirection: Axis.horizontal,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minWidth: 1500),
-          child: Scrollbar(
-            controller: _horizontalController,
-            thumbVisibility: true,
-            child: SingleChildScrollView(
-              controller: _horizontalController,
-              child: Column(
-                children: [
-                  _tableHeader(widget.isDark),
-                  ...widget.opportunities.map((opp) => _tableRow(opp, widget.isDark)),
-                ],
+        child: SizedBox(
+          width: 4000,
+          height: MediaQuery.of(context).size.height * 0.7,
+          child: Column(
+            children: [
+              _tableHeader(widget.isDark),
+              Expanded(
+                child: Scrollbar(
+                  controller: _verticalController,
+                  thumbVisibility: true,
+                  child: ListView.builder(
+                    controller: _verticalController,
+                    itemCount:
+                        widget.opportunities.length +
+                        (widget.isLoadingMore ? 1 : 0),
+                    itemBuilder: (context, index) {
+                      if (index >= widget.opportunities.length) {
+                        return _loadingMoreRow();
+                      }
+                      return _tableRow(
+                        widget.opportunities[index],
+                        widget.isDark,
+                      );
+                    },
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),
     );
   }
+
+  Widget _loadingMoreRow() {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 18),
+      alignment: Alignment.center,
+      child: const SizedBox(
+        width: 18,
+        height: 18,
+        child: CircularProgressIndicator(strokeWidth: 2),
+      ),
+    );
+  }
+
   Widget _tableHeader(bool isDark) {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 14),
@@ -85,11 +119,10 @@ class _OpportunityTableState extends State<OpportunityTable> {
       ),
     );
   }
-  // ---------------- BUILD TABLE ----------------
-
 
   Widget _tableRow(Opportunity opp, bool isDark) {
     return InkWell(
+      key: ValueKey(opp.id),
       onTap: () {},
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 14),
@@ -150,41 +183,37 @@ class _OpportunityTableState extends State<OpportunityTable> {
             : _companyCell(company, opportunity?.companyLogoUrl, isDark),
         _typeBadge(type, isDark),
         _statusBadge(status, isDark),
-
         _cell(location, flex: 2, style: textStyle, isDark: isDark),
         _cell(workMode, flex: 1, style: textStyle, isDark: isDark),
         _cell(paid, flex: 1, style: textStyle, isDark: isDark),
         _cell(audience, flex: 1, style: textStyle, isDark: isDark),
-        isHeader
-            ? _cell(description, flex: 5, style: textStyle, isDark: isDark)
-            : _cell(description, flex: 5, style: textStyle, isDark: isDark),
+        _cell(description, flex: 5, style: textStyle, isDark: isDark),
         _cell(skills, flex: 4, style: textStyle, isDark: isDark),
         _cell(applicants, flex: 1, style: textStyle, isDark: isDark),
         _cell(deadline, flex: 1, style: textStyle, isDark: isDark),
-
         if (isHeader)
           _cell(actions, flex: 1, style: textStyle, isDark: isDark)
         else
-         SizedBox(
-  width: 140,
-  child: Row(
-    children: [
-      IconButton(
-        icon: Icon(Icons.edit),
-        onPressed: () => widget.onEdit(opportunity!),
-      ),
-      IconButton(
-        icon: Icon(Icons.delete),
-        onPressed: () => widget.onDelete(opportunity!.id),
-      ),
-    ],
-  ),
-)
+          SizedBox(
+            width: 140,
+            child: Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => widget.onEdit(opportunity!),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => widget.onDelete(opportunity!.id),
+                ),
+              ],
+            ),
+          ),
       ],
     );
   }
 
- Widget _cell(
+  Widget _cell(
     String text, {
     required int flex,
     required TextStyle style,
@@ -205,10 +234,10 @@ class _OpportunityTableState extends State<OpportunityTable> {
       ),
     );
   }
- Widget _typeBadge(String type, bool isDark) {
+
+  Widget _typeBadge(String type, bool isDark) {
     Color bg;
     Color fg;
-
     switch (type) {
       case 'Training':
         bg = Colors.purple.withOpacity(0.15);
@@ -222,7 +251,6 @@ class _OpportunityTableState extends State<OpportunityTable> {
         bg = Colors.green.withOpacity(0.15);
         fg = Colors.green;
     }
-
     return _badge(type, bg, fg, isDark);
   }
 
@@ -261,55 +289,54 @@ class _OpportunityTableState extends State<OpportunityTable> {
   }
 
   Widget _companyCell(String company, String? logoUrl, bool isDark) {
-  return SizedBox(
-    width: 2 * 140.0, // matches flex: 2
-    child: Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 12),
-      child: Row(
-        children: [
-          // Logo or fallback icon
-          Container(
-            width: 32,
-            height: 32,
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(6),
-              color: isDark ? Colors.white10 : Colors.grey.shade100,
-              border: Border.all(
-                color: isDark ? Colors.white12 : Colors.grey.shade200,
+    return SizedBox(
+      width: 2 * 140.0,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12),
+        child: Row(
+          children: [
+            Container(
+              width: 32,
+              height: 32,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(6),
+                color: isDark ? Colors.white10 : Colors.grey.shade100,
+                border: Border.all(
+                  color: isDark ? Colors.white12 : Colors.grey.shade200,
+                ),
               ),
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: logoUrl != null && logoUrl.isNotEmpty
-                ? Image.network(
-                    logoUrl,
-                    fit: BoxFit.contain,
-                    errorBuilder: (_, __, ___) => Icon(
+              clipBehavior: Clip.antiAlias,
+              child: logoUrl != null && logoUrl.isNotEmpty
+                  ? CachedNetworkImage(
+                      imageUrl: logoUrl,
+                      fit: BoxFit.contain,
+                      placeholder: (_, __) => const SizedBox.shrink(),
+                      errorWidget: (_, __, ___) => Icon(
+                        Icons.business,
+                        size: 18,
+                        color: isDark ? Colors.white38 : Colors.grey.shade400,
+                      ),
+                    )
+                  : Icon(
                       Icons.business,
                       size: 18,
                       color: isDark ? Colors.white38 : Colors.grey.shade400,
                     ),
-                  )
-                : Icon(
-                    Icons.business,
-                    size: 18,
-                    color: isDark ? Colors.white38 : Colors.grey.shade400,
-                  ),
-          ),
-          const SizedBox(width: 8),
-          // Company name
-          Expanded(
-            child: Text(
-              company,
-              overflow: TextOverflow.ellipsis,
-              softWrap: false,
-              style: AppTextStyles.body.copyWith(
-                color: isDark ? AppColors.darkTextPrimary : null,
+            ),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                company,
+                overflow: TextOverflow.ellipsis,
+                softWrap: false,
+                style: AppTextStyles.body.copyWith(
+                  color: isDark ? AppColors.darkTextPrimary : null,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 }

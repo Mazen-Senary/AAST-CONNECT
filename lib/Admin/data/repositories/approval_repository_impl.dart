@@ -10,16 +10,29 @@ class ApprovalRepositoryImpl implements ApprovalRepository {
   final ApprovalRemoteDataSource remote;
 
   ApprovalRepositoryImpl(this.remote);
-
+/*
   @override
   Future<List<Application>> getApplications() async {
     final response = await remote.fetchApplications();
-
+  
     return response
         .map((e) => ApplicationModel.fromMap(e))
         .toList();
   }
-
+*/
+@override
+Future<List<Application>> getApplications() async {
+  final response = await remote.fetchApplications();
+  
+  final mapped = response.map((e) {
+    try {
+      return ApplicationModel.fromMap(e);
+    } catch (err) {
+      return null;
+    }
+  }).whereType<Application>().toList();
+    return mapped;
+}
   @override
 Future<List<Training>> getTraining() async {
   final response = await remote.fetchTraining();

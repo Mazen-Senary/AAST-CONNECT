@@ -7,7 +7,6 @@ import 'approvals_screen.dart';
 import 'theme_provider.dart';
 import '../../theme/app_colors.dart';
 
-
 class AdminNavigation extends StatefulWidget {
   final int adminId;
 
@@ -32,29 +31,29 @@ class _AdminNavigationState extends State<AdminNavigation> {
       const ApprovalsScreen(),
     ];
   }
-  final List<NavigationItem> _navItems = [
-  NavigationItem(
-    icon: Icons.dashboard_outlined,
-    activeIcon: Icons.dashboard,
-    label: 'Dashboard',
-  ),
-  NavigationItem(
-    icon: Icons.work_outline,
-    activeIcon: Icons.work,
-    label: 'Programs',
-  ),
-  NavigationItem(
-    icon: Icons.group_outlined,
-    activeIcon: Icons.group,
-    label: 'Students',
-  ),
-  NavigationItem(
-    icon: Icons.access_time_outlined,
-    activeIcon: Icons.access_time,
-    label: 'Approvals',
-  ),
-];
 
+  final List<NavigationItem> _navItems = [
+    NavigationItem(
+      icon: Icons.home_outlined,
+      activeIcon: Icons.home,
+      label: 'Home',
+    ),
+    NavigationItem(
+      icon: Icons.work_outline,
+      activeIcon: Icons.work,
+      label: 'Opportunities',
+    ),
+    NavigationItem(
+      icon: Icons.group_outlined,
+      activeIcon: Icons.group,
+      label: 'Students',
+    ),
+    NavigationItem(
+      icon: Icons.access_time_outlined,
+      activeIcon: Icons.access_time,
+      label: 'Approvals',
+    ),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -63,36 +62,32 @@ class _AdminNavigationState extends State<AdminNavigation> {
         return Theme(
           data: themeProvider.currentTheme,
           child: Scaffold(
-            body: IndexedStack(
-              index: _currentIndex,
-              children: _screens,
-            ),
+            body: IndexedStack(index: _currentIndex, children: _screens),
             bottomNavigationBar: _buildCustomBottomNavBar(themeProvider),
           ),
         );
       },
     );
   }
-  Widget _buildCustomBottomNavBar(ThemeProvider themeProvider) {
-  final isDark = themeProvider.isDarkMode;
 
-  return Container(
-    height: 80,
-    decoration: BoxDecoration(
-      color: isDark ? AppColors.darkCard : Colors.white,
-      boxShadow: [
-        BoxShadow(
-          color: Colors.black.withOpacity(0.05),
-          spreadRadius: 1,
-          blurRadius: 4,
-          offset: const Offset(0, -2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: List.generate(
-        _navItems.length,
-        (index) {
+  Widget _buildCustomBottomNavBar(ThemeProvider themeProvider) {
+    final isDark = themeProvider.isDarkMode;
+
+    return Container(
+      height: 80,
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.darkCard : Colors.white,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            spreadRadius: 1,
+            blurRadius: 4,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: Row(
+        children: List.generate(_navItems.length, (index) {
           final bool isSelected = _currentIndex == index;
 
           return Expanded(
@@ -103,11 +98,9 @@ class _AdminNavigationState extends State<AdminNavigation> {
                 });
               },
               child: Container(
-                margin:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                 decoration: BoxDecoration(
-                  color:
-                      isSelected ? AppColors.accentInfo : Colors.transparent,
+                  color: isSelected ? AppColors.accentInfo : Colors.transparent,
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Column(
@@ -128,8 +121,9 @@ class _AdminNavigationState extends State<AdminNavigation> {
                             ? AppColors.interactive
                             : AppColors.textMuted,
                         fontSize: 12,
-                        fontWeight:
-                            isSelected ? FontWeight.w600 : FontWeight.w400,
+                        fontWeight: isSelected
+                            ? FontWeight.w600
+                            : FontWeight.w400,
                       ),
                     ),
                   ],
@@ -137,12 +131,10 @@ class _AdminNavigationState extends State<AdminNavigation> {
               ),
             ),
           );
-        },
+        }),
       ),
-    ),
-  );
-}
-
+    );
+  }
 }
 
 class NavigationItem {

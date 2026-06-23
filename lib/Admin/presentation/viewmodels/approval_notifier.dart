@@ -53,6 +53,13 @@ class ApprovalsState {
       applicationSort: applicationSort ?? this.applicationSort,
     );
   }
+  Map<String, List<Application>> get groupedApplications {
+  final map = <String, List<Application>>{};
+  for (final a in filteredApplications) {
+    map.putIfAbsent(a.studentName, () => []).add(a);
+  }
+  return map;
+}
 
   /*
   List<Application> get filteredApplications =>
@@ -85,6 +92,14 @@ class ApprovalsState {
 
   List<Training> get filteredTrainingHours =>
       trainingRecords.where((t) => t.status == trainingFilter).toList();
+      
+  Map<String, List<Training>> get groupedTraining {
+    final map = <String, List<Training>>{};
+    for (final t in filteredTrainingHours) {
+      map.putIfAbsent(t.studentName, () => []).add(t);
+    }
+    return map;
+  }
 }
 
 class ApprovalsNotifier extends StateNotifier<ApprovalsState> {
@@ -107,7 +122,7 @@ class ApprovalsNotifier extends StateNotifier<ApprovalsState> {
     loadAll();
     _subscribeToChanges();
   }
-
+/*
   Future<void> loadAll() async {
     final apps = await getApplications();
     final training = await getTraining();
@@ -118,7 +133,18 @@ class ApprovalsNotifier extends StateNotifier<ApprovalsState> {
       loadingTraining: false,
     );
   }
+*/
+Future<void> loadAll() async {
+  // Load only the current filter's status to reduce data
+  final apps = await getApplications();
+  final training = await getTraining();
 
+  state = state.copyWith(
+    applications: apps,
+    trainingRecords: training,
+    loadingTraining: false,
+  );
+}
   void changeSection(String section) {
     state = state.copyWith(selectedSection: section);
   }

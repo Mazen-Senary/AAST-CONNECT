@@ -5,7 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'signIn.dart';
 import 'Admin/presentation/views/theme_provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'auth_session.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -27,8 +27,41 @@ Future<void> main() async {
 
 
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {        
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
+  final supabase = Supabase.instance.client;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      final id = AuthSession.collegeId;
+      final role = AuthSession.role;
+      if (id != null && role != null) {
+        supabase.rpc('set_session_context', params: {
+          'p_college_id': id,
+          'p_role': role,
+        });
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {

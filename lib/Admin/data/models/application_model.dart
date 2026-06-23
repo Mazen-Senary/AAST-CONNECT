@@ -12,9 +12,11 @@ class ApplicationModel extends Application {
     super.rejectionReason,
     super.expanded,
     super.gpa,
+    super.profileImageUrl,
   });
 
   factory ApplicationModel.fromMap(Map<String, dynamic> map) {
+    print('APP MODEL IMAGE = ${map['profile_image_url']}');
     return ApplicationModel(
       applicationId: map['applicationid'],
       status: map['status'],
@@ -27,6 +29,7 @@ class ApplicationModel extends Application {
       documentId: map['document_id'],
       rejectionReason: map['rejectionreason'],
       gpa: (map['gpa'] as num?)?.toDouble(),
+      profileImageUrl: map['profile_image_url'],
       );
   }
 }

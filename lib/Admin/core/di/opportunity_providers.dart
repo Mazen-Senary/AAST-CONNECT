@@ -5,11 +5,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../data/datasources/opportunity_remote_datasource.dart';
 import '../../data/repositories/opportunity_repository_impl.dart';
 import '../../domain/repositories/opportunity_repository.dart';
-import '../../domain/usecases/get_opportunities.dart';
+import '../../domain/usecases/get_opportunities_page.dart';
 import '../../domain/usecases/delete_opportunity.dart';
 import '../../domain/usecases/add_opportunity.dart';
 import '../../domain/usecases/update_opportunity.dart';
 import '../../domain/entities/opportunity.dart';
+import '../../domain/entities/opportunities_state.dart';      
+
 /// Repository
 final opportunityRepositoryProvider =
     Provider<OpportunityRepository>((ref) {
@@ -22,7 +24,7 @@ final opportunityRepositoryProvider =
 
 /// UseCases
 final getOpportunitiesProvider = Provider(
-  (ref) => GetOpportunities(ref.read(opportunityRepositoryProvider)),
+  (ref) => GetOpportunitiesPage(ref.read(opportunityRepositoryProvider)),
 );
 
 final deleteOpportunityProvider = Provider(
@@ -39,8 +41,7 @@ final updateOpportunityProvider = Provider(
 
 /// ViewModel
 final opportunitiesProvider =
-    StateNotifierProvider<OpportunitiesNotifier,
-        AsyncValue<List<Opportunity>>>((ref) {
+    StateNotifierProvider<OpportunitiesNotifier, OpportunitiesState>((ref) {
   return OpportunitiesNotifier(
     ref.read(getOpportunitiesProvider),
     ref.read(deleteOpportunityProvider),

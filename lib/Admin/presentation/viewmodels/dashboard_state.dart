@@ -6,7 +6,7 @@ class DashboardState {
   final DashboardStateEntity? data;
 
   DashboardState({
-    this.isLoading = false,
+    this.isLoading = true,
     this.error,
     this.data,
   });

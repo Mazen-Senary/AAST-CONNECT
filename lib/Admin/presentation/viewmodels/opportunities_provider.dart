@@ -1,56 +1,98 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:grad_project/Admin/domain/usecases/add_opportunity.dart';
-import 'package:grad_project/Admin/domain/usecases/delete_opportunity.dart';
-import 'package:grad_project/Admin/domain/usecases/get_opportunities.dart';
-import 'package:grad_project/Admin/domain/usecases/update_opportunity.dart';
-import 'package:grad_project/Admin/domain/entities/opportunity.dart';
+import '../../domain/entities/opportunities_state.dart';
+import '../../domain/usecases/get_opportunities_page.dart';
+import '../../domain/usecases/add_opportunity.dart';
+import '../../domain/usecases/delete_opportunity.dart';
+import '../../domain/usecases/update_opportunity.dart';
 
-
-class OpportunitiesNotifier
-    extends StateNotifier<AsyncValue<List<Opportunity>>> {
+class OpportunitiesNotifier extends StateNotifier<OpportunitiesState> {
   OpportunitiesNotifier(
-    this.getOpportunities,
-  this.deleteOpportunityUseCase,
-  this.addOpportunityUseCase,
-  this.updateOpportunityUseCase,
-  ) : super(const AsyncLoading()) {
-    fetchOpportunities();
+    this.getOpportunitiesPage,
+    this.deleteOpportunityUseCase,
+    this.addOpportunityUseCase,
+    this.updateOpportunityUseCase,
+  ) : super(const OpportunitiesState(isLoading: true)) {
+    fetchFirstPage();
   }
-final GetOpportunities getOpportunities;
-final DeleteOpportunity deleteOpportunityUseCase;
-final AddOpportunity addOpportunityUseCase;
-final UpdateOpportunity updateOpportunityUseCase;
 
-  // ✅ FETCH
-  Future<void> fetchOpportunities() async {
-  state = const AsyncLoading();
+  final GetOpportunitiesPage getOpportunitiesPage;
+  final DeleteOpportunity deleteOpportunityUseCase;
+  final AddOpportunity addOpportunityUseCase;
+  final UpdateOpportunity updateOpportunityUseCase;
 
-  try {
-    final data = await getOpportunities();
-    state = AsyncData(data);
-  } catch (e, st) {
-    state = AsyncError(e, st);
+  static const int pageSize = 20;
+  int _page = 0;
+  String _search = '';
+  String _type = 'all';
+
+  Future<void> fetchFirstPage({String? search, String? type}) async {
+    _search = search ?? _search;
+    _type = type ?? _type;
+    _page = 0;
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final result = await getOpportunitiesPage(
+        page: 0,
+        pageSize: pageSize,
+        search: _search,
+        type: _type,
+      );
+      state = OpportunitiesState(
+        items: result.opportunities,
+        hasMore: result.hasMore,
+        isLoading: false,
+      );
+    } catch (e) {
+      print('Fetch error: $e'); 
+      state = state.copyWith(isLoading: false, error: e);
+    }
   }
-}
 
-  // ✅ DELETE
+  Future<void> fetchNextPage() async {
+    if (state.isLoading || state.isLoadingMore || !state.hasMore) return;
+
+    state = state.copyWith(isLoadingMore: true);
+    final nextPage = _page + 1;
+    try {
+      final result = await getOpportunitiesPage(
+        page: nextPage,
+        pageSize: pageSize,
+        search: _search,
+        type: _type,
+      );
+      _page = nextPage;
+      state = state.copyWith(
+        items: [...state.items, ...result.opportunities],
+        hasMore: result.hasMore,
+        isLoadingMore: false,
+      );
+    } catch (e) {
+      state = state.copyWith(isLoadingMore: false, error: e);
+    }
+  }
+
+  void updateSearch(String search) => fetchFirstPage(search: search);
+  void updateTypeFilter(String type) => fetchFirstPage(type: type);
+
   Future<void> deleteOpportunity(String id) async {
-  await deleteOpportunityUseCase(id);
-  await fetchOpportunities();
-}
+    final previous = state.items;
+    state = state.copyWith(items: previous.where((o) => o.id != id).toList());
+    try {
+      await deleteOpportunityUseCase(id);
+    } catch (e) {
+      state = state.copyWith(items: previous, error: e);
+      rethrow;
+    }
+  }
 
-  // ✅ ADD
- Future<void> addOpportunity(Map<String, dynamic> data) async {
-  await addOpportunityUseCase(data);
-  await fetchOpportunities();
-}
+  Future<void> addOpportunity(Map<String, dynamic> data) async {
+    await addOpportunityUseCase(data);
+    await fetchFirstPage();
+  }
 
-  // ✅ UPDATE
- Future<void> updateOpportunity(
-  String id,
-  Map<String, dynamic> data,
-) async {
-  await updateOpportunityUseCase(id, data);
-  await fetchOpportunities();
-}
+  Future<void> updateOpportunity(String id, Map<String, dynamic> data) async {
+    await updateOpportunityUseCase(id, data);
+    await fetchFirstPage();
+  }
 }

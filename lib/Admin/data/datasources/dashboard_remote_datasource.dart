@@ -8,74 +8,53 @@ class DashboardRemoteDataSource {
   DashboardRemoteDataSource(this.client);
 
   Future<DashboardModel> getDashboard() async {
-    // 1️⃣ dashboard stats
-    final statsResponse = await client
-        .from('student_application_counts')
-        .select();
+    final results = await Future.wait([
+      client.from('student_application_counts').select(),
+      client.from('application').select().order('created_at', ascending: false).limit(5),
+      client.from('trainingrecord').select().order('created_at', ascending: false).limit(5),
+    ]);
 
-    // 2️⃣ recent activities
-    final applications = await client
-        .from('application')
-        .select()
-        .order('created_at', ascending: false)
-        .limit(5);
+    final statsResponse = results[0] as List;
+    final applications = results[1] as List;
+    final training = results[2] as List;
 
-    final training = await client
-        .from('trainingrecord')
-        .select()
-        .order('created_at', ascending: false)
-        .limit(5);
-    // Applications → activities
+    final studentIds = training
+        .map((r) => r['studentid'])
+        .where((id) => id != null)
+        .toList();
 
-    final totalApplications = (statsResponse as List).fold<int>(
-      0,
-      (sum, row) => sum + (row['total_applications'] as int),
-    );
-    final pendingApplications = (applications as List)
-        .where((a) => a['status'] == 'PENDING')
-        .length;
-    final trainingUploads = (training as List).length;
-    // ⏱ time formatter
-    String _formatTimeAgo(String dateTimeString) {
-      final dateTime = DateTime.parse(dateTimeString);
-      final diff = DateTime.now().difference(dateTime);
+    Map<dynamic, String> studentNames = {};
+    if (studentIds.isNotEmpty) {
+      final students = await client
+          .from('student')
+          .select('studentid, name')
+          .inFilter('studentid', studentIds);
 
-      if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
-      if (diff.inHours < 24) return '${diff.inHours} hr ago';
-      return '${diff.inDays} days ago';
+      studentNames = {
+        for (final s in students as List) s['studentid']: s['name'] ?? 'Unknown'
+      };
     }
 
-    final appActivities = (applications as List<dynamic>).map((row) {
-      return RecentActivity(
-        studentName: row['applicant_name'] ?? 'Unknown',
-        action: 'Applied for opportunity',
-        timeAgo: _formatTimeAgo(row['created_at']),
-        status: RecentActivity.mapStatus(row['status']),
-      );
-    }).toList();
+    final totalApplications = statsResponse.fold<int>(
+      0, (sum, row) => sum + (row['total_applications'] as int),
+    );
+    final pendingApplications = applications.where((a) => a['status'] == 'PENDING').length;
+    final trainingUploads = training.length;
 
-    final trainingActivities = <RecentActivity>[];
-for (final row in training as List<dynamic>) {
-  String studentName = 'Unknown';
-  final studentId = row['studentid'];
-  if (studentId != null) {
-    try {
-      final student = await client
-          .from('student')
-          .select('name')
-          .eq('studentid', studentId)
-          .single();
-      studentName = student['name'] ?? 'Unknown';
-    } catch (_) {}
-  }
-  trainingActivities.add(RecentActivity(
-    studentName: studentName,
-    action: 'Submitted training',
-    timeAgo: _formatTimeAgo(row['created_at']),
-    status: RecentActivity.mapStatus(row['status']),
-  ));
-}
-    final allActivities = [...appActivities, ...trainingActivities];
+    final appActivities = applications.map((row) => RecentActivity(
+      studentName: row['applicant_name'] ?? 'Unknown',
+      action: 'Applied for opportunity',
+      timeAgo: _formatTimeAgo(row['created_at']),
+      status: RecentActivity.mapStatus(row['status']),
+    )).toList();
+
+    final trainingActivities = training.map((row) => RecentActivity(
+      studentName: studentNames[row['studentid']] ?? 'Unknown',
+      action: 'Submitted training',
+      timeAgo: _formatTimeAgo(row['created_at']),
+      status: RecentActivity.mapStatus(row['status']),
+    )).toList();
+
     return DashboardModel(
       totalApplications: totalApplications,
       pendingApplications: pendingApplications,
@@ -83,7 +62,14 @@ for (final row in training as List<dynamic>) {
       totalAppsChange: 0,
       pendingChange: 0,
       uploadsChange: 0,
-      recentActivities: allActivities,
+      recentActivities: [...appActivities, ...trainingActivities],
     );
+  }
+
+  String _formatTimeAgo(String dateTimeString) {
+    final diff = DateTime.now().difference(DateTime.parse(dateTimeString));
+    if (diff.inMinutes < 60) return '${diff.inMinutes} min ago';
+    if (diff.inHours < 24) return '${diff.inHours} hr ago';
+    return '${diff.inDays} days ago';
   }
 }

@@ -4,7 +4,6 @@ class TrainingModel extends Training {
   TrainingModel({
     required super.recordId,
     required super.studentId,
-    
     required super.studentName,
     required super.companyName,
     required super.supervisorName,
@@ -19,6 +18,7 @@ class TrainingModel extends Training {
     super.certificateUrl,
     super.collegeId,
     super.completedTrainingHours,
+    super.profileImageUrl,
   });
 
   factory TrainingModel.fromMap(Map<String, dynamic> map) {
@@ -42,7 +42,8 @@ class TrainingModel extends Training {
     proofImageUrl: map['proof_image_url'],
     rejectionReason: map['rejectionreason'],
     // add this field to Training entity first
-certificateUrl: map['certificate_url'],
+    certificateUrl: map['certificate_url'],
+    profileImageUrl: map['profile_image_url'],
   );
 }
 }

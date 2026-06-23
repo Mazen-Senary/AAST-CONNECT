@@ -39,61 +39,95 @@ class StudentCard extends StatelessWidget {
         children: [
           // HEADER
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              CircleAvatar(
+                radius: 28,
+                backgroundColor: AppColors.interactive.withOpacity(0.15),
+                backgroundImage:
+                    student.profileImageUrl != null &&
+                        student.profileImageUrl!.isNotEmpty
+                    ? NetworkImage(student.profileImageUrl!)
+                    : null,
+                child:
+                    student.profileImageUrl == null ||
+                        student.profileImageUrl!.isEmpty
+                    ? Text(
+                        student.name.isNotEmpty
+                            ? student.name[0].toUpperCase()
+                            : '?',
+                      )
+                    : null,
+              ),
+
+              const SizedBox(width: 16),
+
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      student.name,
+                      style: AppTextStyles.h3.copyWith(
+                        color: isDark
+                            ? AppColors.darkTextPrimary
+                            : AppColors.textPrimary,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      student.major,
+                      style: AppTextStyles.body.copyWith(
+                        color: isDark
+                            ? AppColors.darkTextSecondary
+                            : AppColors.textSecondary,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 8),
+
               Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    student.name,
-                    style: AppTextStyles.h3.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextPrimary
-                          : AppColors.textPrimary,
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.interactive.withOpacity(0.12),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      student.collegeId ?? '-',
+                      style: AppTextStyles.label.copyWith(
+                        color: AppColors.interactive,
+                      ),
                     ),
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    student.major,
-                    style: AppTextStyles.body.copyWith(
-                      color: isDark
-                          ? AppColors.darkTextSecondary
-                          : AppColors.textSecondary,
+
+                  const SizedBox(height: 8),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 10,
+                      vertical: 4,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.interactive.withOpacity(0.15),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      student.year,
+                      style: AppTextStyles.label.copyWith(
+                        color: AppColors.interactive,
+                      ),
                     ),
                   ),
                 ],
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.interactive.withOpacity(0.12),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  student.collegeId ?? '-',
-                  style: AppTextStyles.label.copyWith(
-                    color: AppColors.interactive,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.interactive.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: Text(
-                  student.year,
-                  style: AppTextStyles.label.copyWith(
-                    color: AppColors.interactive,
-                  ),
-                ),
               ),
             ],
           ),
@@ -137,7 +171,7 @@ class StudentCard extends StatelessWidget {
               _stat('Applications', student.applications.toString(), isDark),
               _stat(
                 'Remaining Hrs',
-                '${(80 - student.trainingHours).clamp(0, 80)}/80',
+                '${(student.requiredTrainingHours - student.trainingHours).clamp(0, student.requiredTrainingHours)}/${student.requiredTrainingHours}',
                 isDark,
               ),
             ],
