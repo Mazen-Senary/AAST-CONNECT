@@ -205,7 +205,7 @@ class StudentCard extends StatelessWidget {
               _labeledRow(Icons.star, 'Skills', student.skills!, isDark),
             if (student.bio != null)
               _labeledRow(Icons.info_outline, 'Bio', student.bio!, isDark),
-
+/*
             if (student.profileImageUrl != null)
               Padding(
                 padding: const EdgeInsets.only(top: 12),
@@ -218,7 +218,7 @@ class StudentCard extends StatelessWidget {
                     fit: BoxFit.cover,
                   ),
                 ),
-              ),
+              ),*/
           ],
 
           // ACTION

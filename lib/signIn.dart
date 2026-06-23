@@ -18,21 +18,33 @@ class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _registrationController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   String _loginMessage = '';
-
+  bool _isLoading = false;
+  
   final supabase = Supabase.instance.client;
 
   Future<void> _signIn() async {
   final collegeId = _registrationController.text.trim();
   final password = _passwordController.text.trim();
 
-  if (collegeId.isEmpty || password.isEmpty) {
-    setState(() => _loginMessage = 'Invalid Admin ID or password');
+  if (collegeId.isEmpty && password.isEmpty) {
+    setState(() => _loginMessage = 'Please enter your ID and password');
+    return;
+  }
+  if (collegeId.isEmpty) {
+    setState(() => _loginMessage = 'Please enter your registration number');
+    return;
+  }
+  if (password.isEmpty) {
+    setState(() => _loginMessage = 'Please enter your password');
     return;
   }
 
+  setState(() {
+    _isLoading = true;
+    _loginMessage = '';
+  });
+
   try {
-    print('collegeId=[$collegeId]');
-print('password=[$password]');
     final result = await supabase.rpc(
       'signin_admin',
       params: {
@@ -40,7 +52,6 @@ print('password=[$password]');
         'input_password': password,
       },
     );
-    print('RPC RESULT = $result');
 
     final admins = List<Map<String, dynamic>>.from(result);
 
@@ -51,12 +62,7 @@ print('password=[$password]');
 
     final adminId = admins.first['adminid'] as int;
 
-    AuthSession.set(
-  collegeId,
-  'ADMIN',
-  password,
-  '',
-);
+    AuthSession.set(collegeId, 'ADMIN', password, '');
 
     if (!mounted) return;
 
@@ -69,9 +75,13 @@ print('password=[$password]');
         ),
       ),
     );
+  } on PostgrestException catch (e) {
+    setState(() => _loginMessage = 'Database error: ${e.message}');
   } catch (e) {
+    setState(() => _loginMessage = 'Something went wrong. Please try again.');
     debugPrint('SIGN IN ERROR: $e');
-    setState(() => _loginMessage = 'Invalid Admin ID or password');
+  } finally {
+    if (mounted) setState(() => _isLoading = false);
   }
 }
 
@@ -182,17 +192,37 @@ print('password=[$password]');
                           ),
                         ),
                       ),
-
-                      if (_loginMessage.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          _loginMessage,
-                          style: const TextStyle(
-                            color: Color(0xFF5B7C99),
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+if (_isLoading) ...[
+  const SizedBox(height: 16),
+  const Row(
+    children: [
+      SizedBox(
+        width: 14,
+        height: 14,
+        child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF5B7C99)),
+      ),
+      SizedBox(width: 8),
+      Text(
+        'Checking admin ID...',
+        style: TextStyle(color: Color(0xFF5B7C99), fontWeight: FontWeight.w500),
+      ),
+    ],
+  ),
+] else if (_loginMessage.isNotEmpty) ...[
+  const SizedBox(height: 16),
+  Row(
+    children: [
+      const Icon(Icons.error_outline, size: 16, color: Color(0xFFE57373)),
+      const SizedBox(width: 6),
+      Expanded(
+        child: Text(
+          _loginMessage,
+          style: const TextStyle(color: Color(0xFFE57373), fontWeight: FontWeight.w500),
+        ),
+      ),
+    ],
+  ),
+],
                       SizedBox(height: 20),
                       SizedBox(
                         width: double.infinity,

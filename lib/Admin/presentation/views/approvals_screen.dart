@@ -19,7 +19,6 @@ import 'dart:html' as html;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:file_picker/file_picker.dart';
 
-
 class ApprovalsScreen extends ConsumerStatefulWidget {
   const ApprovalsScreen({super.key});
 
@@ -39,6 +38,37 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
         if (mounted) ref.read(approvalsProvider.notifier).dismissNewData();
       });
     });
+  }
+
+  void _showSnackBar(
+    BuildContext context,
+    String message, {
+    bool isError = false,
+  }) {
+    ScaffoldMessenger.of(context)
+      ..hideCurrentSnackBar()
+      ..showSnackBar(
+        SnackBar(
+          width: 280,
+          content: Text(
+            message,
+            style: TextStyle(
+              color: isError
+                  ? AppColors.accentAlertText
+                  : AppColors.accentSuccessText,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          backgroundColor: isError
+              ? AppColors.accentAlert
+              : AppColors.accentSuccess,
+          behavior: SnackBarBehavior.floating,
+          duration: const Duration(seconds: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+        ),
+      );
   }
 
   @override
@@ -209,10 +239,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () async {
-                        await notifier.rejectTraining(record, null);
-                        Navigator.pop(context);
-                      },
+                      onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: isDark
                             ? AppColors.darkTextSecondary
@@ -244,6 +271,13 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                           controller.text.trim(),
                         );
                         Navigator.pop(context);
+                        if (mounted) {
+                          _showSnackBar(
+                            context,
+                            'Training record rejected successfully',
+                            isError: true,
+                          );
+                        }
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: AppColors.accentAlert,
@@ -424,13 +458,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 children: [
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () async {
-                        await notifier.rejectApplication(
-                          record,
-                          null,
-                        ); // 👈 reject without reason
-                        Navigator.pop(context);
-                      },
+                      onPressed: () => Navigator.pop(context),
                       style: OutlinedButton.styleFrom(
                         foregroundColor: isDark
                             ? AppColors.darkTextSecondary
@@ -461,6 +489,15 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                           record,
                           controller.text.trim(),
                         );
+
+                        if (mounted) {
+                          _showSnackBar(
+                            context,
+                            'Application rejected successfully',
+                            isError: true,
+                          );
+                        }
+
                         Navigator.pop(context);
                       },
                       style: ElevatedButton.styleFrom(
@@ -619,49 +656,30 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                                 )
                               : RefreshIndicator(
                                   onRefresh: () => notifier.loadAll(),
-                                  child: state.applicationsFilter == 'PENDING'
-                                      ? ListView.separated(
-                                          itemCount:
-                                              state.filteredApplications.length,
-                                          separatorBuilder: (_, __) =>
-                                              const SizedBox(height: 16),
-                                          itemBuilder: (_, index) {
-                                            final app = state
-                                                .filteredApplications[index];
-                                            return KeyedSubtree(
-                                              key: ValueKey(app.applicationId),
-                                              child: _buildApplicationCard(
-                                                app,
-                                                isDark,
-                                                notifier,
-                                              ),
-                                            );
-                                          },
-                                        )
-                                      : Builder(
-                                          builder: (_) {
-                                            final grouped =
-                                                state.groupedApplications;
-                                            final names = grouped.keys.toList();
-                                            return ListView.separated(
-                                              itemCount: names.length,
-                                              separatorBuilder: (_, __) =>
-                                                  const SizedBox(height: 16),
-                                              itemBuilder: (_, index) {
-                                                final name = names[index];
-                                                final records = grouped[name]!;
-                                                final profileImageUrl = records.first.profileImageUrl;
-                                                return _buildGroupedApplicationCard(
-                                                  name,
-                                                  records,
-                                                  isDark,
-                                                  notifier,
-                                                  profileImageUrl: profileImageUrl,
-                                                );
-                                              },
-                                            );
-                                          },
-                                        ),
+                                  child: Builder(
+                                    builder: (_) {
+                                      final grouped = state.groupedApplications;
+                                      final names = grouped.keys.toList();
+                                      return ListView.separated(
+                                        itemCount: names.length,
+                                        separatorBuilder: (_, __) =>
+                                            const SizedBox(height: 16),
+                                        itemBuilder: (_, index) {
+                                          final name = names[index];
+                                          final records = grouped[name]!;
+                                          final profileImageUrl =
+                                              records.first.profileImageUrl;
+                                          return _buildGroupedApplicationCard(
+                                            name,
+                                            records,
+                                            isDark,
+                                            notifier,
+                                            profileImageUrl: profileImageUrl,
+                                          );
+                                        },
+                                      );
+                                    },
+                                  ),
                                 ))
                         : (state.filteredTrainingHours.isEmpty
                               ? RefreshIndicator(
@@ -713,12 +731,12 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
   }
 
   Widget _buildGroupedApplicationCard(
-  String studentName,
-  List<Application> records,
-  bool isDark,
-  ApprovalsNotifier notifier, {
-  String? profileImageUrl,
-}) {
+    String studentName,
+    List<Application> records,
+    bool isDark,
+    ApprovalsNotifier notifier, {
+    String? profileImageUrl,
+  }) {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -731,16 +749,15 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
           Row(
             children: [
               CircleAvatar(
-  radius: 24,
-  backgroundImage: profileImageUrl != null &&
-          profileImageUrl.isNotEmpty
-      ? NetworkImage(profileImageUrl)
-      : null,
-  child: profileImageUrl == null ||
-          profileImageUrl.isEmpty
-      ? const Icon(Icons.person)
-      : null,
-),
+                radius: 24,
+                backgroundImage:
+                    profileImageUrl != null && profileImageUrl.isNotEmpty
+                    ? NetworkImage(profileImageUrl)
+                    : null,
+                child: profileImageUrl == null || profileImageUrl.isEmpty
+                    ? const Icon(Icons.person)
+                    : null,
+              ),
               const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -825,6 +842,12 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
             record.gpa?.toStringAsFixed(2) ?? 'N/A',
             isDark,
           ),
+          _buildLabeledItem(
+            Icons.business,
+            'Company Name',
+            record.companyName ?? 'N/A',
+            isDark,
+          ),
           if (record.expanded) ...[
             const Divider(height: 24),
             _buildLabeledItem(
@@ -837,7 +860,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
               _buildLabeledLink(
                 Icons.picture_as_pdf,
                 'CV',
-                'View CV',
+                'View Student\'s CV',
                 () => _openCV(record.documentId!),
                 isDark,
               ),
@@ -858,6 +881,43 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
               style: TextStyle(color: AppColors.interactive),
             ),
           ),
+          if (record.status == 'PENDING') ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _showRejectDialog(record),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accentAlertText,
+                      side: const BorderSide(color: AppColors.accentAlertText),
+                    ),
+                    child: const Text('Reject'),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      await notifier.approveApplication(record);
+
+                      if (!mounted) return;
+
+                      _showSnackBar(
+                        context,
+                        'Application approved successfully',
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentSuccess,
+                      foregroundColor: AppColors.accentSuccessText,
+                    ),
+                    child: const Text('Approve'),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -1114,7 +1174,17 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => notifier.approveApplication(record),
+                    onPressed: () async {
+                      await notifier.approveApplication(record);
+
+                      if (!mounted) return;
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Application approved successfully'),
+                        ),
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentSuccess,
                       foregroundColor: AppColors.accentSuccessText,
@@ -1254,8 +1324,8 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
     ApprovalsNotifier notifier,
   ) {
     final profileImageUrl = records.isNotEmpty
-      ? records.first.profileImageUrl
-      : null;
+        ? records.first.profileImageUrl
+        : null;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1266,21 +1336,18 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
-          children: [
-            CircleAvatar(
-              radius: 24,
-              backgroundImage:
-                  profileImageUrl != null &&
-                          profileImageUrl.isNotEmpty
-                      ? NetworkImage(profileImageUrl)
-                      : null,
-              child:
-                  profileImageUrl == null ||
-                          profileImageUrl.isEmpty
-                      ? const Icon(Icons.person)
-                      : null,
-            ),
-            const SizedBox(width: 12),
+            children: [
+              CircleAvatar(
+                radius: 24,
+                backgroundImage:
+                    profileImageUrl != null && profileImageUrl.isNotEmpty
+                    ? NetworkImage(profileImageUrl)
+                    : null,
+                child: profileImageUrl == null || profileImageUrl.isEmpty
+                    ? const Icon(Icons.person)
+                    : null,
+              ),
+              const SizedBox(width: 12),
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
@@ -1383,7 +1450,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
               _buildLabeledLink(
                 Icons.image,
                 'Proof',
-                'View',
+                'View Signature',
                 () => html.window.open(record.proofImageUrl!, '_blank'),
                 isDark,
               ),
@@ -1392,7 +1459,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
               _buildLabeledLink(
                 Icons.workspace_premium,
                 'Certificate',
-                'View',
+                'View Certificate',
                 () => html.window.open(record.certificateUrl!, '_blank'),
                 isDark,
               ),
@@ -1420,7 +1487,16 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: ElevatedButton(
-                    onPressed: () => notifier.approveTraining(record),
+                    onPressed: () async {
+                      await notifier.approveTraining(record);
+
+                      if (!mounted) return;
+
+                      _showSnackBar(
+                        context,
+                        'Training record approved successfully',
+                      );
+                    },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentSuccess,
                       foregroundColor: AppColors.accentSuccessText,
@@ -1530,7 +1606,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
             child: Row(
               children: [
                 _sortChip(
-                  'Date ↑',
+                  'Date (Oldest)',
                   ApplicationSortOption.dateAsc,
                   state,
                   notifier,
@@ -1538,7 +1614,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 ),
                 const SizedBox(width: 8),
                 _sortChip(
-                  'Date ↓',
+                  'Date (Newest)',
                   ApplicationSortOption.dateDesc,
                   state,
                   notifier,
@@ -1546,7 +1622,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 ),
                 const SizedBox(width: 8),
                 _sortChip(
-                  'GPA ↑',
+                  'GPA (Lowest to Highest)',
                   ApplicationSortOption.gpaAsc,
                   state,
                   notifier,
@@ -1554,7 +1630,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 ),
                 const SizedBox(width: 8),
                 _sortChip(
-                  'GPA ↓',
+                  'GPA (Highest to Lowest)',
                   ApplicationSortOption.gpaDesc,
                   state,
                   notifier,
@@ -1576,6 +1652,10 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
     bool isDark,
   ) {
     final selected = state.applicationSort == option;
+    final isAsc =
+        option == ApplicationSortOption.dateAsc ||
+        option == ApplicationSortOption.gpaAsc;
+
     return GestureDetector(
       onTap: () => notifier.updateApplicationSort(
         selected ? ApplicationSortOption.none : option,
@@ -1593,16 +1673,29 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                 : (isDark ? AppColors.darkDivider : AppColors.border),
           ),
         ),
-        child: Text(
-          label,
-          style: AppTextStyles.label.copyWith(
-            color: selected
-                ? AppColors.interactive
-                : (isDark
-                      ? AppColors.darkTextSecondary
-                      : AppColors.textSecondary),
-            fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
-          ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (selected) ...[
+              Icon(
+                isAsc ? Icons.arrow_upward : Icons.arrow_downward,
+                size: 14,
+                color: AppColors.interactive,
+              ),
+              const SizedBox(width: 4),
+            ],
+            Text(
+              label,
+              style: AppTextStyles.label.copyWith(
+                color: selected
+                    ? AppColors.interactive
+                    : (isDark
+                          ? AppColors.darkTextSecondary
+                          : AppColors.textSecondary),
+                fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
+              ),
+            ),
+          ],
         ),
       ),
     );

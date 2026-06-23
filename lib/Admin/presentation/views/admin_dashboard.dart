@@ -28,14 +28,21 @@ class _AdminDashboardState extends ConsumerState<AdminDashboard> {
     super.initState();
   }
 
- Future<void> _logout() async {
-  if (AuthSession.token != null) {
-    await supabase.rpc('logout', params: {
-      'p_token': AuthSession.token,
-    });
+Future<void> _logout() async {
+  try {
+    if (AuthSession.token != null && AuthSession.token!.isNotEmpty) {
+      await supabase.rpc('logout', params: {
+        'p_token': AuthSession.token,
+      });
+    }
+  } catch (e) {
+    debugPrint('Logout RPC error (ignored): $e');
+  } finally {
+    AuthSession.clear();
+    if (mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
+    }
   }
-  AuthSession.clear();
-  Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
 }
 
   @override

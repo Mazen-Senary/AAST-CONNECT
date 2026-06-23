@@ -78,6 +78,22 @@ Future<List<Map<String, dynamic>>> fetchApplications() async {
 
   final apps = await supabase.from('application').select();
 
+  final vacancyIds = apps
+      .map((a) => a['vacancyid'])
+      .where((id) => id != null)
+      .toSet()
+      .toList();
+
+  final vacancies = await supabase
+      .from('vacancies')
+      .select('vacancyid, company_name')
+      .inFilter('vacancyid', vacancyIds);
+
+  final vacancyMap = <String, String?>{};
+  for (final v in vacancies) {
+    vacancyMap[v['vacancyid'].toString()] = v['company_name'];
+  }
+
   final studentsRaw = await supabase.rpc(
     'admin_fetch_students',
     params: {
@@ -131,10 +147,12 @@ Future<List<Map<String, dynamic>>> fetchApplications() async {
       'APP $cid -> ${profileMap[cid]}',
     );
 
+    final vid = app['vacancyid']?.toString();
     return {
       ...app,
       'gpa': studentGpaMap[cid] ?? freshGpaMap[cid],
       'profile_image_url': profileMap[cid],
+      'company_name': vacancyMap[vid],
     };
   }).toList();
 }

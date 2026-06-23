@@ -13,6 +13,7 @@ class ApplicationModel extends Application {
     super.expanded,
     super.gpa,
     super.profileImageUrl,
+    super.companyName,
   });
 
   factory ApplicationModel.fromMap(Map<String, dynamic> map) {
@@ -30,6 +31,7 @@ class ApplicationModel extends Application {
       rejectionReason: map['rejectionreason'],
       gpa: (map['gpa'] as num?)?.toDouble(),
       profileImageUrl: map['profile_image_url'],
-      );
+      companyName: map['company_name'],
+    );
   }
 }
