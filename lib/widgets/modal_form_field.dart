@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'rounded_container.dart';
 
 class ModalFormField extends StatelessWidget {
@@ -29,11 +30,11 @@ class ModalFormField extends StatelessWidget {
             label!,
             style: TextStyle(
               color: isDark ? Colors.white : Colors.black,
-              fontSize: 18,
+              fontSize: 18.sp,
               fontWeight: FontWeight.bold,
             ),
           ),
-          const SizedBox(height: 15),
+          SizedBox(height: 15.h),
         ],
         RoundedContainer(
           backgroundColor: isDark
@@ -41,7 +42,7 @@ class ModalFormField extends StatelessWidget {
               : Colors.grey.shade50,
           borderColor: isDark ? Colors.grey.shade800 : Colors.grey.shade200,
           borderRadius: 15.0,
-          padding: const EdgeInsets.all(15),
+          padding: EdgeInsets.all(15.w),
           child: TextField(
             controller: controller,
             maxLines: maxLines,
@@ -86,16 +87,16 @@ class ModalDropdownField extends StatelessWidget {
           label,
           style: TextStyle(
             color: isDark ? Colors.white : Colors.black,
-            fontSize: 18,
+            fontSize: 18.sp,
             fontWeight: FontWeight.bold,
           ),
         ),
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         RoundedContainer(
           backgroundColor: isDark ? const Color(0xFF3C3C3C) : Colors.white,
           borderColor: isDark ? Colors.grey.shade700 : Colors.grey.shade300,
           borderRadius: 8.0,
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          padding: EdgeInsets.symmetric(horizontal: 12.w, vertical: 8.h),
           child: DropdownButton<String>(
             value: value,
             onChanged: onChanged,

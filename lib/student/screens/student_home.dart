@@ -21,10 +21,17 @@ import 'student_tracking.dart';
 class StudentHome extends StatefulWidget {
   final VoidCallback onSeeAll;
   final int unreadNotificationCount;
+  final VoidCallback? onProfileTab;
+  final VoidCallback? onTrackingTab;
+  final VoidCallback? onSupportTab;
+
   const StudentHome({
-    super.key, 
+    super.key,
     required this.onSeeAll,
     this.unreadNotificationCount = 0,
+    this.onProfileTab,
+    this.onTrackingTab,
+    this.onSupportTab,
   });
   @override
   State<StudentHome> createState() => _StudentHomeState();
@@ -439,7 +446,10 @@ class _StudentHomeState extends State<StudentHome> {
       appBar: AppBarWithLogout(
         title: "AAST Connect",
         unreadNotificationCount: widget.unreadNotificationCount,
-        onTimelinePressed: () => _openTracking(initialTabIndex: 0),
+        onTimelinePressed:
+            widget.onTrackingTab ?? () => _openTracking(initialTabIndex: 0),
+        onSupportPressed: widget.onSupportTab,
+        onProfilePressed: widget.onProfileTab,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())

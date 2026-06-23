@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../services/theme_provider.dart';
+
+import 'professional_app_chrome.dart';
 import '../student/screens/student_notifications.dart';
 
 class AppBarWithLogout extends StatelessWidget implements PreferredSizeWidget {
@@ -8,7 +8,12 @@ class AppBarWithLogout extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onLogout;
   final List<Widget>? additionalActions;
   final int unreadNotificationCount;
+  final VoidCallback? onNotificationsPressed;
   final VoidCallback? onTimelinePressed;
+  final VoidCallback? onSupportPressed;
+  final VoidCallback? onProfilePressed;
+  final VoidCallback? onChatbotPressed;
+  final String? photoUrl;
 
   const AppBarWithLogout({
     super.key,
@@ -16,98 +21,34 @@ class AppBarWithLogout extends StatelessWidget implements PreferredSizeWidget {
     this.onLogout,
     this.additionalActions,
     this.unreadNotificationCount = 0,
+    this.onNotificationsPressed,
     this.onTimelinePressed,
+    this.onSupportPressed,
+    this.onProfilePressed,
+    this.onChatbotPressed,
+    this.photoUrl,
   });
 
   @override
   Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      elevation: 0,
-      title: Text(
-        title,
-        style: TextStyle(
-          color: Theme.of(context).colorScheme.onSurface,
-          fontWeight: FontWeight.bold,
-          fontSize: 22,
-        ),
-      ),
-      actions: [
-        // 1. Dark Mode Toggle
-        IconButton(
-          icon: Icon(
-            Provider.of<ThemeProvider>(context).isDark
-                ? Icons.light_mode_outlined
-                : Icons.dark_mode_outlined,
-            color: Theme.of(context).colorScheme.primary,
-          ),
-          onPressed: () {
-            Provider.of<ThemeProvider>(context, listen: false).toggleTheme();
+    return ProfessionalAppBar(
+      unreadNotificationCount: unreadNotificationCount,
+      onNotificationsPressed: onNotificationsPressed ??
+          () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const StudentNotificationsScreen(),
+              ),
+            );
           },
-        ),
-
-        // 2. Timeline Icon (Tracking)
-        if (onTimelinePressed != null)
-          IconButton(
-            tooltip: 'Tracking',
-            onPressed: onTimelinePressed,
-            icon: const Icon(Icons.timeline),
-          ),
-
-        // 3. Bell Icon (Notifications)
-        Stack(
-          children: [
-            IconButton(
-              tooltip: 'Notifications',
-              onPressed: () => Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => const StudentNotificationsScreen(),
-                ),
-              ),
-              icon: const Icon(Icons.notifications_outlined),
-            ),
-            if (unreadNotificationCount > 0)
-              Positioned(
-                right: 8,
-                top: 8,
-                child: Container(
-                  padding: const EdgeInsets.all(4),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    shape: BoxShape.circle,
-                  ),
-                  constraints: const BoxConstraints(
-                    minWidth: 16,
-                    minHeight: 16,
-                  ),
-                  child: Text(
-                    unreadNotificationCount > 99
-                        ? '99+'
-                        : unreadNotificationCount.toString(),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 9,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-                ),
-              ),
-          ],
-        ),
-
-        // 4. Logout Button
-        if (onLogout != null)
-          IconButton(
-            icon: const Icon(Icons.logout, color: Colors.red),
-            tooltip: 'Logout',
-            onPressed: onLogout,
-          ),
-
-        if (additionalActions != null) ...additionalActions!,
-        const SizedBox(width: 5),
-      ],
+      onTrackingPressed: onTimelinePressed,
+      onSupportPressed: onSupportPressed,
+      onProfilePressed: onProfilePressed,
+      onChatbotPressed: onChatbotPressed,
+      onLogoutPressed: onLogout,
+      additionalActions: additionalActions,
+      photoUrl: photoUrl,
     );
   }
 

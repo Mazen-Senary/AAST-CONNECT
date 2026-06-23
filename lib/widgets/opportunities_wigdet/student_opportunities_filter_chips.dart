@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class StudentOpportunitiesFilterChips extends StatelessWidget {
   final List<String> categories;
@@ -16,23 +17,20 @@ class StudentOpportunitiesFilterChips extends StatelessWidget {
   Widget build(BuildContext context) {
     return Column(
       children: [
-        const SizedBox(height: 15),
+        SizedBox(height: 15.h),
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
-          child: Row(
+          child: Wrap(
+            spacing: 8.w,
+            runSpacing: 8.h,
             children: categories.map((category) {
-              return Padding(
-                padding: const EdgeInsets.only(right: 8),
-                child: FilterChip(
-                  label: Text(category),
-                  selected: selectedFilter == category,
-                  onSelected: (selected) => onFilterSelected?.call(category),
-                  backgroundColor: Theme.of(context).colorScheme.surface,
-                  selectedColor: Theme.of(
-                    context,
-                  ).colorScheme.primary.withOpacity(0.2),
-                  checkmarkColor: Theme.of(context).colorScheme.primary,
-                ),
+              return FilterChip(
+                label: Text(category),
+                selected: selectedFilter == category,
+                onSelected: (selected) => onFilterSelected?.call(category),
+                backgroundColor: Theme.of(context).colorScheme.surface,
+                selectedColor: Theme.of(context).colorScheme.primary.withOpacity(0.2),
+                checkmarkColor: Theme.of(context).colorScheme.primary,
               );
             }).toList(),
           ),

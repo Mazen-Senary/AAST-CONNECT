@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_theme.dart';
 import '../models/app_models.dart';
 import '../widgets/job_card.dart';
@@ -66,26 +67,26 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
             },
             child: SingleChildScrollView(
               physics: const AlwaysScrollableScrollPhysics(),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8.h),
                   Text(
                     'Job Opportunities',
                     style: TextStyle(
-                      fontSize: 26,
+                      fontSize: 26.sp,
                       fontWeight: FontWeight.bold,
                       color: isDark
                           ? AppColors.darkTextPrimary
                           : AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4.h),
                   Text(
                     'Find your perfect career match',
                     style: TextStyle(
-                      fontSize: 14,
+                      fontSize: 14.sp,
                       color: isDark
                           ? AppColors.darkTextSecondary
                           : AppColors.textSecondary,
@@ -97,7 +98,7 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                   Container(
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.darkCardBg : Colors.white,
-                      borderRadius: BorderRadius.circular(14),
+                      borderRadius: BorderRadius.circular(14.r),
                       boxShadow: [
                         BoxShadow(
                           color: Colors.black.withOpacity(isDark ? 0.3 : 0.05),
@@ -108,15 +109,15 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                     ),
                     child: Row(
                       children: [
-                        const SizedBox(width: 14),
+                        SizedBox(width: 14.w),
                         Icon(
                           Icons.search,
                           color: isDark
                               ? AppColors.darkTextSecondary
                               : AppColors.textSecondary,
-                          size: 20,
+                          size: 20.sp,
                         ),
-                        const SizedBox(width: 10),
+                        SizedBox(width: 10.w),
                         Expanded(
                           child: TextField(
                             controller: _searchController,
@@ -127,16 +128,16 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                                 color: isDark
                                     ? AppColors.darkTextSecondary
                                     : AppColors.textSecondary,
-                                fontSize: 14,
+                                fontSize: 14.sp,
                               ),
                               border: InputBorder.none,
                               isDense: true,
-                              contentPadding: const EdgeInsets.symmetric(
-                                vertical: 14,
-                              ),
+                                contentPadding: EdgeInsets.symmetric(
+                                  vertical: 14.h,
+                                ),
                             ),
                             style: TextStyle(
-                              fontSize: 14,
+                              fontSize: 14.sp,
                               color: isDark
                                   ? AppColors.darkTextPrimary
                                   : AppColors.textPrimary,
@@ -148,8 +149,8 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                             () => _showLocationFilter = !_showLocationFilter,
                           ),
                           child: Container(
-                            margin: const EdgeInsets.all(8),
-                            padding: const EdgeInsets.all(8),
+                            margin: EdgeInsets.all(8.w),
+                            padding: EdgeInsets.all(8.w),
                             decoration: BoxDecoration(
                               color: _showLocationFilter
                                   ? AppColors.primaryGreen.withOpacity(0.15)
@@ -163,7 +164,7 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                                   : (isDark
                                         ? AppColors.darkTextSecondary
                                         : AppColors.textSecondary),
-                              size: 20,
+                              size: 20.sp,
                             ),
                           ),
                         ),
@@ -173,12 +174,12 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
 
                   // Location filter panel
                   if (_showLocationFilter) ...[
-                    const SizedBox(height: 10),
+                    SizedBox(height: 10.h),
                     Container(
-                      padding: const EdgeInsets.all(14),
+                      padding: EdgeInsets.all(14.w),
                       decoration: BoxDecoration(
                         color: isDark ? AppColors.darkCardBg : Colors.white,
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(14.r),
                         boxShadow: [
                           BoxShadow(
                             color: Colors.black.withOpacity(
@@ -218,48 +219,47 @@ class _OpportunitiesScreenState extends State<OpportunitiesScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          Row(
+                          SizedBox(height: 12.h),
+                          Wrap(
+                            spacing: 8.w,
+                            runSpacing: 8.h,
                             children: _locationFilters.map((filter) {
                               final isSelected = _selectedLocation == filter;
-                              return Padding(
-                                padding: const EdgeInsets.only(right: 8),
-                                child: GestureDetector(
-                                  onTap: () => setState(
-                                    () => _selectedLocation = filter,
+                              return GestureDetector(
+                                onTap: () => setState(
+                                  () => _selectedLocation = filter,
+                                ),
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 200),
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 14.w,
+                                    vertical: 8.h,
                                   ),
-                                  child: AnimatedContainer(
-                                    duration: const Duration(milliseconds: 200),
-                                    padding: const EdgeInsets.symmetric(
-                                      horizontal: 16,
-                                      vertical: 8,
-                                    ),
-                                    decoration: BoxDecoration(
+                                  decoration: BoxDecoration(
+                                    color: isSelected
+                                        ? AppColors.primaryGreen
+                                        : Colors.transparent,
+                                    borderRadius: BorderRadius.circular(20.r),
+                                    border: Border.all(
                                       color: isSelected
                                           ? AppColors.primaryGreen
-                                          : Colors.transparent,
-                                      borderRadius: BorderRadius.circular(20),
-                                      border: Border.all(
-                                        color: isSelected
-                                            ? AppColors.primaryGreen
-                                            : (isDark
-                                                  ? AppColors.darkTextSecondary
-                                                  : Colors.grey.shade300),
-                                      ),
+                                          : (isDark
+                                                ? AppColors.darkTextSecondary
+                                                : Colors.grey.shade300),
                                     ),
-                                    child: Text(
-                                      filter,
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        fontWeight: isSelected
-                                            ? FontWeight.w600
-                                            : FontWeight.w400,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : (isDark
-                                                  ? AppColors.darkTextPrimary
-                                                  : AppColors.textPrimary),
-                                      ),
+                                  ),
+                                  child: Text(
+                                    filter,
+                                    style: TextStyle(
+                                      fontSize: 13.sp,
+                                      fontWeight: isSelected
+                                          ? FontWeight.w600
+                                          : FontWeight.w400,
+                                      color: isSelected
+                                          ? Colors.white
+                                          : (isDark
+                                                ? AppColors.darkTextPrimary
+                                                : AppColors.textPrimary),
                                     ),
                                   ),
                                 ),

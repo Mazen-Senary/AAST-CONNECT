@@ -99,9 +99,9 @@ class ThemeProvider extends ChangeNotifier {
     fontFamily: 'Inter',
     scaffoldBackgroundColor: AppColors.darkBackground,
     colorScheme: const ColorScheme.dark(
-      primary: AppColors.darkPrimary, // Softer, more visible blue
+      primary: AppColors.darkPrimary,
       secondary: AppColors.darkSecondary,
-      surface: AppColors.darkSurface, // Lighter background
+      surface: AppColors.darkSurface,
       onPrimary: Colors.white,
       onSecondary: Colors.white,
       onSurface: Colors.white,
@@ -109,7 +109,7 @@ class ThemeProvider extends ChangeNotifier {
       onError: Colors.black,
     ),
     appBarTheme: const AppBarTheme(
-      backgroundColor: AppColors.darkSurface, // Lighter app bar
+      backgroundColor: AppColors.darkSurface,
       elevation: 0,
       titleTextStyle: TextStyle(
         color: Colors.white,
@@ -119,12 +119,12 @@ class ThemeProvider extends ChangeNotifier {
       iconTheme: IconThemeData(color: AppColors.darkPrimary),
     ),
     bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-      backgroundColor: AppColors.darkSurface, // Lighter bottom nav
+      backgroundColor: AppColors.darkSurface,
       selectedItemColor: AppColors.darkPrimary,
       unselectedItemColor: Colors.grey,
     ),
     cardTheme: const CardThemeData(
-      color: AppColors.darkContainer, // Much lighter card color
+      color: AppColors.darkContainer,
       elevation: 2,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.all(Radius.circular(15)),

@@ -14,10 +14,10 @@ class AppColors {
   static const Color lightError = Color(0xFFF44336);
 
   // Dark Theme Colors
-  static const Color darkPrimary = Color(0xFF4A90E2);
-  static const Color darkSecondary = Color(0xFF637E99);
-  static const Color darkSurface = Color(0xFF2A2A2A);
-  static const Color darkBackground = Color(0xFF1A1A1A);
+  static const Color darkPrimary = Color(0xFF8FC7FF);
+  static const Color darkSecondary = Color(0xFF95A7BA);
+  static const Color darkSurface = Color(0xFF1B2026);
+  static const Color darkBackground = Color(0xFF111418);
   static const Color darkError = Color(0xFFF44336);
 
   // Status Colors
@@ -45,9 +45,9 @@ class AppColors {
   static const Color documentIcon = Color(0xFF284B8C);
 
   // Dark Mode Specific Colors
-  static const Color darkContainer = Color(0xFF2C2C2C);
-  static const Color darkModal = Color(0xFF1E1E1E);
-  static const Color darkDropdown = Color(0xFF3C3C3C);
+  static const Color darkContainer = Color(0xFF202731);
+  static const Color darkModal = Color(0xFF171C22);
+  static const Color darkDropdown = Color(0xFF252D36);
   //navbar colors
   static const Color navSelectedBackground = Color(0xFFD6EAF2);
   static const Color navSelectedIcon = Color(0xFF057C99);

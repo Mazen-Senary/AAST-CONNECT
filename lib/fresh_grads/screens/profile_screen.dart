@@ -4,6 +4,7 @@ import 'package:flutter/material.dart' hide FormField;
 import 'package:provider/provider.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import '../models/app_models.dart';
 import '../theme/app_theme.dart';
 import '../utils/profile_provider.dart';
@@ -390,13 +391,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final lnCtrl = TextEditingController(text: profile.lastName);
     final emailCtrl = TextEditingController(text: profile.email);
     final phoneCtrl = TextEditingController(text: profile.phone);
-    final majorCtrl = TextEditingController(text: profile.major);
-    final gpaCtrl = TextEditingController(text: profile.gpa);
     final bioCtrl = TextEditingController(text: profile.bio);
-    final years = ['Freshman', 'Sophomore', 'Junior', 'Senior', 'Graduate'];
-    String selectedYear = profile.academicYear.isNotEmpty && years.contains(profile.academicYear)
-        ? profile.academicYear
-        : years.last;
 
     showDialog(
       context: context,
@@ -459,33 +454,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 12),
 
                   SectionBox(title: 'Academic Information', isDark: isDark, children: [
-                    FormField(label: 'Major', controller: majorCtrl, isDark: isDark),
+                    FormField(label: 'Major', controller: profile.major.isEmpty ? TextEditingController(text: 'N/A') : TextEditingController(text: profile.major), isDark: isDark, readOnly: true),
                     const SizedBox(height: 12),
-                    Row(children: [
-                      Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                        Text('Academic Year', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500,
-                            color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
-                        const SizedBox(height: 6),
-                        Container(padding: const EdgeInsets.symmetric(horizontal: 12),
-                          decoration: BoxDecoration(
-                            color: isDark ? AppColors.darkSurface : const Color(0xFFF5F5F5),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: DropdownButtonHideUnderline(child: DropdownButton<String>(
-                            value: selectedYear,
-                            isExpanded: true,
-                            dropdownColor: isDark ? AppColors.darkCardBg : Colors.white,
-                            style: TextStyle(fontSize: 13,
-                                color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary),
-                            items: years.map((y) => DropdownMenuItem(value: y, child: Text(y))).toList(),
-                            onChanged: (v) => setS(() => selectedYear = v!),
-                          )),
-                        ),
-                      ])),
-                      const SizedBox(width: 10),
-                      Expanded(child: FormField(label: 'GPA', controller: gpaCtrl,
-                          icon: Icons.school_outlined, isDark: isDark)),
-                    ]),
+                    FormField(label: 'Academic Year', controller: TextEditingController(text: profile.academicYear.isEmpty ? 'Graduate' : profile.academicYear), isDark: isDark, readOnly: true),
+                    const SizedBox(height: 12),
+                    FormField(label: 'GPA', controller: TextEditingController(text: profile.gpa), icon: Icons.school_outlined, isDark: isDark, readOnly: true),
                   ]),
                   const SizedBox(height: 12),
 
@@ -539,18 +512,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   )),
                   const SizedBox(width: 12),
                   Expanded(child: ElevatedButton.icon(
-                    onPressed: () {
-                      context.read<ProfileProvider>().updateProfile(
-                        newFirstName: fnCtrl.text,
-                        newLastName: lnCtrl.text,
-                        newEmail: emailCtrl.text,
-                        newPhone: phoneCtrl.text,
-                        newMajor: majorCtrl.text,
-                        newAcademicYear: selectedYear,
-                        newGpa: gpaCtrl.text,
-                        newBio: bioCtrl.text,
-                      );
-                      Navigator.pop(ctx);
+                    onPressed: () async {
+                      try {
+                        final supabase = Supabase.instance.client;
+                        await supabase
+                            .from('freshgraduate')
+                            .update({
+                              'name': '${fnCtrl.text.trim()} ${lnCtrl.text.trim()}'.trim(),
+                              'email': emailCtrl.text.trim(),
+                              'phone': phoneCtrl.text.trim(),
+                              'bio': bioCtrl.text.trim(),
+                            })
+                            .eq('college_id', profile.collegeId);
+                        await profile.loadFromDatabase();
+                        if (context.mounted) {
+                          Navigator.pop(ctx);
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              behavior: SnackBarBehavior.floating,
+                              backgroundColor: Colors.transparent,
+                              elevation: 0,
+                              content: AwesomeSnackbarContent(
+                                title: 'Success',
+                                message: 'Profile updated successfully!',
+                                contentType: ContentType.success,
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            behavior: SnackBarBehavior.floating,
+                            backgroundColor: Colors.transparent,
+                            elevation: 0,
+                            content: AwesomeSnackbarContent(
+                              title: 'Error',
+                              message: 'Error saving profile: $e',
+                              contentType: ContentType.failure,
+                            ),
+                          ),
+                        );
+                      }
                     },
                     icon: const Icon(Icons.save_outlined, size: 16, color: Colors.white),
                     label: const Text('Save Changes',

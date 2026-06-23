@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../theme/app_theme.dart';
 import '../utils/profile_provider.dart';
 import '../widgets/career_progress_card.dart';
@@ -15,11 +16,11 @@ class HomeScreen extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 8.h),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
 
           // Greeting — rebuilds automatically when firstName changes
           Consumer<ProfileProvider>(
@@ -28,36 +29,36 @@ class HomeScreen extends StatelessWidget {
                 Text(
                   'Hello, ${profile.firstName} ',
                   style: TextStyle(
-                    fontSize: 26,
+                    fontSize: 26.sp,
                     fontWeight: FontWeight.bold,
                     color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary,
                   ),
                 ),
-                const Text('👋', style: TextStyle(fontSize: 26)),
+                Text('👋', style: TextStyle(fontSize: 26.sp)),
               ],
             ),
           ),
-          const SizedBox(height: 4),
+          SizedBox(height: 4.h),
           Text(
             'Your career journey starts here',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 14.sp,
               color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary,
             ),
           ),
-          const SizedBox(height: 20),
+          SizedBox(height: 20.h),
 
           CareerProgressCard(),
-          const SizedBox(height: 14),
+          SizedBox(height: 14.h),
 
           const StatsRow(),
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
 
           CareerPathsSection(),
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
 
           const LatestOpportunitiesSection(),
-          const SizedBox(height: 24),
+          SizedBox(height: 24.h),
         ],
       ),
     );

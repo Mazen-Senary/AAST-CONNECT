@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class ProfileInfoField extends StatelessWidget {
   final IconData icon;
@@ -16,16 +17,16 @@ class ProfileInfoField extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.grey),
-        const SizedBox(width: 10),
+        Icon(icon, size: 20.sp, color: Colors.grey),
+        SizedBox(width: 10.w),
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               label,
-              style: const TextStyle(color: Colors.grey, fontSize: 12),
+              style: TextStyle(color: Colors.grey, fontSize: 12.sp),
             ),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.w500)),
+            Text(value, style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14.sp)),
           ],
         ),
       ],

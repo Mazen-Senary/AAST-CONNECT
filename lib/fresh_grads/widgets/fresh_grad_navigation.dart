@@ -243,18 +243,22 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:provider/provider.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../constants/app_colors.dart';
 import '../screens/home_screen.dart';
 import '../screens/opportunities_screen.dart';
 import '../screens/profile_screen.dart';
 import '../screens/fresh_grad_tracking.dart';
-import '../screens/support_screen.dart';
 import '../screens/fresh_grad_notifications.dart';
+import '../screens/support_screen.dart';
 import '../widgets/aast_app_bar.dart';
-import '../theme/app_theme.dart';
 import '../../services/fresh_grad_opportunity_notification_service.dart';
 import '../../services/notification_service.dart';
+import '../../services/theme_provider.dart';
 import '../../services/user_session.dart';
+import '../../widgets/professional_app_chrome.dart';
 
 class _NavItem {
   final IconData icon;
@@ -277,6 +281,7 @@ class FreshGradNavigation extends StatefulWidget {
 
 class _FreshGradNavigationState extends State<FreshGradNavigation> {
   int _currentIndex = 0;
+  int _previousIndex = 0;
   int _unreadCount = 0;
 
   RealtimeChannel? _notifChannel;
@@ -293,7 +298,8 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
     HomeScreen(),
     OpportunitiesScreen(),
     ProfileScreen(),
-    SupportScreen(),
+    FreshGradTrackingScreen(embedded: true),
+    SupportScreen(embedded: true),
   ];
 
   static const List<_NavItem> _navItems = [
@@ -313,9 +319,9 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
       label: 'Profile',
     ),
     _NavItem(
-      icon: Icons.help_outline,
-      activeIcon: Icons.help_rounded,
-      label: 'Support',
+      icon: Icons.track_changes_outlined,
+      activeIcon: Icons.track_changes,
+      label: 'Tracking',
     ),
   ];
 
@@ -412,13 +418,20 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
   }
 
   void _openTracking() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => const FreshGradTrackingScreen(),
-      ),
-    );
+    setState(() {
+      _previousIndex = _currentIndex;
+      _currentIndex = 3;
+    });
   }
+
+  void _openSupport() {
+    setState(() {
+      _previousIndex = _currentIndex;
+      _currentIndex = 4;
+    });
+  }
+
+  int get _selectedNavIndex => _currentIndex > 3 ? _previousIndex : _currentIndex;
 
   @override
   void dispose() {
@@ -429,32 +442,50 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
 
   @override
   Widget build(BuildContext context) {
-    return Theme(
-      data: AppTheme.light(),
-      child: Scaffold(
-        appBar: AastAppBar(
-          isDark: false,
-          onThemeToggle: () {},
-          unreadNotificationCount: _unreadCount,
-          onTrackingPressed: _openTracking,
-          onNotificationsPressed: _openNotifications,
-        ),
-        body: IndexedStack(
-          index: _currentIndex,
-          children: _screens,
-        ),
-        bottomNavigationBar: _buildCustomBottomNavBar(),
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Scaffold(
+      appBar: AastAppBar(
+        isDark: isDark,
+        onThemeToggle: () =>
+            Provider.of<ThemeProvider>(context, listen: false).toggleTheme(),
+        unreadNotificationCount: _unreadCount,
+        onTrackingPressed: _openTracking,
+        onSupportPressed: _openSupport,
+        onNotificationsPressed: _openNotifications,
+        onProfilePressed: () => setState(() {
+          _previousIndex = _currentIndex;
+          _currentIndex = 2;
+        }),
+        onChatbotPressed: () => showChatbotSheet(context),
       ),
+      body: IndexedStack(
+        index: _currentIndex,
+        children: _screens,
+      ),
+      bottomNavigationBar: SafeArea(child: _buildCustomBottomNavBar()),
     );
   }
   Widget _buildCustomBottomNavBar() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final navBg = isDark ? Theme.of(context).colorScheme.surface : Colors.white;
+    final selectedBg = isDark
+        ? Theme.of(context).colorScheme.primary.withValues(alpha: 0.16)
+        : AppColors.navSelectedBackground;
+    final selectedColor = isDark
+        ? Theme.of(context).colorScheme.primary
+        : AppColors.navSelectedIcon;
+    final unselectedColor = isDark
+        ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.62)
+        : AppColors.navUnselectedIcon;
+
     return Container(
-      height: 86,
+      height: 86.h,
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: navBg,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withOpacity(isDark ? 0.25 : 0.05),
             spreadRadius: 1,
             blurRadius: 4,
             offset: const Offset(0, -2),
@@ -463,22 +494,23 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
       ),
       child: Row(
         children: List.generate(_navItems.length, (index) {
-          final isSelected = _currentIndex == index;
+          final isSelected = _selectedNavIndex == index;
           final item = _navItems[index];
 
           return Expanded(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
-              onTap: () => setState(() => _currentIndex = index),
+              onTap: () => setState(() {
+                _previousIndex = _currentIndex;
+                _currentIndex = index;
+              }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
-                margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
-                padding: const EdgeInsets.symmetric(vertical: 8),
+                margin: EdgeInsets.symmetric(horizontal: 6.w, vertical: 6.h),
+                padding: EdgeInsets.symmetric(vertical: 8.h),
                 decoration: BoxDecoration(
-                  color: isSelected
-                      ? AppColors.navSelectedBackground
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(12),
+                  color: isSelected ? selectedBg : Colors.transparent,
+                  borderRadius: BorderRadius.circular(12.r),
                 ),
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -486,20 +518,18 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
                   children: [
                     Icon(
                       isSelected ? item.activeIcon : item.icon,
-                      color: isSelected
-                          ? AppColors.navSelectedIcon
-                          : AppColors.navUnselectedIcon,
-                      size: 24,
+                      color: isSelected ? selectedColor : unselectedColor,
+                      size: 24.sp,
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4.h),
                     Text(
                       item.label,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         color: isSelected
-                            ? AppColors.navSelectedIcon
-                            : AppColors.navUnselectedIcon,
-                        fontSize: 12,
+                            ? selectedColor
+                            : unselectedColor,
+                        fontSize: 12.sp,
                         fontWeight:
                         isSelected ? FontWeight.w600 : FontWeight.w400,
                       ),

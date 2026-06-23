@@ -55,6 +55,17 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+    final primaryText =
+        isDark ? Colors.white : theme.colorScheme.onSurface;
+    final secondaryText =
+        theme.colorScheme.onSurface.withValues(alpha: isDark ? 0.78 : 0.62);
+    final appliedBackground = isDark
+        ? const Color(0xFF3A4552)
+        : Colors.grey.shade200;
+    final appliedForeground = isDark ? Colors.white : Colors.black87;
+
     return RoundedContainer(
       margin: const EdgeInsets.only(bottom: 15),
       child: Column(
@@ -70,15 +81,15 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
                   children: [
                     Text(
                       program['title'] ?? 'N/A',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: Colors.black87,
+                        color: primaryText,
                       ),
                     ),
                     Text(
                       program['company'] ?? program['company_name'] ?? 'Unknown Company',
-                      style: const TextStyle(color: Colors.grey),
+                      style: TextStyle(color: secondaryText),
                     ),
                   ],
                 ),
@@ -117,7 +128,7 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
               Expanded(
                 child: Text(
                   "${program['hours']} • ${program['location']}",
-                  style: const TextStyle(color: Colors.grey),
+                  style: TextStyle(color: secondaryText),
                   overflow: TextOverflow.ellipsis,
                   maxLines: 1,
                 ),
@@ -145,10 +156,10 @@ class StudentOpportunitiesProgramCard extends StatelessWidget {
                 child: ElevatedButton(
                   style: ElevatedButton.styleFrom(
                     backgroundColor: program['applied']
-                        ? Colors.grey.shade200
+                        ? appliedBackground
                         : AppColors.lightSecondary,
                     foregroundColor: program['applied']
-                        ? Colors.black87
+                        ? appliedForeground
                         : Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 
 class BaseModal extends StatelessWidget {
   final String title;
@@ -22,20 +23,20 @@ class BaseModal extends StatelessWidget {
       height: MediaQuery.of(context).size.height * heightFactor!,
       decoration: BoxDecoration(
         color: isDark ? const Color(0xFF1E1E1E) : Colors.white,
-        borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
       ),
       child: Column(
         children: [
           // Fixed Header
           Padding(
-            padding: const EdgeInsets.all(25),
+            padding: EdgeInsets.all(25.w),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
                   title,
                   style: TextStyle(
-                    fontSize: 24,
+                    fontSize: 24.sp,
                     fontWeight: FontWeight.bold,
                     color: isDark ? Colors.white : Colors.black,
                   ),
@@ -43,7 +44,7 @@ class BaseModal extends StatelessWidget {
                 Row(
                   children: [
                     if (actions != null) ...actions!,
-                    const SizedBox(width: 8),
+                    SizedBox(width: 8.w),
                     IconButton(
                       icon: Icon(
                         Icons.close,
@@ -59,7 +60,7 @@ class BaseModal extends StatelessWidget {
           // Scrollable Content
           Expanded(
             child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 25),
+              padding: EdgeInsets.symmetric(horizontal: 25.w),
               child: child,
             ),
           ),

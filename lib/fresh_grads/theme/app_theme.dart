@@ -13,25 +13,25 @@ class AppColors {
   static const Color applyButton = Color(0xFF37474F);
 
   // Dark mode
-  static const Color darkScaffoldBg = Color(0xFF121212);
-  static const Color darkCardBg = Color(0xFF1E1E1E);
-  static const Color darkSurface = Color(0xFF2A2A2A);
-  static const Color darkGreen = Color(0xFF1B3A1F);
-  static const Color darkBlue = Color(0xFF0D2137);
-  static const Color darkOrange = Color(0xFF2D1F0A);
+  static const Color darkScaffoldBg = Color(0xFF111418);
+  static const Color darkCardBg = Color(0xFF202731);
+  static const Color darkSurface = Color(0xFF1B2026);
+  static const Color darkGreen = Color(0xFF1F3A2B);
+  static const Color darkBlue = Color(0xFF1C3346);
+  static const Color darkOrange = Color(0xFF3A2B1F);
 
   // 🌐 Backgrounds
   static const Color background = Color(0xFFFAF9F6);
   static const Color foreground = Color(0xFF2D2D2D);
 
-  static const Color darkBackground = Color(0xFF1A1A1A);
+  static const Color darkBackground = Color(0xFF111418);
   static const Color darkForeground = Color(0xFFF5F5F5);
 
   // 🧱 Cards
   static const Color card = Color(0xFFFFFFFF);
   static const Color cardForeground = Color(0xFF2D2D2D);
 
-  static const Color darkCard = Color(0xFF242424);
+  static const Color darkCard = Color(0xFF202731);
   static const Color darkCardForeground = Color(0xFFF5F5F5);
 
   // 🎯 Accents
@@ -59,22 +59,22 @@ class AppColors {
   static const Color textMuted = Color(0xFF9B9B9B);
 
   static const Color darkTextPrimary = Color(0xFFF5F5F5);
-  static const Color darkTextSecondary = Color(0xFFB0B0B0);
-  static const Color darkTextMuted = Color(0xFF808080);
+  static const Color darkTextSecondary = Color(0xFFC2CBD6);
+  static const Color darkTextMuted = Color(0xFF8C98A5);
 
   // 📐 Borders & dividers
   static const Color border = Color(0xFFE8E8E8);
   static const Color divider = Color(0xFFF0F0F0);
 
-  static const Color darkBorder = Color(0xFF333333);
-  static const Color darkDivider = Color(0xFF2A2A2A);
+  static const Color darkBorder = Color(0xFF303A45);
+  static const Color darkDivider = Color(0xFF2A323C);
 
   // 🖱️ Interactive
   static const Color interactive = Color(0xFF5B7C99);
   static const Color interactiveHover = Color(0xFF4A6780);
 
-  static const Color darkInteractive = Color(0xFF7A9BB8);
-  static const Color darkInteractiveHover = Color(0xFF8BAEC9);
+  static const Color darkInteractive = Color(0xFF8FC7FF);
+  static const Color darkInteractiveHover = Color(0xFFA8D5FF);
 
   //navabr colors
   static const Color navSelectedBackground = Color(0xFFD6EAF2);

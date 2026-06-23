@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 
@@ -14,11 +15,17 @@ import '../../constants/app_colors.dart';
 class StudentTrackingScreen extends StatefulWidget {
   final int initialTabIndex;
   final String initialStatusFilter;
+  final VoidCallback? onProfileTab;
+  final VoidCallback? onTrackingTab;
+  final VoidCallback? onSupportTab;
 
   const StudentTrackingScreen({
     super.key,
     this.initialTabIndex = 0,
     this.initialStatusFilter = 'All',
+    this.onProfileTab,
+    this.onTrackingTab,
+    this.onSupportTab,
   });
 
   @override
@@ -134,13 +141,9 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       appBar: AppBarWithLogout(
         title: 'AAST Connect',
-        additionalActions: [
-          IconButton(
-            tooltip: 'Refresh tracking',
-            onPressed: _fetchTrackingData,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
+        onTimelinePressed: widget.onTrackingTab,
+        onSupportPressed: widget.onSupportTab,
+        onProfilePressed: widget.onProfileTab,
       ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
@@ -150,7 +153,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
               onRefresh: _fetchTrackingData,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(20.w),
                 children: [
                   Text(
                     'My Tracking',
@@ -164,11 +167,11 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
                       context,
                     ).textTheme.bodyMedium?.copyWith(fontSize: 16),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   _buildToggle(),
-                  const SizedBox(height: 15),
+                  SizedBox(height: 15.h),
                   _buildSummaryCard(),
-                  const SizedBox(height: 15),
+                  SizedBox(height: 15.h),
                   _buildStatusFilters(),
                   const SizedBox(height: 10),
                   ...(_selectedTab == 0
@@ -196,7 +199,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
   Widget _buildErrorState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.w),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -219,7 +222,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
       backgroundColor: Theme.of(context).colorScheme.surface,
       borderColor: Theme.of(context).dividerColor,
       borderRadius: 14,
-      padding: const EdgeInsets.all(6),
+      padding: EdgeInsets.all(6.w),
       child: Row(
         children: [
           Expanded(

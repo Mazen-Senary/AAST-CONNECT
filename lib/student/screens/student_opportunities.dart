@@ -1,6 +1,7 @@
 //new opportunities screen with save program feature and better error handling
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
@@ -17,7 +18,16 @@ import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.d
 import 'student_tracking.dart';
 
 class StudentOpportunities extends StatefulWidget {
-  const StudentOpportunities({super.key});
+  final VoidCallback? onProfileTab;
+  final VoidCallback? onTrackingTab;
+  final VoidCallback? onSupportTab;
+
+  const StudentOpportunities({
+    super.key,
+    this.onProfileTab,
+    this.onTrackingTab,
+    this.onSupportTab,
+  });
 
   @override
   State<StudentOpportunities> createState() => _StudentOpportunitiesState();
@@ -375,7 +385,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
-              fontSize: 22,
+              fontSize: 22.sp,
             ),
           ),
         ),
@@ -394,7 +404,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
             style: TextStyle(
               color: Theme.of(context).colorScheme.onSurface,
               fontWeight: FontWeight.bold,
-              fontSize: 22,
+              fontSize: 22.sp,
             ),
           ),
         ),
@@ -418,15 +428,17 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
       appBar: AppBarWithLogout(
         title: "AAST Connect",
         unreadNotificationCount: 0,
-        onTimelinePressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const StudentTrackingScreen(),
-            ),
-          );
-        },
-        onLogout: () {},
+        onTimelinePressed: widget.onTrackingTab ??
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const StudentTrackingScreen(),
+                ),
+              );
+            },
+        onSupportPressed: widget.onSupportTab,
+        onProfilePressed: widget.onProfileTab,
       ),
       body: Column(
         children: [
@@ -451,7 +463,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
           ],
 
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+            padding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 8.h),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -478,8 +490,8 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
               child: _filteredPrograms.isEmpty
                   ? ListView(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      children: const [
-                        SizedBox(height: 180),
+                        children: [
+                        SizedBox(height: 180.h),
                         Center(
                           child: Text(
                             "No programs found",
@@ -490,7 +502,7 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
                     )
                   : ListView.builder(
                       physics: const AlwaysScrollableScrollPhysics(),
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      padding: EdgeInsets.symmetric(horizontal: 20.w),
                       itemCount: _filteredPrograms.length,
                       itemBuilder: (context, index) {
                         final program = _filteredPrograms[index];

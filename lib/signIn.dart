@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'fresh_grads/widgets/fresh_grad_navigation.dart';
 import 'fresh_grads/theme/app_theme.dart';
 import 'fresh_grads/utils/profile_provider.dart';
@@ -17,12 +18,37 @@ class SignInScreen extends StatefulWidget {
 class _SignInScreenState extends State<SignInScreen> {
   final TextEditingController _registrationController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final FocusNode _registrationFocusNode = FocusNode();
+  final FocusNode _passwordFocusNode = FocusNode();
   String _loginMessage = '';
   bool _isLoading = false;
   bool _registrationHasError = false;
   bool _passwordHasError = false;
 
   final StudentIdentityService _identityService = StudentIdentityService();
+
+  @override
+  void initState() {
+    super.initState();
+    _registrationFocusNode.addListener(_validateRegistrationOnBlur);
+    _passwordFocusNode.addListener(_validatePasswordOnBlur);
+  }
+
+  void _validateRegistrationOnBlur() {
+    if (!_registrationFocusNode.hasFocus) {
+      setState(() {
+        _registrationHasError = _registrationController.text.trim().isEmpty;
+      });
+    }
+  }
+
+  void _validatePasswordOnBlur() {
+    if (!_passwordFocusNode.hasFocus) {
+      setState(() {
+        _passwordHasError = _passwordController.text.isEmpty;
+      });
+    }
+  }
 
   bool _isErrorMessage(String message) {
     final lower = message.toLowerCase();
@@ -119,187 +145,229 @@ class _SignInScreenState extends State<SignInScreen> {
     }) {
       return InputDecoration(
         filled: true,
-        fillColor: AppColors.inputBackground,
+        fillColor: Colors.white,
         hintText: hintText,
+        hintStyle: TextStyle(
+          color: const Color(0xFF8A8A8A),
+          fontSize: 14.sp,
+        ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
           borderSide: BorderSide(
             color: hasError ? Colors.red : Colors.transparent,
-            width: 1.5,
+            width: 1.5.w,
           ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
           borderSide: BorderSide(
             color: hasError ? Colors.red : Colors.transparent,
-            width: 1.5,
+            width: 1.5.w,
           ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(12.r),
           borderSide: BorderSide(
             color: hasError ? Colors.red : AppColors.interactive,
-            width: 1.8,
+            width: 1.8.w,
           ),
         ),
       );
     }
 
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: AppColors.background,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            children: [
-              const SizedBox(height: 40),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          padding: EdgeInsets.all(24.w),
+          child: ConstrainedBox(
+            constraints: BoxConstraints(minHeight: MediaQuery.of(context).size.height - MediaQuery.of(context).padding.vertical),
+            child: Column(
+              children: [
+                SizedBox(height: 28.h),
 
-              Center(
-                child: Column(
-                  children: [
-                    Container(
-                      width: 80,
-                      height: 80,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: const LinearGradient(
-                          colors: [
-                            AppColors.interactive,
-                            AppColors.darkInteractive,
-                          ],
+                Center(
+                  child: Column(
+                    children: [
+                      Container(
+                        width: 80.w,
+                        height: 80.w,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(20.r),
+                          gradient: const LinearGradient(
+                            colors: [
+                              AppColors.interactive,
+                              AppColors.darkInteractive,
+                            ],
+                          ),
+                        ),
+                        child: Icon(
+                          Icons.school,
+                          size: 40.sp,
+                          color: Colors.white,
                         ),
                       ),
-                      child: const Icon(
-                        Icons.school,
-                        size: 40,
-                        color: Colors.white,
+                      SizedBox(height: 16.h),
+                      Text(
+                        'AAST Connect',
+                        style: TextStyle(
+                          fontSize: 26.sp,
+                          fontWeight: FontWeight.w700,
+                          color: const Color(0xFF2D2D2D),
+                        ),
+                        textAlign: TextAlign.center,
                       ),
-                    ),
-                    const SizedBox(height: 16),
-                    const Text('AAST Connect', style: AppTextStyles.h1),
-                    const SizedBox(height: 4),
-                    const Text(
-                      'Your path to training and opportunities',
-                      textAlign: TextAlign.center,
-                      style: AppTextStyles.body,
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 60),
-
-              Card(
-                color: AppColors.card,
-                elevation: 8,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Welcome Back',
+                      SizedBox(height: 4.h),
+                      Text(
+                        'Your path to training and opportunities',
+                        textAlign: TextAlign.center,
                         style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 22,
-                          fontWeight: FontWeight.w600,
-                          color: Color(0xFF2D2D2D),
-                        ),
-                      ),
-                      const SizedBox(height: 20),
-
-                      const Text(
-                        'Registration Number',
-                        style: AppTextStyles.label,
-                      ),
-                      const SizedBox(height: 8),
-
-                      TextField(
-                        controller: _registrationController,
-                        decoration: buildDecoration(
-                          hintText: 'Enter your registration number',
-                          hasError: _registrationHasError,
-                        ),
-                        onChanged: (_) {
-                          if (_registrationHasError && _registrationController.text.trim().isNotEmpty) {
-                            setState(() {
-                              _registrationHasError = false;
-                            });
-                          }
-                        },
-                      ),
-
-                      const SizedBox(height: 16),
-
-                      const Text(
-                        'Password',
-                        style: AppTextStyles.label,
-                      ),
-                      const SizedBox(height: 8),
-
-                      TextField(
-                        controller: _passwordController,
-                        obscureText: true,
-                        decoration: buildDecoration(
-                          hintText: 'Enter your password',
-                          hasError: _passwordHasError,
-                        ),
-                        onChanged: (_) {
-                          if (_passwordHasError && _passwordController.text.isNotEmpty) {
-                            setState(() {
-                              _passwordHasError = false;
-                            });
-                          }
-                        },
-                      ),
-
-                      if (_loginMessage.isNotEmpty) ...[
-                        const SizedBox(height: 16),
-                        Text(
-                          _loginMessage,
-                          style: TextStyle(
-                            color: _isErrorMessage(_loginMessage)
-                                ? Colors.red
-                                : AppColors.interactive,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      SizedBox(
-                        width: double.infinity,
-                        height: 50,
-                        child: ElevatedButton(
-                          onPressed: _isLoading ? null : _signIn,
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.interactive,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                          ),
-                          child: _isLoading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
-                              : const Text(
-                                  'Sign In',
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.white,
-                                  ),
-                                ),
+                          fontSize: 14.sp,
+                          color: const Color(0xFF4A4A4A),
                         ),
                       ),
                     ],
                   ),
                 ),
-              ),
-            ],
+
+                SizedBox(height: 36.h),
+
+                Card(
+                  color: AppColors.card,
+                  elevation: 8,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16.r),
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(24.w),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Welcome Back',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 22.sp,
+                            fontWeight: FontWeight.w600,
+                            color: const Color(0xFF2D2D2D),
+                          ),
+                        ),
+                        SizedBox(height: 20.h),
+
+                        const Text(
+                          'Registration Number',
+                          style: AppTextStyles.label,
+                        ),
+                        SizedBox(height: 8.h),
+
+                        TextField(
+                          controller: _registrationController,
+                          focusNode: _registrationFocusNode,
+                          style: const TextStyle(
+                            color: Color(0xFF1F1F1F),
+                            fontSize: 14,
+                          ),
+                          cursorColor: AppColors.interactive,
+                          decoration: buildDecoration(
+                            hintText: 'Enter your registration number',
+                            hasError: _registrationHasError,
+                          ),
+                          onChanged: (_) {
+                            if (_registrationHasError &&
+                                _registrationController.text.trim().isNotEmpty) {
+                              setState(() {
+                                _registrationHasError = false;
+                              });
+                            }
+                          },
+                        ),
+
+                        SizedBox(height: 16.h),
+
+                        const Text(
+                          'Password',
+                          style: AppTextStyles.label,
+                        ),
+                        SizedBox(height: 8.h),
+
+                        TextField(
+                          controller: _passwordController,
+                          focusNode: _passwordFocusNode,
+                          obscureText: true,
+                          style: const TextStyle(
+                            color: Color(0xFF1F1F1F),
+                            fontSize: 14,
+                          ),
+                          cursorColor: AppColors.interactive,
+                          decoration: buildDecoration(
+                            hintText: 'Enter your password',
+                            hasError: _passwordHasError,
+                          ),
+                          onChanged: (_) {
+                            if (_passwordHasError &&
+                                _passwordController.text.isNotEmpty) {
+                              setState(() {
+                                _passwordHasError = false;
+                              });
+                            }
+                          },
+                        ),
+
+                        if (_loginMessage.isNotEmpty) ...[
+                          SizedBox(height: 16.h),
+                          Text(
+                            _loginMessage,
+                            style: TextStyle(
+                              color: _isErrorMessage(_loginMessage)
+                                  ? Colors.red
+                                  : AppColors.interactive,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 13.sp,
+                            ),
+                          ),
+                        ],
+                        SizedBox(height: 20.h),
+                        SizedBox(
+                          width: double.infinity,
+                          height: 50.h,
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : _signIn,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppColors.interactive,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(16.r),
+                              ),
+                            ),
+                            child: _isLoading
+                                ? SizedBox(
+                                    width: 20.w,
+                                    height: 20.w,
+                                    child: const CircularProgressIndicator(
+                                      color: Colors.white,
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : Text(
+                                    'Sign In',
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 15.sp,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                SizedBox(height: 24.h),
+              ],
+            ),
           ),
         ),
       ),
@@ -308,6 +376,8 @@ class _SignInScreenState extends State<SignInScreen> {
 
   @override
   void dispose() {
+    _registrationFocusNode.dispose();
+    _passwordFocusNode.dispose();
     _registrationController.dispose();
     _passwordController.dispose();
     super.dispose();

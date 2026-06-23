@@ -61,6 +61,7 @@
 // }
 
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../constants/app_colors.dart';
 
 class CustomNavItem extends StatelessWidget {
@@ -100,8 +101,8 @@ class CustomNavItem extends StatelessWidget {
         onTap: onTap,
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 250),
-          margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
-          padding: const EdgeInsets.symmetric(vertical: 10),
+          margin: EdgeInsets.symmetric(horizontal: 6.w, vertical: 8.h),
+          padding: EdgeInsets.symmetric(vertical: 10.h),
           decoration: BoxDecoration(
             color: isSelected
                 ? selectedBgColor
@@ -113,15 +114,15 @@ class CustomNavItem extends StatelessWidget {
             children: [
               Icon(
                 icon,
-                size: 24,
+                size: 24.sp,
                 color: isSelected ? selectedIconColor : unselectedIconColor,
               ),
-              const SizedBox(height: 4),
+              SizedBox(height: 4.h),
               Text(
                 label,
                 style: TextStyle(
                   color: isSelected ? selectedIconColor : unselectedIconColor,
-                  fontSize: 12,
+                  fontSize: 12.sp,
                   fontWeight: isSelected ? FontWeight.w600 : FontWeight.w400,
                 ),
               ),

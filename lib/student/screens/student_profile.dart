@@ -17,9 +17,18 @@ import '../../signIn.dart';
 import 'student_tracking.dart';
 
 class StudentProfile extends StatefulWidget {
+  final VoidCallback? onProfileTab;
+  final VoidCallback? onTrackingTab;
+  final VoidCallback? onSupportTab;
   final bool shouldRefresh; // NEW — triggered from main.dart on tab switch
 
-  const StudentProfile({super.key, this.shouldRefresh = false});
+  const StudentProfile({
+    super.key,
+    this.shouldRefresh = false,
+    this.onProfileTab,
+    this.onTrackingTab,
+    this.onSupportTab,
+  });
 
   @override
   State<StudentProfile> createState() => _StudentProfileState();
@@ -322,14 +331,17 @@ class _StudentProfileState extends State<StudentProfile> {
       appBar: AppBarWithLogout(
         title: "AAST Connect",
         unreadNotificationCount: 0,
-        onTimelinePressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const StudentTrackingScreen(),
-            ),
-          );
-        },
+        onTimelinePressed: widget.onTrackingTab ??
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const StudentTrackingScreen(),
+                ),
+              );
+            },
+        onSupportPressed: widget.onSupportTab,
+        onProfilePressed: widget.onProfileTab,
         onLogout: _handleLogout,
       ),
       body: _isLoading
@@ -364,9 +376,13 @@ class _StudentProfileState extends State<StudentProfile> {
                         child: GestureDetector(
                           onTap: () => _showEditProfileModal(context),
                           child: _buildQuickAction(
-                            Icons.email_outlined,
+                            context,
+                            Icons.edit_outlined,
                             "Edit Profile",
-                            const Color(0xFFD6E2F2),
+                            lightBackground: AppColors.quickActionEdit,
+                            lightForeground: AppColors.lightPrimary,
+                            darkBackground: const Color(0xFF1D3143),
+                            darkForeground: const Color(0xFF64AEFF),
                           ),
                         ),
                       ),
@@ -378,9 +394,13 @@ class _StudentProfileState extends State<StudentProfile> {
                             _student!.studentID,
                           ),
                           child: _buildQuickAction(
-                            Icons.eco_outlined,
+                            context,
+                            Icons.emoji_events_outlined,
                             "Skills & Interests",
-                            const Color(0xFFCFE3CF),
+                            lightBackground: AppColors.quickActionSkills,
+                            lightForeground: const Color(0xFF3E8D44),
+                            darkBackground: const Color(0xFF183022),
+                            darkForeground: const Color(0xFF62D26F),
                           ),
                         ),
                       ),
@@ -397,9 +417,13 @@ class _StudentProfileState extends State<StudentProfile> {
                             onUpdate: () => _fetchStudentData(),
                           ),
                           child: _buildQuickAction(
+                            context,
                             Icons.description_outlined,
                             "Documents",
-                            const Color(0xFFF9EAD2),
+                            lightBackground: AppColors.quickActionDocuments,
+                            lightForeground: const Color(0xFFCC8C19),
+                            darkBackground: const Color(0xFF463115),
+                            darkForeground: const Color(0xFFFFB12E),
                           ),
                         ),
                       ),
@@ -411,9 +435,13 @@ class _StudentProfileState extends State<StudentProfile> {
                             _student!.studentID,
                           ),
                           child: _buildQuickAction(
+                            context,
                             Icons.bookmark_border,
                             "Portfolio Links",
-                            const Color(0xFFF2C6C6),
+                            lightBackground: AppColors.quickActionPortfolio,
+                            lightForeground: const Color(0xFFA34A71),
+                            darkBackground: const Color(0xFF42192F),
+                            darkForeground: const Color(0xFFFF4E9A),
                           ),
                         ),
                       ),
@@ -546,19 +574,34 @@ class _StudentProfileState extends State<StudentProfile> {
     );
   }
 
-  Widget _buildQuickAction(IconData icon, String label, Color color) {
+  Widget _buildQuickAction(
+    BuildContext context,
+    IconData icon,
+    String label, {
+    required Color lightBackground,
+    required Color lightForeground,
+    required Color darkBackground,
+    required Color darkForeground,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final backgroundColor = isDark ? darkBackground : lightBackground;
+    final foregroundColor = isDark ? darkForeground : lightForeground;
     return RoundedContainer(
-      backgroundColor: color,
+      backgroundColor: backgroundColor,
       borderRadius: 15.0,
       padding: const EdgeInsets.all(15),
       child: Row(
         children: [
-          Icon(icon, size: 20),
+          Icon(icon, size: 20, color: foregroundColor),
           const SizedBox(width: 8),
           Flexible(
             child: Text(
               label,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 13,
+                color: foregroundColor,
+              ),
             ),
           ),
         ],
@@ -567,6 +610,8 @@ class _StudentProfileState extends State<StudentProfile> {
   }
 
   Widget _buildUserInfoCard(BuildContext context) {
+    final mutedColor =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72);
     return RoundedContainer(
       backgroundColor: Theme.of(context).colorScheme.surface,
       borderColor: Theme.of(context).dividerColor,
@@ -598,11 +643,14 @@ class _StudentProfileState extends State<StudentProfile> {
                 ),
               ),
               const SizedBox(width: 15),
-              Column(
+              Expanded(
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     _student?.studentName ?? '',
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                     style: const TextStyle(
                       fontSize: 20,
                       fontWeight: FontWeight.bold,
@@ -610,13 +658,18 @@ class _StudentProfileState extends State<StudentProfile> {
                   ),
                   Text(
                     "${_student?.major ?? ''} • ${_student?.academicYear ?? ''}",
-                    style: const TextStyle(color: Colors.grey),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: mutedColor),
                   ),
                   Text(
                     "ID: ${_student?.collegeID ?? ''}",
-                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(color: mutedColor, fontSize: 12),
                   ),
                 ],
+                ),
               ),
             ],
           ),
@@ -639,7 +692,7 @@ class _StudentProfileState extends State<StudentProfile> {
             value: _student?.gpa?.toString() ?? 'N/A',
           ),
           const SizedBox(height: 20),
-          const Text("Bio", style: TextStyle(color: Colors.grey)),
+          Text("Bio", style: TextStyle(color: mutedColor)),
           Text(_student?.bio ?? 'No bio added'),
         ],
       ),
@@ -647,9 +700,11 @@ class _StudentProfileState extends State<StudentProfile> {
   }
 
   Widget _buildDocItem(String name, String date, [bool isClickable = false]) {
+    final mutedColor =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72);
     return RoundedContainer(
-      backgroundColor: Colors.white,
-      borderColor: Colors.grey.shade200,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      borderColor: Theme.of(context).dividerColor,
       borderRadius: 15.0,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(15),
@@ -674,12 +729,12 @@ class _StudentProfileState extends State<StudentProfile> {
                 Text(name, style: const TextStyle(fontWeight: FontWeight.bold)),
                 Text(
                   date,
-                  style: const TextStyle(color: Colors.grey, fontSize: 12),
+                  style: TextStyle(color: mutedColor, fontSize: 12),
                 ),
               ],
             ),
           ),
-          if (isClickable) const Icon(Icons.chevron_right, color: Colors.grey),
+          if (isClickable) Icon(Icons.chevron_right, color: mutedColor),
         ],
       ),
     );
@@ -690,9 +745,11 @@ class _StudentProfileState extends State<StudentProfile> {
     String company, {
     VoidCallback? onUnsave,
   }) {
+    final mutedColor =
+        Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.72);
     return RoundedContainer(
-      backgroundColor: Colors.white,
-      borderColor: Colors.grey.shade100,
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      borderColor: Theme.of(context).dividerColor,
       borderRadius: 15.0,
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(20),
@@ -710,7 +767,7 @@ class _StudentProfileState extends State<StudentProfile> {
                     fontSize: 16,
                   ),
                 ),
-                Text(company, style: const TextStyle(color: Colors.grey)),
+                Text(company, style: TextStyle(color: mutedColor)),
               ],
             ),
           ),
@@ -725,7 +782,7 @@ class _StudentProfileState extends State<StudentProfile> {
                   ),
                 ),
               const SizedBox(width: 8),
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              Icon(Icons.chevron_right, color: mutedColor),
             ],
           ),
         ],

@@ -6,7 +6,14 @@ class FormField extends StatelessWidget {
   final TextEditingController controller;
   final IconData? icon;
   final bool isDark;
-  const FormField({required this.label, required this.controller, this.icon, required this.isDark});
+  final bool readOnly;
+  const FormField({
+    required this.label,
+    required this.controller,
+    this.icon,
+    required this.isDark,
+    this.readOnly = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -15,6 +22,7 @@ class FormField extends StatelessWidget {
           color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
       const SizedBox(height: 6),
       TextField(controller: controller,
+        readOnly: readOnly,
         decoration: InputDecoration(
           prefixIcon: icon != null ? Icon(icon, size: 16,
               color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary) : null,

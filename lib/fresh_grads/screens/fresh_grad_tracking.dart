@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
-
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../constants/app_colors.dart';
 import '../../services/user_session.dart';
 import '../../services/vacancy_service.dart';
@@ -8,13 +8,17 @@ import '../../widgets/app_bar_with_logout.dart';
 import '../../widgets/cancellation_confirmation_dialog.dart';
 import '../../widgets/rounded_container.dart';
 import '../../widgets/tracking_status_chip.dart';
+import '../../widgets/app_navigation_helpers.dart';
+import 'support_screen.dart';
 
 class FreshGradTrackingScreen extends StatefulWidget {
   final String initialStatusFilter;
+  final bool embedded;
 
   const FreshGradTrackingScreen({
     super.key,
     this.initialStatusFilter = 'All',
+    this.embedded = false,
   });
 
   @override
@@ -170,11 +174,11 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24.r)),
       ),
       builder: (context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
+        padding: EdgeInsets.fromLTRB(20.w, 20.h, 20.w, 30.h),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -184,7 +188,7 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
               style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             Text(subtitle, style: const TextStyle(color: Colors.grey)),
-            const SizedBox(height: 12),
+            SizedBox(height: 12.h),
             _buildTimelinePhases(phases),
           ],
         ),
@@ -206,29 +210,29 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             SizedBox(
-              width: 34,
+              width: 34.w,
               child: Column(
                 children: [
                   Container(
-                    height: 28,
-                    width: 28,
+                    height: 28.w,
+                    width: 28.w,
                     decoration: BoxDecoration(
                       color: phase.color,
                       shape: BoxShape.circle,
                     ),
-                    child: Icon(phase.icon, color: Colors.white, size: 16),
+                    child: Icon(phase.icon, color: Colors.white, size: 16.sp),
                   ),
                   if (hasNext)
                     Container(
-                      width: 3,
-                      height: 38,
-                      margin: const EdgeInsets.symmetric(vertical: 2),
+                      width: 3.w,
+                      height: 38.h,
+                      margin: EdgeInsets.symmetric(vertical: 2.h),
                       color: connectorColor,
                     ),
                 ],
               ),
             ),
-            const SizedBox(width: 10),
+            SizedBox(width: 10.w),
             Expanded(
               child: Padding(
                 padding: EdgeInsets.only(bottom: hasNext ? 14 : 0),
@@ -242,7 +246,7 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
                         color: phase.color,
                       ),
                     ),
-                    const SizedBox(height: 2),
+                    SizedBox(height: 2.h),
                     Text(
                       phase.subtitle,
                       style: TextStyle(
@@ -367,13 +371,13 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Applications Overview',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10.h),
           Text('Total: $total'),
-          const SizedBox(height: 8),
+          SizedBox(height: 8.h),
           Wrap(
             spacing: 8,
             runSpacing: 8,
@@ -407,10 +411,10 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
 
   Widget _miniCounter(String label, int value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: EdgeInsets.symmetric(horizontal: 10.w, vertical: 6.h),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.12),
-        borderRadius: BorderRadius.circular(999),
+        borderRadius: BorderRadius.circular(999.r),
       ),
       child: Text(
         '$label: $value',
@@ -423,8 +427,8 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
     const statuses = ['All', 'Pending', 'Approved', 'Rejected', 'Canceled'];
 
     return Wrap(
-      spacing: 8,
-      runSpacing: 8,
+      spacing: 8.w,
+      runSpacing: 8.h,
       children: statuses
           .map(
             (status) => ChoiceChip(
@@ -440,7 +444,7 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
   List<Widget> _buildApplicationCards(List<Map<String, dynamic>> records) {
     if (records.isEmpty) {
       return [
-        const SizedBox(height: 30),
+        SizedBox(height: 30.h),
         const Center(child: Text('No applications found for this filter.')),
       ];
     }
@@ -454,7 +458,7 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
         backgroundColor: Theme.of(context).colorScheme.surface,
         borderColor: Theme.of(context).dividerColor,
         borderRadius: 16,
-        margin: const EdgeInsets.only(bottom: 12),
+        margin: EdgeInsets.only(bottom: 12.h),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -468,12 +472,12 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
                     children: [
                       Text(
                         vacancy['title']?.toString() ?? 'Untitled Application',
-                        style: const TextStyle(
-                          fontSize: 16,
+                      style: TextStyle(
+                          fontSize: 16.sp,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4.h),
                       Text(
                         vacancy['company_name']?.toString() ??
                             'Unknown Company',
@@ -489,7 +493,7 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
                 TrackingStatusChip(status: status),
               ],
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: 8.h),
             Row(
               mainAxisAlignment: MainAxisAlignment.end,
               children: [
@@ -502,7 +506,7 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
                       foregroundColor: AppColors.rejected,
                     ),
                   ),
-                const SizedBox(width: 8),
+                SizedBox(width: 8.w),
                 TextButton.icon(
                   onPressed: () => _showTimelineSheet(
                     title:
@@ -527,14 +531,14 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
   Widget _buildErrorState() {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(20),
+        padding: EdgeInsets.all(20.w),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 50, color: Colors.redAccent),
-            const SizedBox(height: 12),
+            Icon(Icons.error_outline, size: 50.sp, color: Colors.redAccent),
+            SizedBox(height: 12.h),
             Text(_error ?? 'Unexpected error'),
-            const SizedBox(height: 12),
+            SizedBox(height: 12.h),
             ElevatedButton(
               onPressed: _fetchTrackingData,
               child: const Text('Retry'),
@@ -547,19 +551,7 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBarWithLogout(
-        title: 'AAST Connect',
-        additionalActions: [
-          IconButton(
-            tooltip: 'Refresh tracking',
-            onPressed: _fetchTrackingData,
-            icon: const Icon(Icons.refresh),
-          ),
-        ],
-      ),
-      body: _isLoading
+    final body = _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
           ? _buildErrorState()
@@ -567,29 +559,51 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
               onRefresh: _fetchTrackingData,
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20),
+                padding: EdgeInsets.all(20.w),
                 children: [
                   Text(
                     'My Tracking',
                     style: Theme.of(
                       context,
-                    ).textTheme.headlineLarge?.copyWith(fontSize: 28),
+                    ).textTheme.headlineLarge?.copyWith(fontSize: 28.sp),
                   ),
                   Text(
                     'Track your applications in one place',
                     style: Theme.of(
                       context,
-                    ).textTheme.bodyMedium?.copyWith(fontSize: 16),
+                    ).textTheme.bodyMedium?.copyWith(fontSize: 16.sp),
                   ),
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20.h),
                   _buildSummaryCard(),
-                  const SizedBox(height: 15),
+                  SizedBox(height: 15.h),
                   _buildStatusFilters(),
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
                   ..._buildApplicationCards(_filteredApplications),
                 ],
               ),
-            ),
+            );
+
+    if (widget.embedded) {
+      return body;
+    }
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBarWithLogout(
+        title: 'AAST Connect',
+        onNotificationsPressed: () {
+          openFreshGradNotifications(context);
+        },
+        onSupportPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const SupportScreen()),
+          );
+        },
+        onProfilePressed: () => openFreshGradProfile(context),
+        onTimelinePressed: () {},
+      ),
+      body: body,
     );
   }
 }

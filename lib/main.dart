@@ -1,5 +1,10 @@
+import 'dart:math' as math;
+import 'dart:ui' as ui;
+
 import 'package:aast_connect/providers/CachedChatProvider.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
@@ -36,13 +41,38 @@ class MyApp extends StatelessWidget {
       ],
       child: Consumer<ThemeProvider>(
         builder: (context, themeProvider, child) {
-          return MaterialApp(
-            title: 'AAST Connect',
-            debugShowCheckedModeBanner: false,
-            theme: themeProvider.lightTheme,
-            darkTheme: themeProvider.darkTheme,
-            themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
-            home: const SignInScreen(),
+          final view = WidgetsBinding.instance.platformDispatcher.views.first;
+          final mediaQueryData = MediaQueryData.fromView(view);
+          final effectiveWidth = kIsWeb
+              ? math.min(mediaQueryData.size.width, 430.0)
+              : mediaQueryData.size.width;
+          final effectiveMediaQuery = mediaQueryData.copyWith(
+            size: ui.Size(effectiveWidth, mediaQueryData.size.height),
+          );
+
+          return MediaQuery(
+            data: effectiveMediaQuery,
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: SizedBox(
+                width: effectiveWidth,
+                child: ScreenUtilInit(
+                  designSize: const Size(375, 812),
+                  minTextAdapt: true,
+                  splitScreenMode: true,
+                  builder: (context, child) => MaterialApp(
+                    title: 'AAST Connect',
+                    debugShowCheckedModeBanner: false,
+                    theme: themeProvider.lightTheme,
+                    darkTheme: themeProvider.darkTheme,
+                    themeMode: themeProvider.isDark
+                        ? ThemeMode.dark
+                        : ThemeMode.light,
+                    home: const SignInScreen(),
+                  ),
+                ),
+              ),
+            ),
           );
         },
       ),

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/rounded_container.dart';
@@ -187,9 +188,9 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
       appBar: AppBar(
         backgroundColor: Theme.of(context).colorScheme.surface,
         elevation: 0,
-        title: const Text(
+        title: Text(
           'Notifications',
-          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22.sp),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
@@ -221,7 +222,7 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                         size: 64,
                         color: AppColors.rejected,
                       ),
-                      const SizedBox(height: 16),
+                      SizedBox(height: 16.h),
                       Text(
                         _error ?? 'Something went wrong',
                         style: TextStyle(
@@ -229,7 +230,7 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                           fontSize: 16,
                         ),
                       ),
-                      const SizedBox(height: 24),
+                      SizedBox(height: 24.h),
                       ElevatedButton(
                         onPressed: _fetchNotifications,
                         child: const Text('Retry'),
@@ -247,7 +248,7 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                             size: 64,
                             color: Colors.grey.shade400,
                           ),
-                          const SizedBox(height: 16),
+                          SizedBox(height: 16.h),
                           Text(
                             'No notifications',
                             style: TextStyle(
@@ -256,7 +257,7 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                               fontWeight: FontWeight.w500,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h),
                           Text(
                             'All caught up! You\'re all set.',
                             style: TextStyle(
@@ -270,7 +271,7 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                   : RefreshIndicator(
                       onRefresh: _fetchNotifications,
                       child: ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                        padding: EdgeInsets.all(16.w),
                         itemCount: _notifications.length,
                         itemBuilder: (context, index) {
                           final notification = _notifications[index];
@@ -335,7 +336,7 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
                                           : Colors.grey.shade200)
                                       : color.withValues(alpha: 0.25),
                                   borderRadius: 18.0,
-                                  padding: const EdgeInsets.all(16),
+                                  padding: EdgeInsets.all(16.w),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,

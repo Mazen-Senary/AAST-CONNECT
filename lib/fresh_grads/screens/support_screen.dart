@@ -1,13 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../providers/CachedChatProvider.dart';
+import '../../services/theme_provider.dart';
 import '../theme/app_theme.dart';
+import '../widgets/aast_app_bar.dart';
 import '../widgets/contact_card.dart';
 import '../widgets/quick_action_card.dart';
 import '../widgets/resource_title.dart';
+import 'profile_screen.dart';
 
 class SupportScreen extends StatefulWidget {
-  const SupportScreen({super.key});
+  final bool embedded;
+
+  const SupportScreen({super.key, this.embedded = false});
 
   @override
   State<SupportScreen> createState() => _SupportScreenState();
@@ -30,29 +36,29 @@ class _SupportScreenState extends State<SupportScreen> {
       builder: (ctx) {
         return Dialog(
               backgroundColor: Colors.transparent,
-              insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 60),
+              insetPadding: EdgeInsets.symmetric(horizontal: 20.w, vertical: 60.h),
               child: Container(
                 height: MediaQuery.of(context).size.height * 0.72,
                 decoration: BoxDecoration(
                   color: isDark ? AppColors.darkCardBg : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
+                  borderRadius: BorderRadius.circular(20.r),
                 ),
                 child: Column(
                   children: [
                     // Header
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                      padding: EdgeInsets.fromLTRB(16.w, 16.h, 16.w, 0),
                       child: Row(
                         children: [
                           Container(
-                            width: 42,
-                            height: 42,
+                            width: 42.w,
+                            height: 42.w,
                             decoration: BoxDecoration(
                               color: AppColors.lightBlue,
                               shape: BoxShape.circle,
                             ),
-                            child: const Icon(Icons.support_agent,
-                                color: AppColors.accentBlue, size: 22),
+                            child: Icon(Icons.support_agent,
+                                color: AppColors.accentBlue, size: 22.sp),
                           ),
                           const SizedBox(width: 12),
                           Column(
@@ -61,17 +67,17 @@ class _SupportScreenState extends State<SupportScreen> {
                               Text(
                                 'FAQ Assistant',
                                 style: TextStyle(
-                                  fontSize: 16,
+                                  fontSize: 16.sp,
                                   fontWeight: FontWeight.w600,
                                   color: isDark
                                       ? AppColors.darkTextPrimary
                                       : AppColors.textPrimary,
                                 ),
                               ),
-                              const Text(
+                               Text(
                                 'Online',
                                 style: TextStyle(
-                                  fontSize: 12,
+                                  fontSize: 12.sp,
                                   color: AppColors.primaryGreen,
                                 ),
                               ),
@@ -88,14 +94,14 @@ class _SupportScreenState extends State<SupportScreen> {
                         ],
                       ),
                     ),
-                    const Divider(height: 20),
+                    Divider(height: 20.h),
 
                     // Messages
                     Expanded(
                       child: Consumer<CachedChatProvider>(
                         builder: (_, chatProvider, child) {
                           return ListView.builder(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            padding: EdgeInsets.symmetric(horizontal: 16.w),
                             itemCount: chatProvider.messages.length,
                             itemBuilder: (_, i) {
                               final msg = chatProvider.messages[i];
@@ -112,21 +118,21 @@ class _SupportScreenState extends State<SupportScreen> {
                                   children: [
                                     if (isBot) ...[
                                       Container(
-                                        width: 32,
-                                        height: 32,
-                                        margin: const EdgeInsets.only(right: 8, top: 4),
+                                        width: 32.w,
+                                        height: 32.w,
+                                        margin: EdgeInsets.only(right: 8.w, top: 4.h),
                                         decoration: BoxDecoration(
                                           color: AppColors.lightBlue,
                                           shape: BoxShape.circle,
                                         ),
-                                        child: const Icon(Icons.support_agent,
-                                            color: AppColors.accentBlue, size: 16),
+                                        child: Icon(Icons.support_agent,
+                                            color: AppColors.accentBlue, size: 16.sp),
                                       ),
                                     ],
                                     Flexible(
                                       child: Container(
-                                        margin: const EdgeInsets.only(bottom: 12),
-                                        padding: const EdgeInsets.all(12),
+                                        margin: EdgeInsets.only(bottom: 12.h),
+                                        padding: EdgeInsets.all(12.w),
                                         decoration: BoxDecoration(
                                           color: isBot
                                               ? (isDark
@@ -134,16 +140,16 @@ class _SupportScreenState extends State<SupportScreen> {
                                               : const Color(0xFFF0F4F8))
                                               : AppColors.primaryGreen,
                                           borderRadius: BorderRadius.only(
-                                            topLeft: const Radius.circular(16),
-                                            topRight: const Radius.circular(16),
-                                            bottomLeft: Radius.circular(isBot ? 4 : 16),
-                                            bottomRight: Radius.circular(isBot ? 16 : 4),
+                                            topLeft: Radius.circular(16.r),
+                                            topRight: Radius.circular(16.r),
+                                            bottomLeft: Radius.circular(isBot ? 4.r : 16.r),
+                                            bottomRight: Radius.circular(isBot ? 16.r : 4.r),
                                           ),
                                         ),
                                         child: Text(
                                           msg.text,
                                           style: TextStyle(
-                                            fontSize: 14,
+                                            fontSize: 14.sp,
                                             color: isBot
                                                 ? (isDark
                                                 ? AppColors.darkTextPrimary
@@ -165,15 +171,15 @@ class _SupportScreenState extends State<SupportScreen> {
                     Consumer<CachedChatProvider>(
                       builder: (_, chatProvider, child) {
                         if (!chatProvider.isLoading) return const SizedBox.shrink();
-                        return const Padding(
-                          padding: EdgeInsets.only(bottom: 8),
+                        return Padding(
+                          padding: EdgeInsets.only(bottom: 8.h),
                           child: Align(
                             alignment: Alignment.centerLeft,
                             child: Text(
                               'Assistant is typing...',
                               style: TextStyle(
                                 color: AppColors.textSecondary,
-                                fontSize: 12,
+                                fontSize: 12.sp,
                                 fontStyle: FontStyle.italic,
                               ),
                             ),
@@ -197,7 +203,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                   : AppColors.textSecondary,
                             ),
                           ),
-                          const SizedBox(height: 8),
+                          SizedBox(height: 8.h),
                           SingleChildScrollView(
                             scrollDirection: Axis.horizontal,
                             child: Row(
@@ -208,7 +214,7 @@ class _SupportScreenState extends State<SupportScreen> {
                                       .read<CachedChatProvider>()
                                       .sendMessage(q),
                                   child: Container(
-                                    margin: const EdgeInsets.only(right: 8),
+                                    margin: EdgeInsets.only(right: 8.w),
                                     padding: const EdgeInsets.symmetric(
                                         horizontal: 12, vertical: 8),
                                     decoration: BoxDecoration(
@@ -217,12 +223,12 @@ class _SupportScreenState extends State<SupportScreen> {
                                             ? AppColors.darkTextSecondary
                                             : Colors.grey.shade300,
                                       ),
-                                      borderRadius: BorderRadius.circular(20),
+                                      borderRadius: BorderRadius.circular(20.r),
                                     ),
                                     child: Text(
                                       q,
                                       style: TextStyle(
-                                        fontSize: 12,
+                                        fontSize: 12.sp,
                                         color: isDark
                                             ? AppColors.darkTextPrimary
                                             : AppColors.textPrimary,
@@ -240,7 +246,7 @@ class _SupportScreenState extends State<SupportScreen> {
 
                     // Input
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      padding: EdgeInsets.fromLTRB(16.w, 0, 16.w, 12.h),
                       child: Row(
                         children: [
                           Expanded(
@@ -252,22 +258,22 @@ class _SupportScreenState extends State<SupportScreen> {
                                   color: isDark
                                       ? AppColors.darkTextSecondary
                                       : AppColors.textSecondary,
-                                  fontSize: 14,
+                                  fontSize: 14.sp,
                                 ),
                                 filled: true,
                                 fillColor: isDark
                                     ? AppColors.darkSurface
                                     : const Color(0xFFF5F5F5),
                                 border: OutlineInputBorder(
-                                  borderRadius: BorderRadius.circular(24),
+                                  borderRadius: BorderRadius.circular(24.r),
                                   borderSide: BorderSide.none,
                                 ),
-                                contentPadding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 12),
+                                contentPadding: EdgeInsets.symmetric(
+                                    horizontal: 16.w, vertical: 12.h),
                               ),
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          SizedBox(width: 8.w),
                           GestureDetector(
                             onTap: () {
                               final text = chatController.text.trim();
@@ -278,8 +284,8 @@ class _SupportScreenState extends State<SupportScreen> {
                               chatController.clear();
                             },
                             child: Container(
-                              width: 44,
-                              height: 44,
+                              width: 44.w,
+                              height: 44.w,
                               decoration: const BoxDecoration(
                                 color: AppColors.accentBlue,
                                 shape: BoxShape.circle,
@@ -503,7 +509,7 @@ class _SupportScreenState extends State<SupportScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Terms & Conditions',
+                    'Privacy Policy',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -606,7 +612,7 @@ class _SupportScreenState extends State<SupportScreen> {
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    return SingleChildScrollView(
+    final content = SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -733,6 +739,25 @@ class _SupportScreenState extends State<SupportScreen> {
           const SizedBox(height: 24),
         ],
       ),
+    );
+
+    if (widget.embedded) {
+      return content;
+    }
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
+      appBar: AastAppBar(
+        isDark: isDark,
+        onThemeToggle: () => context.read<ThemeProvider>().toggleTheme(),
+        onProfilePressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ProfileScreen()),
+          );
+        },
+      ),
+      body: content,
     );
   }
 }

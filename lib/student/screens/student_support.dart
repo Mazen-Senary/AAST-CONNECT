@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import '../../services/theme_provider.dart';
@@ -6,7 +7,16 @@ import '../../widgets/app_bar_with_logout.dart';
 import 'student_tracking.dart';
 import '../../providers/CachedChatProvider.dart';
 class StudentSupport extends StatelessWidget {
-  const StudentSupport({super.key});
+  final bool embedded;
+  final VoidCallback? onProfileTab;
+  final VoidCallback? onTrackingTab;
+
+  const StudentSupport({
+    super.key,
+    this.embedded = false,
+    this.onProfileTab,
+    this.onTrackingTab,
+  });
   
   // ================= MODAL HELPERS =================
   // void _showChatBot(BuildContext context) {
@@ -162,9 +172,9 @@ class StudentSupport extends StatelessWidget {
         height: MediaQuery.of(context).size.height * 0.85,
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(30.r)),
         ),
-        padding: const EdgeInsets.all(25),
+        padding: EdgeInsets.all(25.w),
         child: Consumer<CachedChatProvider>(
             builder: (context, chatProvider, child) {
               return Column(
@@ -176,12 +186,12 @@ class StudentSupport extends StatelessWidget {
                         backgroundColor: Colors.blue.shade50,
                         child: const Icon(Icons.smart_toy_outlined, color: Colors.blue),
                       ),
-                      const SizedBox(width: 15),
-                      const Column(
+                      SizedBox(width: 15.w),
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("FAQ Assistant", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
-                          Text("Online", style: TextStyle(color: Colors.green, fontSize: 12)),
+                          Text("FAQ Assistant", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.sp)),
+                          Text("Online", style: TextStyle(color: Colors.green, fontSize: 12.sp)),
                         ],
                       ),
                       const Spacer(),
@@ -191,7 +201,7 @@ class StudentSupport extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const Divider(height: 30),
+                  Divider(height: 30.h),
 
                   // Chat List
                   Expanded(
@@ -202,11 +212,11 @@ class StudentSupport extends StatelessWidget {
                         return Align(
                           alignment: msg.isUser ? Alignment.centerRight : Alignment.centerLeft,
                           child: Container(
-                            margin: const EdgeInsets.symmetric(vertical: 5),
-                            padding: const EdgeInsets.all(15),
+                            margin: EdgeInsets.symmetric(vertical: 5.h),
+                            padding: EdgeInsets.all(15.w),
                             decoration: BoxDecoration(
                               color: msg.isUser ? AppColors.lightPrimary : Colors.grey.shade100,
-                              borderRadius: BorderRadius.circular(20),
+                              borderRadius: BorderRadius.circular(20.r),
                             ),
                             child: Text(
                               msg.text,
@@ -220,27 +230,27 @@ class StudentSupport extends StatelessWidget {
 
                   // Typing Indicator
                   if (chatProvider.isLoading)
-                    const Padding(
-                      padding: EdgeInsets.all(8.0),
+                    Padding(
+                      padding: EdgeInsets.all(8.w),
                       child: Align(
                         alignment: Alignment.centerLeft,
                         child: Text("Assistant is typing...", style: TextStyle(color: Colors.grey, fontStyle: FontStyle.italic)),
                       ),
                     ),
 
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
 
                   // Quick Questions Chips
                   SizedBox(
-                    height: 40,
+                    height: 40.h,
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       itemCount: quickQuestions.length,
                       itemBuilder: (context, index) {
                         return Padding(
-                          padding: const EdgeInsets.only(right: 8.0),
+                          padding: EdgeInsets.only(right: 8.w),
                           child: ActionChip(
-                            label: Text(quickQuestions[index], style: const TextStyle(fontSize: 12)),
+                            label: Text(quickQuestions[index], style: TextStyle(fontSize: 12.sp)),
                             backgroundColor: Colors.blue.shade50,
                             side: BorderSide.none,
                             onPressed: () {
@@ -252,7 +262,7 @@ class StudentSupport extends StatelessWidget {
                     ),
                   ),
 
-                  const SizedBox(height: 10),
+                  SizedBox(height: 10.h),
 
                   // Input Field
                   TextField(
@@ -269,7 +279,7 @@ class StudentSupport extends StatelessWidget {
                       filled: true,
                       fillColor: Colors.grey.shade100,
                       border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(15),
+                        borderRadius: BorderRadius.circular(15.r),
                         borderSide: BorderSide.none,
                       ),
                     ),
@@ -290,16 +300,16 @@ class StudentSupport extends StatelessWidget {
 
   Widget _buildFAQItem(BuildContext context, String question, String answer) {
     return Card(
-      margin: const EdgeInsets.symmetric(vertical: 4),
+      margin: EdgeInsets.symmetric(vertical: 4.h),
       child: ExpansionTile(
         title: Text(
           question,
-          style: const TextStyle(fontWeight: FontWeight.w500),
+          style: TextStyle(fontWeight: FontWeight.w500, fontSize: 14.sp),
         ),
         children: [
           Padding(
-            padding: const EdgeInsets.all(16),
-            child: Text(answer, style: const TextStyle(height: 1.5)),
+            padding: EdgeInsets.all(16.w),
+            child: Text(answer, style: TextStyle(height: 1.5, fontSize: 13.sp)),
           ),
         ],
       ),
@@ -313,22 +323,47 @@ class StudentSupport extends StatelessWidget {
   ) {
     showDialog(
       context: context,
-      builder: (context) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        title: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-            IconButton(
-              icon: const Icon(Icons.close),
-              onPressed: () => Navigator.pop(context),
+      builder: (context) => Dialog(
+        insetPadding: EdgeInsets.symmetric(horizontal: 16.w, vertical: 24.h),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.r)),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: 520.w),
+          child: Padding(
+            padding: EdgeInsets.all(20.w),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        title,
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18.sp),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () => Navigator.pop(context),
+                    ),
+                  ],
+                ),
+                SizedBox(height: 8.h),
+                SizedBox(
+                  width: double.maxFinite,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(maxHeight: 420.h),
+                    child: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: children,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
-        ),
-        content: SizedBox(
-          width: double.maxFinite,
-          child: SingleChildScrollView(
-            child: Column(mainAxisSize: MainAxisSize.min, children: children),
           ),
         ),
       ),
@@ -339,30 +374,15 @@ class StudentSupport extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Theme.of(context).colorScheme.surface,
-      appBar: AppBarWithLogout(
-        title: "AAST Connect",
-        unreadNotificationCount: 0,
-        onTimelinePressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => const StudentTrackingScreen(),
-            ),
-          );
-        },
-        onLogout: () {},
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(20),
+    final content = SingleChildScrollView(
+        padding: EdgeInsets.all(20.w),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
               "Help & Support",
               style: TextStyle(
-                fontSize: 28,
+                fontSize: 28.sp,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
@@ -371,10 +391,10 @@ class StudentSupport extends StatelessWidget {
               "Find answers and get assistance",
               style: TextStyle(
                 color: Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 16,
+                fontSize: 16.sp,
               ),
             ),
-            const SizedBox(height: 25),
+            SizedBox(height: 25.h),
 
             Row(
               children: [
@@ -388,7 +408,7 @@ class StudentSupport extends StatelessWidget {
                     () => _showChatBot(context),
                   ),
                 ),
-                const SizedBox(width: 15),
+                SizedBox(width: 15.w),
                 Expanded(
                   child: _buildActionCard(
                     context,
@@ -402,16 +422,16 @@ class StudentSupport extends StatelessWidget {
               ],
             ),
 
-            const SizedBox(height: 30),
+            SizedBox(height: 30.h),
             Text(
               "Contact Us",
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 20.sp,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 15),
+            SizedBox(height: 15.h),
             _buildContactTile(
               context,
               "Email Support",
@@ -425,16 +445,16 @@ class StudentSupport extends StatelessWidget {
               Icons.phone_outlined,
             ),
 
-            const SizedBox(height: 30),
+            SizedBox(height: 30.h),
             Text(
               "Resources",
               style: TextStyle(
-                fontSize: 20,
+                fontSize: 20.sp,
                 fontWeight: FontWeight.bold,
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            const SizedBox(height: 15),
+            SizedBox(height: 15.h),
             _buildResourceTile(
               context,
               "Terms & Conditions",
@@ -455,7 +475,25 @@ class StudentSupport extends StatelessWidget {
             ),
           ],
         ),
+    );
+
+    return Scaffold(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      appBar: AppBarWithLogout(
+        title: "AAST Connect",
+        unreadNotificationCount: 0,
+        onTimelinePressed: onTrackingTab ??
+            () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const StudentTrackingScreen(),
+                ),
+              );
+            },
+        onProfilePressed: onProfileTab,
       ),
+      body: content,
     );
   }
 
@@ -520,13 +558,13 @@ class StudentSupport extends StatelessWidget {
 
   Widget _guideItem(String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: 8.h),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           const Icon(Icons.check_circle_outline, color: Colors.green, size: 20),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
+          SizedBox(width: 10.w),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 14.sp))),
         ],
       ),
     );
@@ -534,7 +572,7 @@ class StudentSupport extends StatelessWidget {
 
   Widget _guideStep(String num, String text) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
+      padding: EdgeInsets.symmetric(vertical: 8.h),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -543,11 +581,11 @@ class StudentSupport extends StatelessWidget {
             backgroundColor: Colors.orange.shade100,
             child: Text(
               num,
-              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+              style: TextStyle(fontSize: 12.sp, fontWeight: FontWeight.bold),
             ),
           ),
-          const SizedBox(width: 10),
-          Expanded(child: Text(text, style: const TextStyle(fontSize: 14))),
+          SizedBox(width: 10.w),
+          Expanded(child: Text(text, style: TextStyle(fontSize: 14.sp))),
         ],
       ),
     );
@@ -563,23 +601,23 @@ class StudentSupport extends StatelessWidget {
   ) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: color,
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, size: 28),
-            const SizedBox(height: 10),
+      borderRadius: BorderRadius.circular(20.r),
+        child: Container(
+          padding: EdgeInsets.all(20.w),
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: BorderRadius.circular(20.r),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+            Icon(icon, size: 28.sp),
+            SizedBox(height: 10.h),
             Text(
               title,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16.sp),
             ),
-            Text(sub, style: const TextStyle(fontSize: 12)),
+            Text(sub, style: TextStyle(fontSize: 12.sp)),
           ],
         ),
       ),
@@ -593,11 +631,11 @@ class StudentSupport extends StatelessWidget {
     IconData icon,
   ) {
     return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(20),
+      margin: EdgeInsets.only(bottom: 12.h),
+      padding: EdgeInsets.all(20.w),
       decoration: BoxDecoration(
         color: Theme.of(context).colorScheme.surface,
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(18.r),
         border: Border.all(color: Theme.of(context).dividerColor),
       ),
       child: Row(
@@ -606,7 +644,7 @@ class StudentSupport extends StatelessWidget {
             backgroundColor: const Color(0xFFD6E2F2),
             child: Icon(icon, color: const Color(0xFF284B8C)),
           ),
-          const SizedBox(width: 15),
+          SizedBox(width: 15.w),
           Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -616,7 +654,7 @@ class StudentSupport extends StatelessWidget {
                   color: Theme.of(
                     context,
                   ).colorScheme.onSurface.withOpacity(0.6),
-                  fontSize: 12,
+                  fontSize: 12.sp,
                 ),
               ),
               Text(
@@ -642,17 +680,17 @@ class StudentSupport extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.all(15),
+        margin: EdgeInsets.only(bottom: 12.h),
+        padding: EdgeInsets.all(15.w),
         decoration: BoxDecoration(
           color: Theme.of(context).colorScheme.surface,
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(15.r),
           border: Border.all(color: Theme.of(context).dividerColor),
         ),
         child: Row(
           children: [
             Icon(icon, color: Colors.orange.shade300),
-            const SizedBox(width: 15),
+            SizedBox(width: 15.w),
             Text(
               title,
               style: TextStyle(

@@ -5,8 +5,9 @@ import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'screens/student_home.dart';
 import 'screens/student_opportunities.dart';
 import 'screens/student_profile.dart';
-import 'screens/student_support.dart';
+import 'screens/student_tracking.dart';
 import 'screens/student_notifications.dart';
+import 'screens/student_support.dart';
 import '../services/notification_service.dart';
 import '../services/user_session.dart';
 
@@ -99,6 +100,8 @@ class _StudentMainNavigationState extends State<StudentMainNavigation> {
     super.dispose();
   }
 
+  int get _selectedNavIndex => _currentIndex > 3 ? _previousIndex : _currentIndex;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -108,45 +111,67 @@ class _StudentMainNavigationState extends State<StudentMainNavigation> {
           StudentHome(
             onSeeAll: _goToTraining,
             unreadNotificationCount: _unreadCount,
+            onProfileTab: () => _changeTab(2),
+            onTrackingTab: () => _changeTab(3),
+            onSupportTab: () => _changeTab(4),
           ),
-          const StudentOpportunities(),
+          StudentOpportunities(
+            onProfileTab: () => _changeTab(2),
+            onTrackingTab: () => _changeTab(3),
+            onSupportTab: () => _changeTab(4),
+          ),
           StudentProfile(
             shouldRefresh: _currentIndex == 2 && _previousIndex != 2,
+            onProfileTab: () => _changeTab(2),
+            onTrackingTab: () => _changeTab(3),
+            onSupportTab: () => _changeTab(4),
           ),
-          const StudentSupport(),
+          StudentTrackingScreen(
+            onProfileTab: () => _changeTab(2),
+            onTrackingTab: () => _changeTab(3),
+            onSupportTab: () => _changeTab(4),
+          ),
+          StudentSupport(
+            embedded: true,
+            onProfileTab: () => _changeTab(2),
+            onTrackingTab: () => _changeTab(3),
+          ),
         ],
       ),
 
-      bottomNavigationBar: Container(
-        color:Theme.of(context).bottomNavigationBarTheme.backgroundColor,
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        child: Row(
-          children: [
-            CustomNavItem(
-              icon: Icons.home_outlined,
-              label: 'Home',
-              isSelected: _currentIndex == 0,
-              onTap: () => _changeTab(0),
-            ),
-            CustomNavItem(
-              icon: Icons.work_outline,
-              label: 'Training',
-              isSelected: _currentIndex == 1,
-              onTap: () => _changeTab(1),
-            ),
-            CustomNavItem(
-              icon: Icons.person_outline,
-              label: 'Profile',
-              isSelected: _currentIndex == 2,
-              onTap: () => _changeTab(2),
-            ),
-            CustomNavItem(
-              icon: Icons.help_outline,
-              label: 'Support',
-              isSelected: _currentIndex == 3,
-              onTap: () => _changeTab(3),
-            ),
-          ],
+      bottomNavigationBar: SafeArea(
+        top: false,
+        child: Container(
+          color: Theme.of(context).bottomNavigationBarTheme.backgroundColor,
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Row(
+            children: [
+              CustomNavItem(
+                icon: Icons.home_outlined,
+                label: 'Home',
+                isSelected: _selectedNavIndex == 0,
+                onTap: () => _changeTab(0),
+              ),
+              CustomNavItem(
+                icon: Icons.work_outline,
+                label: 'Training',
+                isSelected: _selectedNavIndex == 1,
+                onTap: () => _changeTab(1),
+              ),
+              CustomNavItem(
+                icon: Icons.person_outline,
+                label: 'Profile',
+                isSelected: _selectedNavIndex == 2,
+                onTap: () => _changeTab(2),
+              ),
+              CustomNavItem(
+                icon: Icons.track_changes_outlined,
+                label: 'Tracking',
+                isSelected: _selectedNavIndex == 3,
+                onTap: () => _changeTab(3),
+              ),
+            ],
+          ),
         ),
       ),
     );
