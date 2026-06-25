@@ -585,8 +585,7 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
                         onTap: () {
                           _bannerTimer?.cancel();
                           _bannerTimer = null;
-                          ref.read(approvalsProvider.notifier).dismissNewData();
-                          notifier.loadAll();
+                          notifier.dismissNewData();
                         },
                         child: Container(
                           width: double.infinity,
@@ -1520,38 +1519,41 @@ class _ApprovalsScreenState extends ConsumerState<ApprovalsScreen> {
     VoidCallback onTap,
     bool isDark,
   ) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: AppColors.interactive),
-        const SizedBox(width: 12),
-        RichText(
-          text: TextSpan(
-            style: AppTextStyles.body,
-            children: [
-              TextSpan(
-                text: '$label: ',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: isDark
-                      ? AppColors.darkTextSecondary
-                      : AppColors.textSecondary,
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 18, color: AppColors.interactive),
+          const SizedBox(width: 12),
+          RichText(
+            text: TextSpan(
+              style: AppTextStyles.body,
+              children: [
+                TextSpan(
+                  text: '$label: ',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: isDark
+                        ? AppColors.darkTextSecondary
+                        : AppColors.textSecondary,
+                  ),
                 ),
-              ),
-            ],
-          ),
-        ),
-        GestureDetector(
-          onTap: onTap,
-          child: Text(
-            linkText,
-            style: TextStyle(
-              color: AppColors.interactive,
-              decoration: TextDecoration.underline,
-              fontWeight: FontWeight.w500,
+              ],
             ),
           ),
-        ),
-      ],
+          GestureDetector(
+            onTap: onTap,
+            child: Text(
+              linkText,
+              style: TextStyle(
+                color: AppColors.interactive,
+                decoration: TextDecoration.underline,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 

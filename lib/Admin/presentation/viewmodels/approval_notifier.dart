@@ -158,23 +158,28 @@ Future<void> loadAll() async {
   }
 
   void _subscribeToChanges() {
-    _channel = Supabase.instance.client
-        .channel('approvals_changes')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'application',
-          callback: (payload) => state = state.copyWith(hasNewData: true),
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'trainingrecord',
-          callback: (payload) => state = state.copyWith(hasNewData: true),
-        )
-        .subscribe();
-  }
-
+  _channel = Supabase.instance.client
+      .channel('approvals_changes')
+      .onPostgresChanges(
+        event: PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'application',
+        callback: (payload) async {
+          await loadAll();
+          state = state.copyWith(hasNewData: true); // banner still shows
+        },
+      )
+      .onPostgresChanges(
+        event: PostgresChangeEvent.insert,
+        schema: 'public',
+        table: 'trainingrecord',
+        callback: (payload) async {
+          await loadAll();
+          state = state.copyWith(hasNewData: true);
+        },
+      )
+      .subscribe();
+}
   void dismissNewData() {
     state = state.copyWith(hasNewData: false);
   }
