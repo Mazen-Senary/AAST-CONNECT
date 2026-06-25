@@ -2,7 +2,12 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class StatsRow extends StatelessWidget {
-  const StatsRow({super.key});
+  final int jobMatches;
+
+  const StatsRow({
+    super.key,
+    required this.jobMatches,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -12,18 +17,7 @@ class StatsRow extends StatelessWidget {
       children: [
         Expanded(
           child: _StatCard(
-            value: '128',
-            label: 'Profile Views',
-            icon: Icons.trending_up,
-            bgColor: isDark ? AppColors.darkBlue : AppColors.lightBlue,
-            valueColor: AppColors.accentBlue,
-            isDark: isDark,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: _StatCard(
-            value: '18',
+            value: '$jobMatches',
             label: 'Job Matches',
             icon: Icons.gps_fixed,
             bgColor: isDark ? AppColors.darkOrange : AppColors.lightOrange,

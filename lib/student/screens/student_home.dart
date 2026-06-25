@@ -15,6 +15,7 @@ import '../../widgets/home_widgets/student_home_stat_card.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_apply_modal.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.dart';
 import '../../services/vacancy_service.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/user_session.dart';
 import 'student_tracking.dart';
 
@@ -61,6 +62,18 @@ class _StudentHomeState extends State<StudentHome> {
   void initState() {
     super.initState();
     _fetchData();
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    super.dispose();
+  }
+
+  void _handleRefreshSignal() {
+    if (!mounted) return;
+    _fetchData();
   }
 
   Future<void> _fetchData() async {
@@ -86,13 +99,6 @@ class _StudentHomeState extends State<StudentHome> {
           .maybeSingle();
       _profileId = profile?['profileid'];
 
-      // fetch pending training records count
-      final pendingData = await supabase
-          .from('trainingrecord')
-          .select()
-          .eq('studentid', studentId)
-          .eq('status', 'PENDING');
-
       // ✅ Calculate progress based on APPROVED trainings only
       final trainingProgress =
           await _trainingService.calculateTrainingProgress(studentId);
@@ -116,15 +122,21 @@ class _StudentHomeState extends State<StudentHome> {
 
       // fetch user applications
       _applications = await _vacancyService.getUserApplications(userId);
+      final pendingApplications = _applications
+          .where(
+            (app) => (app['status']?.toString().toUpperCase() ?? 'PENDING') ==
+                'PENDING',
+          )
+          .length;
 
       setState(() {
         // Use student table name if available, otherwise fall back to UserSession name
         _studentName = studentData?['name'] ?? UserSession.instance.name ?? '';
         // ✅ Use calculated approved hours (only APPROVED trainings)
-        _completedHours = (trainingProgress['approvedHours'] as int).toDouble();
+        _completedHours = (trainingProgress['completedHours'] as int).toDouble();
         _totalHours = (trainingProgress['requiredHours'] as int).toDouble();
-        _pendingCount = pendingData.length;
-        _approvedCount = trainingProgress['approvedHours'] > 0 ? 1 : 0;
+        _pendingCount = pendingApplications;
+        _approvedCount = trainingProgress['completedHours'] as int;
         _vacancies = List<Map<String, dynamic>>.from(vacanciesData);
         _deadlines = List<Map<String, dynamic>>.from(deadlinesData);
         _isLoading = false;
@@ -492,7 +504,7 @@ class _StudentHomeState extends State<StudentHome> {
                             child: InkWell(
                               borderRadius: BorderRadius.circular(18),
                               onTap: () => _openTracking(
-                                initialTabIndex: 1,
+                                initialTabIndex: 0,
                                 initialStatusFilter: 'Pending',
                               ),
                               child: StudentHomeStatCard(
@@ -507,14 +519,11 @@ class _StudentHomeState extends State<StudentHome> {
                           Expanded(
                             child: InkWell(
                               borderRadius: BorderRadius.circular(18),
-                              onTap: () => _openTracking(
-                                initialTabIndex: 1,
-                                initialStatusFilter: 'Approved',
-                              ),
+                              onTap: () => _openTracking(initialTabIndex: 1),
                               child: StudentHomeStatCard(
                                 backgroundColor: AppColors.statApproved,
                                 number: _approvedCount.toString(),
-                                label: "Completed",
+                                label: "Completed Hrs",
                                 icon: Icons.verified,
                               ),
                             ),

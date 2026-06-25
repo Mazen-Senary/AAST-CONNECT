@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
 
+import '../fresh_grads/utils/opportunities_provider.dart';
+import '../fresh_grads/utils/profile_provider.dart';
 import '../providers/CachedChatProvider.dart';
+import '../services/fresh_grad_home_service.dart';
 import '../services/theme_provider.dart';
 import '../services/user_session.dart';
 import '../signIn.dart';
@@ -335,6 +338,10 @@ class _DrawerPanel extends StatelessWidget {
   }
 
   void _defaultLogout(BuildContext context) {
+    context.read<ProfileProvider>().reset();
+    context.read<OpportunitiesProvider>().reset();
+    context.read<CachedChatProvider>().clearActiveSession();
+    FreshGradHomeService.invalidateCache();
     UserSession.instance.clear();
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const SignInScreen()),

@@ -9,6 +9,7 @@ import '../models/app_models.dart';
 import '../utils/profile_provider.dart';
 import '../utils/opportunities_provider.dart';
 import '../../widgets/company_logo.dart';
+import '../../services/fresh_grad_home_service.dart';
 import '../../services/fresh_grad_vacancy_service.dart';
 
 class JobCard extends StatelessWidget {
@@ -24,11 +25,15 @@ class JobCard extends StatelessWidget {
   });
 
   void _onApplyPressed(BuildContext context) {
-    if (job.applicationMethod == 'EXTERNAL' && job.externalApplyUrl != null) {
-      _launchUrl(job.externalApplyUrl!);
-    } else {
-      _showInternalForm(context);
-    }
+    handleFreshGradJobApply(
+      context,
+      job: job,
+      isDark: isDark,
+      isApplied: isApplied,
+      onApplied: () {
+        context.read<OpportunitiesProvider>().markApplied(job.vacancyId);
+      },
+    );
   }
 
   Future<void> _launchUrl(String url) async {
@@ -43,7 +48,7 @@ class JobCard extends StatelessWidget {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _ApplyDialog(job: job, isDark: isDark),
+      builder: (context) => FreshGradApplyDialog(job: job, isDark: isDark),
     );
   }
 
@@ -224,7 +229,11 @@ class JobCard extends StatelessWidget {
                     elevation: 0,
                   ),
                   child: Text(
-                    isApplied ? 'Applied' : 'Apply Now',
+                    isApplied
+                        ? 'Applied'
+                        : job.applicationMethod == 'EXTERNAL'
+                            ? 'Apply from Website'
+                            : 'Apply Now',
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -240,17 +249,53 @@ class JobCard extends StatelessWidget {
   }
 }
 
-class _ApplyDialog extends StatefulWidget {
-  final JobOpportunity job;
-  final bool isDark;
+Future<void> handleFreshGradJobApply(
+  BuildContext context, {
+  required JobOpportunity job,
+  required bool isDark,
+  bool isApplied = false,
+  VoidCallback? onApplied,
+}) async {
+  if (isApplied) return;
 
-  const _ApplyDialog({required this.job, required this.isDark});
+  if (job.applicationMethod == 'EXTERNAL' && job.externalApplyUrl != null) {
+    final uri = Uri.parse(job.externalApplyUrl!);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+    return;
+  }
 
-  @override
-  State<_ApplyDialog> createState() => _ApplyDialogState();
+  if (!context.mounted) return;
+
+  showDialog(
+    context: context,
+    barrierDismissible: false,
+    builder: (context) => FreshGradApplyDialog(
+      job: job,
+      isDark: isDark,
+      onApplied: onApplied,
+    ),
+  );
 }
 
-class _ApplyDialogState extends State<_ApplyDialog> {
+class FreshGradApplyDialog extends StatefulWidget {
+  final JobOpportunity job;
+  final bool isDark;
+  final VoidCallback? onApplied;
+
+  const FreshGradApplyDialog({
+    super.key,
+    required this.job,
+    required this.isDark,
+    this.onApplied,
+  });
+
+  @override
+  State<FreshGradApplyDialog> createState() => _FreshGradApplyDialogState();
+}
+
+class _FreshGradApplyDialogState extends State<FreshGradApplyDialog> {
   final TextEditingController _coverLetterController = TextEditingController();
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
 
@@ -276,10 +321,7 @@ class _ApplyDialogState extends State<_ApplyDialog> {
 
   Future<void> _init() async {
     try {
-      final userData = await FreshGradVacancyService.fetchCurrentUserData();
-      _ownerProfileId = userData['userid'] is int
-          ? userData['userid'] as int
-          : int.tryParse(userData['userid'].toString());
+      _ownerProfileId = await FreshGradVacancyService.resolveOrCreateProfileId();
     } catch (e) {
       debugPrint('Error initializing apply dialog: $e');
     } finally {
@@ -362,11 +404,13 @@ class _ApplyDialogState extends State<_ApplyDialog> {
         coverLetter: _coverLetterController.text.trim(),
         documentId: _selectedDocumentId,
       );
+      FreshGradHomeService.invalidateCache();
 
       if (!mounted) return;
 
       // Mark as applied immediately so the card updates without a reload.
       context.read<OpportunitiesProvider>().markApplied(widget.job.vacancyId);
+      widget.onApplied?.call();
 
       Navigator.pop(context);
 

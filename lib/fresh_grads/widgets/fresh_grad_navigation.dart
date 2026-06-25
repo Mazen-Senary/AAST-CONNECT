@@ -242,6 +242,8 @@
 //   }
 // }
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:provider/provider.dart';
@@ -254,6 +256,7 @@ import '../screens/fresh_grad_tracking.dart';
 import '../screens/fresh_grad_notifications.dart';
 import '../screens/support_screen.dart';
 import '../widgets/aast_app_bar.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/fresh_grad_opportunity_notification_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/theme_provider.dart';
@@ -286,6 +289,8 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
 
   RealtimeChannel? _notifChannel;
   RealtimeChannel? _vacancyChannel;
+  RealtimeChannel? _applicationChannel;
+  Timer? _refreshDebounce;
 
   final NotificationService _notificationService = NotificationService();
   final FreshGradOpportunityNotificationService
@@ -331,6 +336,7 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
     _loadUnreadCount();
     _listenForNotifications();
     _listenForGraduateVacancies();
+    _listenForLiveDataChanges();
   }
 
   int get _userId => UserSession.instance.userId!;
@@ -346,12 +352,22 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
     setState(() => _unreadCount = notificationCount + opportunityCount);
   }
 
+  void _scheduleRefresh() {
+    _refreshDebounce?.cancel();
+    _refreshDebounce = Timer(const Duration(milliseconds: 300), () {
+      if (!mounted) return;
+      _loadUnreadCount();
+      AppRefreshService.instance.notifyDataChanged();
+    });
+  }
+
   void _listenForNotifications() {
     _notifChannel =
         _notificationService.listenToNotifications(_userId, (payload) {
           if (!mounted) return;
 
           setState(() => _unreadCount++);
+          _scheduleRefresh();
 
           final message =
               payload['message']?.toString() ?? 'New notification';
@@ -366,6 +382,23 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
             ),
           );
         });
+  }
+
+  void _listenForLiveDataChanges() {
+    _applicationChannel = _supabase
+        .channel('fresh-grad-application-live:$_userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'application',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'applicantid',
+            value: _userId,
+          ),
+          callback: (_) => _scheduleRefresh(),
+        )
+        .subscribe();
   }
 
   void _listenForGraduateVacancies() {
@@ -422,6 +455,7 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
       _previousIndex = _currentIndex;
       _currentIndex = 3;
     });
+    AppRefreshService.instance.notifyDataChanged();
   }
 
   void _openSupport() {
@@ -429,6 +463,7 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
       _previousIndex = _currentIndex;
       _currentIndex = 4;
     });
+    AppRefreshService.instance.notifyDataChanged();
   }
 
   int get _selectedNavIndex => _currentIndex > 3 ? _previousIndex : _currentIndex;
@@ -437,6 +472,8 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
   void dispose() {
     _notifChannel?.unsubscribe();
     _vacancyChannel?.unsubscribe();
+    _applicationChannel?.unsubscribe();
+    _refreshDebounce?.cancel();
     super.dispose();
   }
 
@@ -456,6 +493,7 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
         onProfilePressed: () => setState(() {
           _previousIndex = _currentIndex;
           _currentIndex = 2;
+        AppRefreshService.instance.notifyDataChanged();
         }),
         onChatbotPressed: () => showChatbotSheet(context),
       ),
@@ -503,6 +541,7 @@ class _FreshGradNavigationState extends State<FreshGradNavigation> {
               onTap: () => setState(() {
                 _previousIndex = _currentIndex;
                 _currentIndex = index;
+                AppRefreshService.instance.notifyDataChanged();
               }),
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),

@@ -72,6 +72,7 @@
 // }
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/app_refresh_service.dart';
 import '../services/chat_service.dart';
 import '../services/chat_session_scope.dart';
 import '../services/chat_session_store.dart';
@@ -103,6 +104,7 @@ class CachedChatProvider extends ChangeNotifier {
 
   CachedChatProvider() {
     _resetConversationForCurrentSession();
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
   }
 
   // PUBLIC: Call this after any DB change (like submitting hours)
@@ -117,6 +119,17 @@ class CachedChatProvider extends ChangeNotifier {
       _sessionStore.clearSession(_activeSessionKey!);
     }
     _resetConversationForCurrentSession();
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    super.dispose();
+  }
+
+  void _handleRefreshSignal() {
+    invalidateCache();
     notifyListeners();
   }
 

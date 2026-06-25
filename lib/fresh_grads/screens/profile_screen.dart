@@ -18,6 +18,8 @@ import '../widgets/saved_jobs_sections.dart';
 import '../widgets/section_box.dart';
 import '../widgets/form_field.dart';
 import '../widgets/skill_chip.dart';
+import '../../services/fresh_grad_vacancy_service.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/user_session.dart';
 
 // ─── Profile Screen ───────────────────────────────────────────────────────────
@@ -30,54 +32,96 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  final List<Skill> _skills = [
-    Skill(name: 'React', category: 'Technical', level: 'Advanced'),
-    Skill(name: 'TypeScript', category: 'Technical', level: 'Intermediate'),
-    Skill(name: 'Python', category: 'Technical', level: 'Advanced'),
-    Skill(name: 'Communication', category: 'Soft', level: 'Advanced'),
-    Skill(name: 'Team Leadership', category: 'Soft', level: 'Intermediate'),
-  ];
-
-  final List<String> _interests = [
-    'Web Development', 'Machine Learning', 'UI/UX Design', 'Cloud Computing'
-  ];
-
-  final List<PortfolioLink> _portfolioLinks = [
-    PortfolioLink(title: 'GitHub Profile', url: 'https://github.com/ahmedgomaa',
-        icon: Icons.code, iconBg: const Color(0xFFEEEEEE), iconColor: const Color(0xFF333333)),
-    PortfolioLink(title: 'LinkedIn', url: 'https://linkedin.com/in/ahmedgomaa',
-        icon: Icons.linked_camera, iconBg: const Color(0xFFE3F2FD), iconColor: const Color(0xFF0077B5)),
-    PortfolioLink(title: 'Personal Portfolio', url: 'https://ahmedgomaa.dev',
-        icon: Icons.language, iconBg: const Color(0xFFFFF3E0), iconColor: const Color(0xFFFF9800)),
-  ];
+  final List<Skill> _skills = [];
+  final List<String> _interests = [];
+  final List<PortfolioLink> _portfolioLinks = [];
 
   List<Document> _documents = [];
+  int? _profileId;
 
   @override
   void initState() {
     super.initState();
     _fetchRealDocuments();
+    _loadProfileExtras();
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    super.dispose();
+  }
+
+  void _handleRefreshSignal() {
+    if (!mounted) return;
+    _fetchRealDocuments();
+    _loadProfileExtras();
+    context.read<ProfileProvider>().loadFromDatabase();
+  }
+
+  Future<void> _loadProfileExtras() async {
+    try {
+      final collegeId = UserSession.instance.collegeId;
+      if (collegeId == null || collegeId.isEmpty) return;
+
+      final supabase = Supabase.instance.client;
+      final row = await supabase
+          .from('freshgraduate')
+          .select('skills, interests, portfolio_links')
+          .eq('college_id', collegeId)
+          .maybeSingle();
+
+      if (row == null || !mounted) return;
+
+      final parsedSkills = _parseSkills(row['skills']?.toString());
+      final parsedInterests = _parseInterests(row['interests']?.toString());
+      final parsedLinks = _parsePortfolioLinks(row['portfolio_links']?.toString());
+
+      setState(() {
+        _skills
+          ..clear()
+          ..addAll(parsedSkills);
+        _interests
+          ..clear()
+          ..addAll(parsedInterests);
+        _portfolioLinks
+          ..clear()
+          ..addAll(parsedLinks);
+      });
+    } catch (e) {
+      debugPrint('Error loading fresh grad profile extras: $e');
+    }
   }
 
   Future<void> _fetchRealDocuments() async {
     try {
       final supabase = Supabase.instance.client;
-      final userId = UserSession.instance.userId;
-      final storagePath = 'student_$userId';
-      final files = await supabase.storage.from('documents').list(path: storagePath);
+      _profileId ??= await FreshGradVacancyService.resolveOrCreateProfileId();
+      if (_profileId == null) return;
+
+      final rows = await supabase
+          .from('document')
+          .select('documentid, documenttype, filepath, uploaddate, status')
+          .eq('ownerprofileid', _profileId!)
+          .order('uploaddate', ascending: false);
 
       if (mounted) {
         setState(() {
-          _documents = files
-              .where((file) => file.name != '.emptyFolderPlaceholder') 
-              .map((file) {
-            final ext = file.name.split('.').last.toUpperCase();
+          _documents = List<Map<String, dynamic>>.from(rows).map((row) {
+            final filepath = row['filepath']?.toString() ?? '';
+            final filename = _extractFileName(filepath);
+            final ext = filename.contains('.')
+                ? filename.split('.').last.toUpperCase()
+                : 'FILE';
             return Document(
-              name: file.name,
+              id: row['documentid']?.toString(),
+              name: filename,
               type: ext,
-              date: 'Recent', 
+              date: _formatUploadDate(row['uploaddate']?.toString()),
               size: 'Uploaded',
-              status: 'Pending Review',
+              status: _mapStatus(row['status']?.toString()),
+              filepath: filepath,
             );
           }).toList();
         });
@@ -85,6 +129,173 @@ class _ProfileScreenState extends State<ProfileScreen> {
     } catch (e) {
       debugPrint('Error fetching documents: $e');
     }
+  }
+
+  String _extractFileName(String filepath) {
+    try {
+      final uri = Uri.parse(filepath);
+      final fullName = uri.pathSegments.last;
+      final parts = fullName.split('_');
+      if (parts.length > 2) return parts.sublist(2).join('_');
+      return fullName;
+    } catch (_) {
+      return 'Document';
+    }
+  }
+
+  String _formatUploadDate(String? raw) {
+    if (raw == null || raw.isEmpty) return 'Recent';
+    final parsed = DateTime.tryParse(raw);
+    if (parsed == null) return 'Recent';
+    return '${parsed.day}/${parsed.month}/${parsed.year}';
+  }
+
+  String _mapStatus(String? status) {
+    switch ((status ?? 'PENDING').toUpperCase()) {
+      case 'APPROVED':
+        return 'Approved';
+      case 'REJECTED':
+        return 'Rejected';
+      default:
+        return 'Pending Review';
+    }
+  }
+
+  List<Skill> _parseSkills(String? skillsStr) {
+    if (skillsStr == null || skillsStr.trim().isEmpty) return [];
+    return skillsStr
+        .split(',')
+        .where((value) => value.trim().isNotEmpty)
+        .map((value) {
+          final parts = value.trim().split(':');
+          return Skill(
+            name: parts.isNotEmpty ? parts[0].trim() : '',
+            level: parts.length > 1 ? parts[1].trim() : 'Beginner',
+            category: parts.length > 2 ? parts[2].trim() : 'Technical',
+          );
+        })
+        .where((skill) => skill.name.isNotEmpty)
+        .toList();
+  }
+
+  List<String> _parseInterests(String? interestsStr) {
+    if (interestsStr == null || interestsStr.trim().isEmpty) return [];
+    return interestsStr
+        .split(',')
+        .where((value) => value.trim().isNotEmpty)
+        .map((value) => value.trim())
+        .toList();
+  }
+
+  List<PortfolioLink> _parsePortfolioLinks(String? linksStr) {
+    if (linksStr == null || linksStr.trim().isEmpty) return [];
+    return linksStr
+        .split(',')
+        .where((value) => value.trim().isNotEmpty)
+        .map((value) => value.trim().split('|'))
+        .map((parts) {
+          final title = parts.isNotEmpty ? parts[0].trim() : 'Website';
+          final url = parts.length > 1 ? parts[1].trim() : '';
+          final type = parts.length > 2 ? parts[2].trim() : 'Website';
+          return _buildPortfolioLink(title: title, url: url, type: type);
+        })
+        .where((link) => link.url.isNotEmpty)
+        .toList();
+  }
+
+  String _serializeSkills() => _skills
+      .map((skill) => '${skill.name}:${skill.level}:${skill.category}')
+      .join(',');
+
+  String _serializeInterests() => _interests.join(',');
+
+  String _serializePortfolioLinks() => _portfolioLinks
+      .map((link) => '${link.title}|${link.url}|${_getPortfolioType(link)}')
+      .join(',');
+
+  String _getPortfolioType(PortfolioLink link) {
+    if (link.icon == Icons.code) return 'GitHub';
+    if (link.icon == Icons.work) return 'LinkedIn';
+    if (link.icon == Icons.brush) return 'Behance';
+    if (link.icon == Icons.sports_basketball) return 'Dribbble';
+    return 'Website';
+  }
+
+  PortfolioLink _buildPortfolioLink({
+    required String title,
+    required String url,
+    String type = 'Website',
+  }) {
+    switch (type) {
+      case 'GitHub':
+        return PortfolioLink(
+          title: title,
+          url: url,
+          icon: Icons.code,
+          iconBg: const Color(0xFFEEEEEE),
+          iconColor: const Color(0xFF333333),
+        );
+      case 'LinkedIn':
+        return PortfolioLink(
+          title: title,
+          url: url,
+          icon: Icons.work,
+          iconBg: const Color(0xFFE3F2FD),
+          iconColor: const Color(0xFF0077B5),
+        );
+      case 'Behance':
+        return PortfolioLink(
+          title: title,
+          url: url,
+          icon: Icons.brush,
+          iconBg: const Color(0xFFE8EAF6),
+          iconColor: const Color(0xFF1769FF),
+        );
+      case 'Dribbble':
+        return PortfolioLink(
+          title: title,
+          url: url,
+          icon: Icons.sports_basketball,
+          iconBg: const Color(0xFFFCE4EC),
+          iconColor: const Color(0xFFEA4C89),
+        );
+      default:
+        return PortfolioLink(
+          title: title,
+          url: url,
+          icon: Icons.language,
+          iconBg: AppColors.lightBlue,
+          iconColor: AppColors.accentBlue,
+        );
+    }
+  }
+
+  String _inferPortfolioType(String title, String url) {
+    final value = '$title $url'.toLowerCase();
+    if (value.contains('github')) return 'GitHub';
+    if (value.contains('linkedin')) return 'LinkedIn';
+    if (value.contains('behance')) return 'Behance';
+    if (value.contains('dribbble')) return 'Dribbble';
+    return 'Website';
+  }
+
+  Future<void> _saveSkillsAndInterests() async {
+    final collegeId = UserSession.instance.collegeId;
+    if (collegeId == null || collegeId.isEmpty) return;
+
+    await Supabase.instance.client.from('freshgraduate').update({
+      'skills': _serializeSkills(),
+      'interests': _serializeInterests(),
+    }).eq('college_id', collegeId);
+  }
+
+  Future<void> _savePortfolioLinks() async {
+    final collegeId = UserSession.instance.collegeId;
+    if (collegeId == null || collegeId.isEmpty) return;
+
+    await Supabase.instance.client.from('freshgraduate').update({
+      'portfolio_links': _serializePortfolioLinks(),
+    }).eq('college_id', collegeId);
   }
 
 
@@ -264,10 +475,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       setS(() => isUploading = true);
 
       final supabase = Supabase.instance.client;
+      _profileId ??= await FreshGradVacancyService.resolveOrCreateProfileId();
+      if (_profileId == null) {
+        throw Exception('No profile found for this account.');
+      }
       final uniqueFileName =
           '${DateTime.now().millisecondsSinceEpoch}_${file.name}';
-      final userId = UserSession.instance.userId;
-      final storagePath = 'student_$userId/$uniqueFileName';
+      final storagePath = 'student_$_profileId/$uniqueFileName';
 
       // ✅ SINGLE upload method for ALL platforms
       await supabase.storage.from('documents').uploadBinary(
@@ -276,15 +490,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         fileOptions: const FileOptions(upsert: true),
       );
 
+      final fileUrl = supabase.storage.from('documents').getPublicUrl(storagePath);
+      final inserted = await supabase
+          .from('document')
+          .insert({
+            'ownerprofileid': _profileId,
+            'documenttype': 'ATTACHMENT',
+            'filepath': fileUrl,
+          })
+          .select('documentid, filepath, uploaddate, status')
+          .single();
+
       setState(() {
         _documents.insert(
           0,
           Document(
-            name: uniqueFileName,
+            id: inserted['documentid']?.toString(),
+            name: file.name,
             type: ext!.toUpperCase(),
-            date: 'Just now',
+            date: _formatUploadDate(inserted['uploaddate']?.toString()),
             size: '${(file.size / 1024).toStringAsFixed(0)} KB',
-            status: 'Pending Review',
+            status: _mapStatus(inserted['status']?.toString()),
+            filepath: inserted['filepath']?.toString(),
           ),
         );
       });
@@ -336,22 +563,59 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onDelete: () async {
                         try {
                           final supabase = Supabase.instance.client;
-                          
-                          // FIX 3: Actually delete from Supabase storage
-                          final userId = UserSession.instance.userId;
-                          await supabase.storage
-                              .from('documents')
-                              .remove(['student_$userId/${doc.name}']);
+                          if (doc.id == null) {
+                            throw Exception('Document id is missing.');
+                          }
 
-                          // Only remove from UI if the storage delete succeeds
+                          final linkedApplications = await supabase
+                              .from('application')
+                              .select('applicationid')
+                              .eq('document_id', doc.id!)
+                              .limit(1);
+
+                          if (linkedApplications.isNotEmpty) {
+                            await supabase
+                                .from('document')
+                                .update({'ownerprofileid': null})
+                                .eq('documentid', doc.id!);
+                          } else {
+                            final sharedDocuments = await supabase
+                                .from('document')
+                                .select('documentid')
+                                .eq('filepath', doc.filepath ?? '')
+                                .neq('documentid', doc.id!)
+                                .limit(1);
+
+                            await supabase
+                                .from('document')
+                                .delete()
+                                .eq('documentid', doc.id!);
+
+                            if (sharedDocuments.isEmpty && doc.filepath != null) {
+                              final uri = Uri.parse(doc.filepath!);
+                              final storagePath = uri.pathSegments
+                                  .skipWhile((s) => s != 'documents')
+                                  .skip(1)
+                                  .join('/');
+                              await supabase.storage
+                                  .from('documents')
+                                  .remove([storagePath]);
+                            }
+                          }
+
                           setState(() {
                             _documents.remove(doc);
                           });
-                          setS(() {}); // Update the dialog state
-                          
+                          setS(() {});
+
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Document deleted from storage'), backgroundColor: Colors.blueGrey),
+                              const SnackBar(
+                                content: Text(
+                                  'Document removed from your profile.',
+                                ),
+                                backgroundColor: Colors.blueGrey,
+                              ),
                             );
                           }
                         } catch (e) {
@@ -439,10 +703,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   SectionBox(title: 'Basic Information', isDark: isDark, children: [
                     Row(children: [
                       Expanded(child: FormField(label: 'First Name', controller: fnCtrl,
-                          icon: Icons.person_outline, isDark: isDark)),
+                          icon: Icons.person_outline, isDark: isDark, readOnly: true)),
                       const SizedBox(width: 10),
                       Expanded(child: FormField(label: 'Last Name', controller: lnCtrl,
-                          icon: Icons.person_outline, isDark: isDark)),
+                          icon: Icons.person_outline, isDark: isDark, readOnly: true)),
                     ]),
                     const SizedBox(height: 12),
                     FormField(label: 'Email', controller: emailCtrl,
@@ -450,6 +714,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 12),
                     FormField(label: 'Phone Number', controller: phoneCtrl,
                         icon: Icons.phone_outlined, isDark: isDark),
+                    const SizedBox(height: 10),
+                    Text('Name is managed by the university and cannot be edited.',
+                        style: TextStyle(fontSize: 12,
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
                   ]),
                   const SizedBox(height: 12),
 
@@ -518,7 +786,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         await supabase
                             .from('freshgraduate')
                             .update({
-                              'name': '${fnCtrl.text.trim()} ${lnCtrl.text.trim()}'.trim(),
                               'email': emailCtrl.text.trim(),
                               'phone': phoneCtrl.text.trim(),
                               'bio': bioCtrl.text.trim(),
@@ -678,12 +945,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       const SizedBox(height: 10),
                       SizedBox(width: double.infinity,
                         child: ElevatedButton(
-                          onPressed: () {
-                            if (skillCtrl.text.trim().isNotEmpty) {
-                              setState(() => _skills.add(Skill(name: skillCtrl.text.trim(),
-                                  category: skillCategory, level: skillLevel)));
-                              setS(() {}); skillCtrl.clear();
+                          onPressed: () async {
+                            final skillName = skillCtrl.text.trim();
+                            if (skillName.isEmpty) return;
+                            if (_skills.any((s) => s.name.toLowerCase() == skillName.toLowerCase())) {
+                              return;
                             }
+
+                            setState(() => _skills.add(Skill(
+                                  name: skillName,
+                                  category: skillCategory,
+                                  level: skillLevel,
+                                )));
+                            setS(() {});
+                            skillCtrl.clear();
+                            await _saveSkillsAndInterests();
                           },
                           style: ElevatedButton.styleFrom(backgroundColor: AppColors.applyButton,
                               padding: const EdgeInsets.symmetric(vertical: 12),
@@ -701,7 +977,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 8),
                     Wrap(spacing: 8, runSpacing: 8, children: techSkills.map((s) => SkillChip(
                       skill: s, bgColor: AppColors.lightBlue, textColor: AppColors.accentBlue,
-                      onRemove: () { setState(() => _skills.remove(s)); setS(() {}); },
+                      onRemove: () async {
+                        setState(() => _skills.remove(s));
+                        setS(() {});
+                        await _saveSkillsAndInterests();
+                      },
                     )).toList()),
                     const SizedBox(height: 14),
                   ],
@@ -712,7 +992,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     const SizedBox(height: 8),
                     Wrap(spacing: 8, runSpacing: 8, children: softSkills.map((s) => SkillChip(
                       skill: s, bgColor: AppColors.lightGreen, textColor: AppColors.primaryGreen,
-                      onRemove: () { setState(() => _skills.remove(s)); setS(() {}); },
+                      onRemove: () async {
+                        setState(() => _skills.remove(s));
+                        setS(() {});
+                        await _saveSkillsAndInterests();
+                      },
                     )).toList()),
                     const SizedBox(height: 20),
                   ],
@@ -738,10 +1022,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     )),
                     const SizedBox(width: 8),
                     GestureDetector(
-                      onTap: () {
-                        if (interestCtrl.text.trim().isNotEmpty) {
-                          setState(() => _interests.add(interestCtrl.text.trim()));
-                          setS(() {}); interestCtrl.clear();
+                      onTap: () async {
+                        final interest = interestCtrl.text.trim();
+                        if (interest.isNotEmpty &&
+                            !_interests.any((i) => i.toLowerCase() == interest.toLowerCase())) {
+                          setState(() => _interests.add(interest));
+                          setS(() {});
+                          interestCtrl.clear();
+                          await _saveSkillsAndInterests();
                         }
                       },
                       child: Container(width: 42, height: 42,
@@ -756,7 +1044,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Row(mainAxisSize: MainAxisSize.min, children: [
                           Text(i, style: const TextStyle(fontSize: 13, color: AppColors.accentOrange, fontWeight: FontWeight.w500)),
                           const SizedBox(width: 6),
-                          GestureDetector(onTap: () { setState(() => _interests.remove(i)); setS(() {}); },
+                          GestureDetector(onTap: () async {
+                            setState(() => _interests.remove(i));
+                            setS(() {});
+                            await _saveSkillsAndInterests();
+                          },
                               child: const Icon(Icons.close, size: 14, color: AppColors.accentOrange)),
                         ]),
                       )
@@ -863,7 +1155,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         ])),
                         const SizedBox(width: 8),
                         GestureDetector(
-                            onTap: () { setState(() => _portfolioLinks.remove(link)); setS(() {}); },
+                            onTap: () async {
+                              setState(() => _portfolioLinks.remove(link));
+                              setS(() {});
+                              await _savePortfolioLinks();
+                            },
                             child: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20)),
                       ]),
                     ),
@@ -914,13 +1210,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ]),
       actions: [
         TextButton(onPressed: () => Navigator.pop(ctx2), child: const Text('Cancel')),
-        ElevatedButton(onPressed: () {
-          if (titleCtrl.text.isNotEmpty && urlCtrl.text.isNotEmpty) {
-            setState(() => _portfolioLinks.add(PortfolioLink(
-              title: titleCtrl.text, url: urlCtrl.text,
-              icon: Icons.link, iconBg: AppColors.lightBlue, iconColor: AppColors.accentBlue,
-            )));
+        ElevatedButton(onPressed: () async {
+          final title = titleCtrl.text.trim();
+          final rawUrl = urlCtrl.text.trim();
+          if (title.isNotEmpty && rawUrl.isNotEmpty) {
+            final finalUrl = rawUrl.startsWith('http') ? rawUrl : 'https://$rawUrl';
+            final type = _inferPortfolioType(title, finalUrl);
+            setState(() => _portfolioLinks.add(_buildPortfolioLink(
+                  title: title,
+                  url: finalUrl,
+                  type: type,
+                )));
             setS(() {});
+            await _savePortfolioLinks();
           }
           Navigator.pop(ctx2);
         }, child: const Text('Add')),

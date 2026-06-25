@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/user_session.dart';
 
 class ProfileProvider extends ChangeNotifier {
@@ -13,6 +14,10 @@ class ProfileProvider extends ChangeNotifier {
   String bio = '';
   String collegeId = '';
 
+  ProfileProvider() {
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
+  }
+
   String get fullName => '$firstName $lastName'.trim();
   String get initials {
     if (firstName.isEmpty && lastName.isEmpty) return '?';
@@ -24,6 +29,30 @@ class ProfileProvider extends ChangeNotifier {
   void setCollegeId(String id) {
     collegeId = id;
     notifyListeners();
+  }
+
+  void reset() {
+    firstName = '';
+    lastName = '';
+    email = '';
+    phone = '';
+    major = '';
+    academicYear = '';
+    gpa = '';
+    bio = '';
+    collegeId = '';
+    notifyListeners();
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    super.dispose();
+  }
+
+  void _handleRefreshSignal() {
+    if (UserSession.instance.role != 'FRESH_GRAD') return;
+    loadFromDatabase();
   }
 
   /// Fetch the full fresh-graduate profile from the database

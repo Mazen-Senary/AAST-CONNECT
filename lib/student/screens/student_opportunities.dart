@@ -15,6 +15,7 @@ import '../../widgets/opportunities_wigdet/student_opportunities_filter_chips.da
 import '../../widgets/opportunities_wigdet/student_opportunities_program_card.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_apply_modal.dart';
 import '../../widgets/opportunities_wigdet/student_opportunities_details_modal.dart';
+import '../../services/app_refresh_service.dart';
 import 'student_tracking.dart';
 
 class StudentOpportunities extends StatefulWidget {
@@ -60,6 +61,19 @@ class _StudentOpportunitiesState extends State<StudentOpportunities> {
   @override
   void initState() {
     super.initState();
+    _loadData();
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _handleRefreshSignal() {
+    if (!mounted) return;
     _loadData();
   }
 

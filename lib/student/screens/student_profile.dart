@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:provider/provider.dart';
 import '../../constants/app_colors.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
+import '../../providers/CachedChatProvider.dart';
+import '../../fresh_grads/utils/opportunities_provider.dart';
+import '../../fresh_grads/utils/profile_provider.dart';
+import '../../services/fresh_grad_home_service.dart';
 import '../../services/user_session.dart';
 import '../../widgets/profile_widgets/student_profile_edit_modal.dart';
 import '../../widgets/rounded_container.dart';
@@ -13,6 +18,7 @@ import '../../widgets/profile_widgets/student_profile_portfolio_modal.dart';
 import '../../widgets/profile_widgets/student_profile_submit_hours_modal.dart';
 import '../../models/student.dart';
 import '../../widgets/app_bar_with_logout.dart';
+import '../../services/app_refresh_service.dart';
 import '../../signIn.dart';
 import 'student_tracking.dart';
 
@@ -45,6 +51,13 @@ class _StudentProfileState extends State<StudentProfile> {
   void initState() {
     super.initState();
     _fetchStudentData();
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    super.dispose();
   }
 
   // called when parent passes new shouldRefresh value
@@ -54,6 +67,11 @@ class _StudentProfileState extends State<StudentProfile> {
     if (widget.shouldRefresh && !oldWidget.shouldRefresh) {
       _fetchStudentData();
     }
+  }
+
+  void _handleRefreshSignal() {
+    if (!mounted) return;
+    _fetchStudentData();
   }
 
   Future<void> _fetchStudentData() async {
@@ -200,7 +218,6 @@ class _StudentProfileState extends State<StudentProfile> {
           await supabase
               .from('student')
               .update({
-                'name': updatedData['name'],
                 'phone': updatedData['phone'],
                 'bio': updatedData['bio'],
                 'address': updatedData['address'],
@@ -311,6 +328,10 @@ class _StudentProfileState extends State<StudentProfile> {
             ),
             onPressed: () {
               Navigator.pop(context);
+              context.read<ProfileProvider>().reset();
+              context.read<OpportunitiesProvider>().reset();
+              context.read<CachedChatProvider>().clearActiveSession();
+              FreshGradHomeService.invalidateCache();
               UserSession.instance.clear();
               Navigator.of(context, rootNavigator: true).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const SignInScreen()),
@@ -589,22 +610,29 @@ class _StudentProfileState extends State<StudentProfile> {
     return RoundedContainer(
       backgroundColor: backgroundColor,
       borderRadius: 15.0,
-      padding: const EdgeInsets.all(15),
-      child: Row(
-        children: [
-          Icon(icon, size: 20, color: foregroundColor),
-          const SizedBox(width: 8),
-          Flexible(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-                fontSize: 13,
-                color: foregroundColor,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      child: SizedBox(
+        height: 60,
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Icon(icon, size: 20, color: foregroundColor),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                label,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 13,
+                  color: foregroundColor,
+                  height: 1.15,
+                ),
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

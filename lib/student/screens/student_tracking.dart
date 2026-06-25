@@ -9,6 +9,7 @@ import '../../widgets/tracking_status_chip.dart';
 import '../../widgets/profile_widgets/student_profile_submit_hours_modal.dart';
 import '../../widgets/cancellation_confirmation_dialog.dart';
 import '../../services/vacancy_service.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/user_session.dart';
 import '../../constants/app_colors.dart';
 
@@ -53,6 +54,18 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
     _selectedTab = widget.initialTabIndex.clamp(0, 1);
     _selectedStatus = widget.initialStatusFilter;
     _fetchTrackingData();
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    super.dispose();
+  }
+
+  void _handleRefreshSignal() {
+    if (!mounted) return;
+    _fetchTrackingData();
   }
 
   Future<void> _fetchTrackingData() async {
@@ -90,7 +103,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
 
       setState(() {
         // ✅ Use calculated approved hours (only APPROVED trainings)
-        _completedHours = (trainingProgress['approvedHours'] as int).toDouble();
+        _completedHours = (trainingProgress['completedHours'] as int).toDouble();
         _requiredHours = (trainingProgress['requiredHours'] as int).toDouble();
         _applications = List<Map<String, dynamic>>.from(applications);
         _trainingRecords = List<Map<String, dynamic>>.from(trainingRecords);
@@ -336,12 +349,14 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
     final displayedCompleted = _completedHours > _requiredHours ? _requiredHours : _completedHours;
     
     final progress = (displayedCompleted / safeRequired).clamp(0.0, 1.0);
-    final remaining = (_requiredHours - displayedCompleted).clamp(
+    final remaining = (_requiredHours - _completedHours).clamp(
       0,
       double.infinity,
     );
-    // Show 0 remaining when at 100%
-    final displayedRemaining = progress >= 1.0 ? 0.0 : remaining;
+    final extra = (_completedHours - _requiredHours).clamp(
+      0,
+      double.infinity,
+    );
 
     return RoundedContainer(
       backgroundColor: AppColors.trainingProgress,
@@ -355,7 +370,7 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
           ),
           const SizedBox(height: 8),
           Text(
-            '${displayedCompleted.toStringAsFixed(0)} / ${_requiredHours.toStringAsFixed(0)} hrs',
+            '${_completedHours.toStringAsFixed(0)} / ${_requiredHours.toStringAsFixed(0)} hrs',
           ),
           const SizedBox(height: 10),
           LinearProgressIndicator(
@@ -366,7 +381,13 @@ class _StudentTrackingScreenState extends State<StudentTrackingScreen> {
             color: AppColors.progressGreen,
           ),
           const SizedBox(height: 8),
-          Text('${displayedRemaining.toStringAsFixed(0)} hours remaining'),
+          Text(
+            extra > 0
+                ? '${extra.toStringAsFixed(0)} extra hours completed'
+                : remaining > 0
+                    ? '${remaining.toStringAsFixed(0)} hours remaining'
+                    : 'Required training hours completed',
+          ),
         ],
       ),
     );

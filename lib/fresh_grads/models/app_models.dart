@@ -22,19 +22,23 @@ class Skill {
 }
 
 class Document {
+  String? id;
   String name;
   String type;
   String date;
   String size;
   String status;
   String? rejectionReason;
+  String? filepath;
   Document({
+    this.id,
     required this.name,
     required this.type,
     required this.date,
     required this.size,
     required this.status,
     this.rejectionReason,
+    this.filepath,
   });
 }
 

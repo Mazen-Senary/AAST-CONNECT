@@ -2,7 +2,18 @@ import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 
 class CareerProgressCard extends StatelessWidget {
-  const CareerProgressCard({super.key});
+  final int totalApplications;
+  final int pendingApplications;
+  final int approvedApplications;
+  final int rejectedApplications;
+
+  const CareerProgressCard({
+    super.key,
+    required this.totalApplications,
+    required this.pendingApplications,
+    required this.approvedApplications,
+    required this.rejectedApplications,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -43,7 +54,7 @@ class CareerProgressCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
                   Text(
-                    '24',
+                    '$totalApplications',
                     style: TextStyle(
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
@@ -72,11 +83,23 @@ class CareerProgressCard extends StatelessWidget {
           const SizedBox(height: 16),
           Row(
             children: [
-              _StatChip(label: 'Interviews', value: '8', isDark: isDark),
+              _StatChip(
+                label: 'Rejected',
+                value: '$rejectedApplications',
+                isDark: isDark,
+              ),
               const SizedBox(width: 10),
-              _StatChip(label: 'Pending', value: '12', isDark: isDark),
+              _StatChip(
+                label: 'Pending',
+                value: '$pendingApplications',
+                isDark: isDark,
+              ),
               const SizedBox(width: 10),
-              _StatChip(label: 'Offers', value: '3', isDark: isDark),
+              _StatChip(
+                label: 'Accepted',
+                value: '$approvedApplications',
+                isDark: isDark,
+              ),
             ],
           ),
         ],

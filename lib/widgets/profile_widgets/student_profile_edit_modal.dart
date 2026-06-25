@@ -35,13 +35,11 @@ class StudentProfileEditModal extends StatefulWidget {
 }
 
 class _StudentProfileEditModalState extends State<StudentProfileEditModal> {
-  late final TextEditingController _nameController;
   late final TextEditingController _phoneController;
   late final TextEditingController _bioController;
   late final TextEditingController _addressController;
   late final TextEditingController _linkedinController;
 
-  String? _nameError;
   String? _phoneError;
   String? _linkedinError;
   bool _submitted = false;
@@ -49,7 +47,6 @@ class _StudentProfileEditModalState extends State<StudentProfileEditModal> {
   @override
   void initState() {
     super.initState();
-    _nameController = TextEditingController(text: widget.userData['name'] ?? '');
     _phoneController = TextEditingController(text: widget.userData['phone'] ?? '');
     _bioController = TextEditingController(text: widget.userData['bio'] ?? '');
     _addressController = TextEditingController(text: widget.userData['address'] ?? '');
@@ -60,17 +57,11 @@ class _StudentProfileEditModalState extends State<StudentProfileEditModal> {
 
   @override
   void dispose() {
-    _nameController.dispose();
     _phoneController.dispose();
     _bioController.dispose();
     _addressController.dispose();
     _linkedinController.dispose();
     super.dispose();
-  }
-
-  String? _validateName(String value) {
-    if (value.trim().isEmpty) return 'Full name is required';
-    return null;
   }
 
   String? _validatePhone(String value) {
@@ -170,17 +161,15 @@ class _StudentProfileEditModalState extends State<StudentProfileEditModal> {
   void _submit() {
     setState(() {
       _submitted = true;
-      _nameError = _validateName(_nameController.text);
       _phoneError = _validatePhone(_phoneController.text);
       _linkedinError = _validateLinkedIn(_linkedinController.text);
     });
 
-    if (_nameError != null || _phoneError != null || _linkedinError != null) {
+    if (_phoneError != null || _linkedinError != null) {
       return;
     }
 
     widget.onSave({
-      'name': _nameController.text.trim(),
       'phone': _phoneController.text.trim(),
       'bio': _bioController.text.trim(),
       'address': _addressController.text.trim(),
@@ -325,30 +314,10 @@ class _StudentProfileEditModalState extends State<StudentProfileEditModal> {
                       ),
                     ),
                     SizedBox(height: 15.h),
-                    Focus(
-                      onFocusChange: (hasFocus) {
-                        if (!hasFocus || _submitted) {
-                          setState(() {
-                            _nameError = _validateName(_nameController.text);
-                          });
-                        }
-                      },
-                      child: TextField(
-                        controller: _nameController,
-                        style: TextStyle(color: scheme.onSurface),
-                        onChanged: (_) {
-                          if (_nameError != null || _submitted) {
-                            setState(() {
-                              _nameError = _validateName(_nameController.text);
-                            });
-                          }
-                        },
-                        decoration: _fieldDecoration(
-                          context,
-                          'Full Name',
-                          errorText: _nameError,
-                        ),
-                      ),
+                    _buildReadOnlyField(
+                      context,
+                      "Full Name",
+                      widget.userData['name'] ?? '',
                     ),
                     SizedBox(height: 15.h),
                     Focus(

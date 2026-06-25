@@ -509,7 +509,7 @@ class _SupportScreenState extends State<SupportScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Privacy Policy',
+                    'Terms & Conditions',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -570,7 +570,7 @@ class _SupportScreenState extends State<SupportScreen> {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    'Terms & Conditions',
+                    'Privacy Policy',
                     style: TextStyle(
                       fontSize: 18,
                       fontWeight: FontWeight.bold,
@@ -726,15 +726,6 @@ class _SupportScreenState extends State<SupportScreen> {
             title: 'Privacy Policy',
             isDark: isDark,
             onTap: () => _showPrivacyPolicyDialog(context, isDark),
-          ),
-          const SizedBox(height: 10),
-          ResourceTile(
-            icon: Icons.description_outlined,
-            iconBg: AppColors.lightOrange,
-            iconColor: AppColors.accentOrange,
-            title: 'Training Guidelines',
-            isDark: isDark,
-            onTap: () => _showTrainingGuidelinesDialog(context, isDark),
           ),
           const SizedBox(height: 24),
         ],

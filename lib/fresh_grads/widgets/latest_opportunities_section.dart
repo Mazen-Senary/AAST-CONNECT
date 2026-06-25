@@ -1,9 +1,19 @@
 import 'package:flutter/material.dart';
 import '../theme/app_theme.dart';
 import '../models/app_models.dart';
+import 'job_card.dart';
 
 class LatestOpportunitiesSection extends StatelessWidget {
-  const LatestOpportunitiesSection({super.key});
+  final List<JobOpportunity> opportunities;
+  final Set<String> appliedVacancyIds;
+  final ValueChanged<String>? onApplied;
+
+  const LatestOpportunitiesSection({
+    super.key,
+    required this.opportunities,
+    required this.appliedVacancyIds,
+    this.onApplied,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +48,15 @@ class LatestOpportunitiesSection extends StatelessWidget {
           ],
         ),
         const SizedBox(height: 12),
-        ...AppData.opportunities.map(
+        ...opportunities.map(
           (job) => Padding(
             padding: const EdgeInsets.only(bottom: 12),
-            child: OpportunityCard(job: job, isDark: isDark),
+            child: OpportunityCard(
+              job: job,
+              isDark: isDark,
+              isApplied: appliedVacancyIds.contains(job.vacancyId),
+              onApplied: onApplied,
+            ),
           ),
         ),
       ],
@@ -52,8 +67,16 @@ class LatestOpportunitiesSection extends StatelessWidget {
 class OpportunityCard extends StatelessWidget {
   final JobOpportunity job;
   final bool isDark;
+  final bool isApplied;
+  final ValueChanged<String>? onApplied;
 
-  const OpportunityCard({super.key, required this.job, required this.isDark});
+  const OpportunityCard({
+    super.key,
+    required this.job,
+    required this.isDark,
+    this.isApplied = false,
+    this.onApplied,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -138,18 +161,32 @@ class OpportunityCard extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton(
-              onPressed: () {},
+              onPressed: isApplied
+                  ? null
+                  : () => handleFreshGradJobApply(
+                        context,
+                        job: job,
+                        isDark: isDark,
+                        isApplied: isApplied,
+                        onApplied: () => onApplied?.call(job.vacancyId),
+                      ),
               style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.applyButton,
-                foregroundColor: Colors.white,
+                backgroundColor:
+                    isApplied ? Colors.grey.shade300 : AppColors.applyButton,
+                foregroundColor:
+                    isApplied ? Colors.grey.shade600 : Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(12),
                 ),
                 elevation: 0,
               ),
-              child: const Text(
-                'Apply Now',
+              child: Text(
+                isApplied
+                    ? 'Applied'
+                    : job.applicationMethod == 'EXTERNAL'
+                        ? 'Apply from Website'
+                        : 'Apply Now',
                 style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
               ),
             ),

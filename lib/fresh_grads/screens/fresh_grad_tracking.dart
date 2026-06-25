@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:awesome_snackbar_content/awesome_snackbar_content.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import '../../constants/app_colors.dart';
+import '../../services/fresh_grad_home_service.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/user_session.dart';
 import '../../services/vacancy_service.dart';
 import '../../widgets/app_bar_with_logout.dart';
@@ -38,6 +40,18 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
   void initState() {
     super.initState();
     _selectedStatus = widget.initialStatusFilter;
+    _fetchTrackingData();
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    super.dispose();
+  }
+
+  void _handleRefreshSignal() {
+    if (!mounted) return;
     _fetchTrackingData();
   }
 
@@ -122,6 +136,7 @@ class _FreshGradTrackingScreenState extends State<FreshGradTrackingScreen> {
       onConfirm: () async {
         try {
           await _vacancyService.cancelApplication(application['applicationid']);
+          FreshGradHomeService.invalidateCache();
           await _fetchTrackingData();
 
           if (mounted) {

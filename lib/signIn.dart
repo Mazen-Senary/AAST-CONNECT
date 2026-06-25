@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'providers/CachedChatProvider.dart';
 import 'fresh_grads/widgets/fresh_grad_navigation.dart';
 import 'fresh_grads/theme/app_theme.dart';
+import 'fresh_grads/utils/opportunities_provider.dart';
 import 'fresh_grads/utils/profile_provider.dart';
+import 'services/fresh_grad_home_service.dart';
 import 'student/student_main_navigation.dart';
 import 'services/student_identity_service.dart';
 import 'services/user_session.dart';
@@ -84,6 +87,15 @@ class _SignInScreenState extends State<SignInScreen> {
     });
 
     try {
+      if (mounted) {
+        context.read<ProfileProvider>().reset();
+        context.read<OpportunitiesProvider>().reset();
+        context.read<CachedChatProvider>().clearActiveSession();
+      }
+
+      FreshGradHomeService.invalidateCache();
+      UserSession.instance.clear();
+
       final sessionData = await _identityService.resolveByCollegeId(
         collegeId,
         password: password,

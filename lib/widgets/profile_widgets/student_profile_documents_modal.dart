@@ -125,10 +125,56 @@ class _DocumentsModalContentState extends State<_DocumentsModalContent> {
   Future<void> _deleteDocument(String documentId, String filePath) async {
     try {
       final supabase = Supabase.instance.client;
-      final uri = Uri.parse(filePath);
-      final storagePath = uri.pathSegments.skipWhile((s) => s != 'documents').skip(1).join('/');
-      await supabase.storage.from('documents').remove([storagePath]);
+      final linkedApplications = await supabase
+          .from('application')
+          .select('applicationid')
+          .eq('document_id', documentId)
+          .limit(1);
+
+      final isUsedByApplication = linkedApplications.isNotEmpty;
+
+      if (isUsedByApplication) {
+        await supabase
+            .from('document')
+            .update({'ownerprofileid': null})
+            .eq('documentid', documentId);
+
+        await _fetchDocuments();
+        widget.onUpdate?.call();
+        if (mounted) Navigator.pop(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            content: AwesomeSnackbarContent(
+              title: 'Removed',
+              message:
+                  'Document removed from your profile and kept for submitted applications.',
+              contentType: ContentType.success,
+            ),
+          ),
+        );
+        return;
+      }
+
+      final sharedDocuments = await supabase
+          .from('document')
+          .select('documentid')
+          .eq('filepath', filePath)
+          .neq('documentid', documentId)
+          .limit(1);
+
       await supabase.from('document').delete().eq('documentid', documentId);
+
+      if (sharedDocuments.isEmpty) {
+        final uri = Uri.parse(filePath);
+        final storagePath = uri.pathSegments
+            .skipWhile((s) => s != 'documents')
+            .skip(1)
+            .join('/');
+        await supabase.storage.from('documents').remove([storagePath]);
+      }
 
       await _fetchDocuments();
       widget.onUpdate?.call();

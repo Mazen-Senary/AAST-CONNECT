@@ -9,6 +9,92 @@ import 'user_session.dart';
 class FreshGradVacancyService {
   static final _client = Supabase.instance.client;
 
+  static Future<int?> resolveOrCreateProfileId() async {
+    final userData = await fetchCurrentUserData();
+    final userId = userData['userid'] is int
+        ? userData['userid'] as int
+        : int.parse(userData['userid'].toString());
+
+    final existing = await _client
+        .from('profile')
+        .select('profileid')
+        .eq('userid', userId)
+        .maybeSingle();
+
+    if (existing != null) {
+      return existing['profileid'] as int?;
+    }
+
+    final created = await _client
+        .from('profile')
+        .insert({'userid': userId})
+        .select('profileid')
+        .single();
+
+    return created['profileid'] as int?;
+  }
+
+  static String _extractStoragePath(String publicUrl) {
+    final uri = Uri.parse(publicUrl);
+    return uri.pathSegments
+        .skipWhile((segment) => segment != 'documents')
+        .skip(1)
+        .join('/');
+  }
+
+  static String _extractFileName(String publicUrl) {
+    final uri = Uri.parse(publicUrl);
+    return uri.pathSegments.isEmpty ? 'document.pdf' : uri.pathSegments.last;
+  }
+
+  static Future<String?> _createApplicationDocumentSnapshot({
+    required String documentId,
+    required int applicantId,
+  }) async {
+    final sourceDocument = await _client
+        .from('document')
+        .select('documentid, documenttype, filepath')
+        .eq('documentid', documentId)
+        .maybeSingle();
+
+    if (sourceDocument == null) {
+      throw Exception('Selected document was not found.');
+    }
+
+    final sourceUrl = sourceDocument['filepath']?.toString() ?? '';
+    if (sourceUrl.isEmpty) {
+      throw Exception('Selected document has no file path.');
+    }
+
+    final sourceBytes = await _client.storage
+        .from('documents')
+        .download(_extractStoragePath(sourceUrl));
+
+    final fileName = _extractFileName(sourceUrl)
+        .replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+    final snapshotPath =
+        'applications/$applicantId/${DateTime.now().millisecondsSinceEpoch}_$fileName';
+
+    await _client.storage
+        .from('documents')
+        .uploadBinary(snapshotPath, sourceBytes);
+
+    final snapshotUrl =
+        _client.storage.from('documents').getPublicUrl(snapshotPath);
+
+    final inserted = await _client
+        .from('document')
+        .insert({
+          'ownerprofileid': null,
+          'documenttype': sourceDocument['documenttype'],
+          'filepath': snapshotUrl,
+        })
+        .select('documentid')
+        .single();
+
+    return inserted['documentid']?.toString();
+  }
+
   static Future<List<JobOpportunity>> fetchAll() async {
     final response = await _client
         .from('vacancies')
@@ -65,19 +151,28 @@ class FreshGradVacancyService {
     String? documentId,
   }) async {
     final userData = await fetchCurrentUserData();
+    final applicantId = userData['userid'] is int
+        ? userData['userid'] as int
+        : int.parse(userData['userid'].toString());
+
+    String? snapshotDocumentId;
+    if (documentId != null && documentId.isNotEmpty) {
+      snapshotDocumentId = await _createApplicationDocumentSnapshot(
+        documentId: documentId,
+        applicantId: applicantId,
+      );
+    }
 
     await _client.from('application').insert({
       'vacancyid': vacancyId,
-      'applicantid': userData['userid'],
+      'applicantid': applicantId,
       'coverletter': coverLetter,
       'status': 'PENDING',
       'submissiondate': DateTime.now().toIso8601String(),
       'created_at': DateTime.now().toIso8601String(),
       'college_id': userData['college_id'],
       'applicant_name': userData['name'],
-      // Note: 'documentid' column does not exist on 'application' yet.
-      // The CV itself is still uploaded and saved in the 'document' table,
-      // it's just not linked to this specific application row for now.
+      'document_id': snapshotDocumentId,
     });
   }
 

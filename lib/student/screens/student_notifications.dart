@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_screenutil/flutter_screenutil.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../constants/app_colors.dart';
 import '../../widgets/rounded_container.dart';
+import '../../services/app_refresh_service.dart';
 import '../../services/notification_service.dart';
 import '../../services/user_session.dart';
 
@@ -27,6 +29,7 @@ class StudentNotificationsScreen extends StatefulWidget {
 class _StudentNotificationsScreenState extends State<StudentNotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
   int get _studentId => UserSession.instance.userId!;
+  RealtimeChannel? _notificationChannel;
 
   List<Map<String, dynamic>> _notifications = [];
   bool _isLoading = true;
@@ -36,6 +39,27 @@ class _StudentNotificationsScreenState extends State<StudentNotificationsScreen>
   void initState() {
     super.initState();
     _fetchNotifications();
+    AppRefreshService.instance.addListener(_handleRefreshSignal);
+    _listenForNotifications();
+  }
+
+  @override
+  void dispose() {
+    AppRefreshService.instance.removeListener(_handleRefreshSignal);
+    _notificationChannel?.unsubscribe();
+    super.dispose();
+  }
+
+  void _handleRefreshSignal() {
+    if (!mounted) return;
+    _fetchNotifications();
+  }
+
+  void _listenForNotifications() {
+    _notificationChannel = NotificationService().listenToNotifications(
+      _studentId,
+      (_) => _fetchNotifications(),
+    );
   }
 
   Future<void> _fetchNotifications() async {
