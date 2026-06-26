@@ -109,10 +109,11 @@ class StudentProfileSubmitHoursModal {
     final hoursController = TextEditingController();
     final supervisorController = TextEditingController();
     final descriptionController = TextEditingController();
-    final proofUrlController = TextEditingController();
-
     DateTime? startDate;
     DateTime? endDate;
+    String? proofImageUrl;
+    String? proofImageLabel;
+    bool isUploadingProofImage = false;
     String? selectedCertificateUrl;
     String? selectedCertificateLabel;
     bool isLoadingCertificates = false;
@@ -217,6 +218,59 @@ class StudentProfileSubmitHoursModal {
         );
       } finally {
         setModalState(() => isUploadingCertificate = false);
+      }
+    }
+
+    Future<void> uploadProofImage(StateSetter setModalState) async {
+      try {
+        if (resolvedProfileId == null) {
+          throw Exception('No profile found for this account.');
+        }
+
+        final result = await FilePicker.platform.pickFiles(
+          type: FileType.custom,
+          allowedExtensions: ['png', 'jpg', 'jpeg', 'webp'],
+          withData: true,
+        );
+        if (result == null) return;
+
+        final file = result.files.first;
+        final bytes = file.bytes;
+        if (bytes == null) {
+          throw Exception('Unable to read the selected image.');
+        }
+
+        setModalState(() => isUploadingProofImage = true);
+
+        final safeName =
+            file.name.replaceAll(RegExp(r'[^A-Za-z0-9._-]'), '_');
+        final storagePath =
+            'student_$resolvedProfileId/proof_${resolvedProfileId}_${DateTime.now().millisecondsSinceEpoch}_$safeName';
+        final supabase = Supabase.instance.client;
+
+        await supabase.storage.from('documents').uploadBinary(storagePath, bytes);
+        final uploadedUrl =
+            supabase.storage.from('documents').getPublicUrl(storagePath);
+
+        setModalState(() {
+          proofImageUrl = uploadedUrl;
+          proofImageLabel = file.name;
+        });
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: Colors.transparent,
+            elevation: 0,
+            content: AwesomeSnackbarContent(
+              title: 'Error',
+              message: 'Could not upload proof image: $e',
+              contentType: ContentType.failure,
+            ),
+          ),
+        );
+      } finally {
+        setModalState(() => isUploadingProofImage = false);
       }
     }
 
@@ -521,36 +575,97 @@ class StudentProfileSubmitHoursModal {
                         ),
                       ),
                       SizedBox(height: 20.h),
-                      TextField(
-                        controller: proofUrlController,
+                      Text(
+                        'Training Proof',
                         style: TextStyle(
-                          color: Theme.of(context).colorScheme.onSurface,
+                          fontSize: 16.sp,
+                          fontWeight: FontWeight.bold,
                         ),
-                        decoration: InputDecoration(
-                          labelText: 'Proof URL (optional)',
-                          hintText: 'https://...',
-                          filled: true,
-                          fillColor:
-                              Theme.of(context).brightness == Brightness.dark
-                                  ? const Color(0xFF232A33)
-                                  : Colors.white,
-                          border: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
+                      ),
+                      SizedBox(height: 10.h),
+                      if (proofImageUrl != null)
+                        Container(
+                          width: double.infinity,
+                          padding: EdgeInsets.symmetric(
+                            horizontal: 18.w,
+                            vertical: 16.h,
                           ),
-                          enabledBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: Theme.of(context)
-                                  .colorScheme
-                                  .outlineVariant
-                                  .withValues(alpha: 0.55),
+                          decoration: BoxDecoration(
+                            color:
+                                Theme.of(context).brightness == Brightness.dark
+                                    ? const Color(0xFF1E2B45)
+                                    : const Color(0xFFF3F6FB),
+                            borderRadius: BorderRadius.circular(16.r),
+                            border: Border.all(
+                              color: const Color(0xFF284B8C),
+                              width: 1.5,
                             ),
                           ),
-                          focusedBorder: OutlineInputBorder(
-                            borderRadius: BorderRadius.circular(12.r),
-                            borderSide: BorderSide(
-                              color: Theme.of(context).colorScheme.primary,
-                              width: 1.4,
+                          child: Row(
+                            children: [
+                              const Icon(
+                                Icons.image_outlined,
+                                color: Color(0xFF284B8C),
+                              ),
+                              SizedBox(width: 12.w),
+                              Expanded(
+                                child: Text(
+                                  proofImageLabel ?? 'Proof image selected',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 15.sp,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF284B8C),
+                                  ),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: isSubmitting
+                                    ? null
+                                    : () => setModalState(() {
+                                          proofImageUrl = null;
+                                          proofImageLabel = null;
+                                        }),
+                                child: const Icon(
+                                  Icons.close,
+                                  color: Color(0xFF284B8C),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      ,
+                      SizedBox(height: 12.h),
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton.icon(
+                          onPressed: isUploadingProofImage
+                              ? null
+                              : () => uploadProofImage(setModalState),
+                          icon: isUploadingProofImage
+                              ? const SizedBox(
+                                  width: 16,
+                                  height: 16,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.image_outlined),
+                          label: Text(
+                            isUploadingProofImage
+                                ? 'Uploading...'
+                                : proofImageUrl == null
+                                    ? 'Upload Training Proof'
+                                    : 'Replace Training Proof',
+                          ),
+                          style: OutlinedButton.styleFrom(
+                            padding: EdgeInsets.symmetric(vertical: 14.h),
+                            side: const BorderSide(
+                              color: Color(0xFF284B8C),
+                            ),
+                            foregroundColor: const Color(0xFF284B8C),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14.r),
                             ),
                           ),
                         ),
@@ -762,8 +877,6 @@ class StudentProfileSubmitHoursModal {
                                       supervisorController.text.trim();
                                   final description =
                                       descriptionController.text.trim();
-                                  final proofUrl =
-                                      proofUrlController.text.trim();
                                   final submittedHours =
                                       int.tryParse(hoursController.text.trim()) ??
                                           0;
@@ -850,8 +963,7 @@ class StudentProfileSubmitHoursModal {
                                           .first,
                                       'name': description,
                                       'status': 'PENDING',
-                                      'proof_image_url':
-                                          proofUrl.isEmpty ? null : proofUrl,
+                                      'proof_image_url': proofImageUrl,
                                       'certificate_url':
                                           selectedCertificateUrl,
                                     });
