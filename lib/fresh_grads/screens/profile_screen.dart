@@ -354,23 +354,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
               onManage: () => _showDocuments(context, isDark)),
           const SizedBox(height: 16),
           SavedJobsSection(isDark: isDark),
-          const SizedBox(height: 16),
-
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => _showResumeChecker(context, isDark),
-              icon: const Icon(Icons.description_outlined, color: Colors.white, size: 18),
-              label: const Text('Resume Checker',
-                  style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600, color: Colors.white)),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.applyButton,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                elevation: 0,
-              ),
-            ),
-          ),
           const SizedBox(height: 24),
         ],
       ),
@@ -1230,59 +1213,4 @@ class _ProfileScreenState extends State<ProfileScreen> {
     ));
   }
 
-  // ─── Resume Checker Modal ──────────────────────────────────────────────────
-  void _showResumeChecker(BuildContext context, bool isDark) {
-    showDialog(
-      context: context,
-      barrierColor: Colors.black.withOpacity(0.4),
-      builder: (ctx) => Dialog(
-        backgroundColor: Colors.transparent,
-        insetPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 80),
-        child: Container(
-          decoration: BoxDecoration(
-            color: isDark ? AppColors.darkCardBg : Colors.white,
-            borderRadius: BorderRadius.circular(20),
-          ),
-          padding: const EdgeInsets.all(20),
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-              Row(children: [
-                Container(width: 40, height: 40,
-                    decoration: const BoxDecoration(color: Color(0xFFEDE7F6), shape: BoxShape.circle),
-                    child: const Icon(Icons.auto_awesome, color: Color(0xFF7C4DFF), size: 20)),
-                const SizedBox(width: 12),
-                Text('Resume Checker', style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
-              ]),
-              GestureDetector(onTap: () => Navigator.pop(ctx),
-                  child: Icon(Icons.close, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-            ]),
-            const SizedBox(height: 24),
-
-            Container(width: double.infinity, padding: const EdgeInsets.symmetric(vertical: 32),
-              decoration: BoxDecoration(
-                color: isDark ? AppColors.darkSurface : const Color(0xFFF8F8F8),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: Column(children: [
-                Container(width: 56, height: 56,
-                    decoration: BoxDecoration(color: AppColors.lightBlue, borderRadius: BorderRadius.circular(14)),
-                    child: const Icon(Icons.upload_outlined, color: AppColors.accentBlue, size: 28)),
-                const SizedBox(height: 14),
-                Text('Upload Your CV', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w600,
-                    color: isDark ? AppColors.darkTextPrimary : AppColors.textPrimary)),
-                const SizedBox(height: 6),
-                Text('Click to browse or drag and drop',
-                    style: TextStyle(fontSize: 13, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                Text('Supports PDF, DOC, DOCX (Max 5MB)',
-                    style: TextStyle(fontSize: 11, color: isDark ? AppColors.darkTextSecondary : AppColors.textSecondary)),
-              ]),
-            ),
-          ]),
-        ),
-      ),
-    );
-  }
 }
